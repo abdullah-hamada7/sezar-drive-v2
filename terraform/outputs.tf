@@ -13,3 +13,7 @@ output "ssh_command" {
 output "domain_endpoint" {
   value = var.domain_name
 }
+
+output "rds_endpoint" {
+  value = aws_db_instance.postgres.endpoint
+}
