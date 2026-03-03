@@ -75,13 +75,20 @@ async function reviewDamageReport(reportId, adminId, action, ipAddress) {
     },
   });
 
-  // If resolved, unlock vehicle
+  // If resolved, unlock vehicle ONLY if it is not in maintenance
   if (newStatus === 'resolved') {
     // Check no other open damage reports for same vehicle
     const otherReports = await prisma.damageReport.count({
-      where: { vehicleId: report.vehicleId, status: { notIn: ['resolved'] }, id: { not: reportId } },
+      where: { vehicleId: report.vehicleId, status: { notIn: ['resolved', 'closed'] }, id: { not: reportId } },
     });
-    if (otherReports === 0) {
+
+    // Check current vehicle status
+    const currentVehicle = await prisma.vehicle.findUnique({
+      where: { id: report.vehicleId },
+      select: { status: true }
+    });
+
+    if (otherReports === 0 && currentVehicle?.status !== 'maintenance') {
       await prisma.vehicle.update({
         where: { id: report.vehicleId },
         data: { status: 'available' },
