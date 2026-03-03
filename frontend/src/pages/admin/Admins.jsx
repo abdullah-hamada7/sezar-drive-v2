@@ -1,163 +1,88 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { driverService as api } from '../../services/driver.service';
+import { adminService } from '../../services/admin.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Users, Plus, Search, Edit, Trash2, X, UserCheck, UserX } from 'lucide-react';
-import ConfirmModal from '../../components/common/ConfirmModal';
+import { Trash2, XCircle, Search, ShieldAlert, ShieldCheck, Plus } from 'lucide-react';
+import PromptModal from '../../components/common/PromptModal';
 
-export default function DriversPage() {
+export default function AdminsPage() {
   const { t } = useTranslation();
   const { addToast } = useContext(ToastContext);
-  const [drivers, setDrivers] = useState([]);
-  const [pagination, setPagination] = useState({});
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+
+  const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const [showModal, setShowModal] = useState(false);
-  const [editDriver, setEditDriver] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
-  const [files, setFiles] = useState({});
-  const [previews, setPreviews] = useState({});
-  const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [confirmData, setConfirmData] = useState({ isOpen: false, type: '', data: null });
+  const [form, setForm] = useState({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validateField = (name, value) => {
-    let err = '';
-    if (name === 'phone') {
-      if (!value) err = t('drivers.modal.phone_required');
-      else if (!/^\+?[0-9]{10,15}$/.test(value)) err = t('drivers.modal.phone_invalid');
-    }
-    if (name === 'email') {
-      if (!value) err = t('drivers.modal.email_required');
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) err = t('drivers.modal.email_invalid');
-    }
-    if (name === 'licenseNumber') {
-      if (!value) err = t('drivers.modal.license_required');
-      else if (!/^[A-Z0-9-]+$/i.test(value)) err = t('drivers.modal.license_invalid');
-    }
-    if (name === 'name' && !value) err = t('drivers.modal.name_required');
-    if (name === 'password') {
-      if (!editDriver && !value) err = t('drivers.modal.password_invalid');
-      if (value && value.length < 8) err = t('drivers.modal.password_invalid');
-    }
+  const [pagination, setPagination] = useState({});
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
 
-    setFieldErrors(prev => ({ ...prev, [name]: err }));
-    return !err;
-  };
+  const [promptData, setPromptData] = useState({ isOpen: false, adminId: null });
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const params = new URLSearchParams({ page, limit: 15 });
-      if (search) params.set('search', search);
-      const res = await api.getDrivers(params.toString());
-      setDrivers(res.data.drivers || []);
-      setPagination(res.data || {});
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  }, [page, search]);
+      const qs = new URLSearchParams({ page, limit: 10 });
+      if (searchTerm) qs.append('search', searchTerm);
+      const res = await adminService.getAdmins(qs.toString());
+      setAdmins(res.data.admins || []);
+      setPagination(res.data);
+    } catch (err) {
+      addToast(err.message || t('common.error'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [page, searchTerm, addToast, t]);
 
   useEffect(() => { load(); }, [load]);
 
-  useEffect(() => {
-    const handleUpdate = () => load();
-    window.addEventListener('ws:identity_reviewed', handleUpdate);
-    return () => window.removeEventListener('ws:identity_reviewed', handleUpdate);
-  }, [load]);
-
-  function openCreate() {
-    setEditDriver(null);
-    setForm({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
-    setFiles({});
-    setPreviews({});
-    setError('');
-    setShowModal(true);
-  }
-
-  function openEdit(driver) {
-    setEditDriver(driver);
-    setForm({ name: driver.name, email: driver.email, phone: driver.phone, licenseNumber: driver.licenseNumber || '' });
-    setFiles({});
-    setPreviews({
-      avatar: driver.avatarUrl || driver.profilePhotoUrl,
-      idCardFront: driver.idCardFront,
-      idCardBack: driver.idCardBack
-    });
-    setError('');
-    setShowModal(true);
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
-
-    // Final check
-    const isNameValid = validateField('name', form.name);
-    const isEmailValid = validateField('email', form.email);
-    const isPhoneValid = validateField('phone', form.phone);
-    const isLicenseValid = validateField('licenseNumber', form.licenseNumber);
-    const isPasswordValid = editDriver ? true : validateField('password', form.password);
-
-    if (!isNameValid || !isEmailValid || !isPhoneValid || !isLicenseValid || !isPasswordValid) {
-      setError(t('common.errors.check_fields'));
-      return;
-    }
-
+    setError(null);
+    setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append('name', form.name);
-      formData.append('phone', form.phone);
-      if (form.licenseNumber) formData.append('licenseNumber', form.licenseNumber);
-      if (form.password) formData.append('password', form.password);
-
-      if (files.avatar) formData.append('avatar', files.avatar);
-      if (files.idCardFront) formData.append('idCardFront', files.idCardFront);
-      if (files.idCardBack) formData.append('idCardBack', files.idCardBack);
-
-      if (editDriver) {
-        await api.updateDriver(editDriver.id, formData);
-      } else {
-        formData.append('email', form.email);
-        await api.createDriver(formData);
+      if (form.temporaryPassword && form.temporaryPassword.length < 8) {
+        setError('Password must be at least 8 characters');
+        setIsSubmitting(false);
+        return;
       }
-      setShowModal(false);
+      await adminService.createAdmin(form);
+      addToast('Admin created successfully', 'success');
+      closeModal();
       load();
     } catch (err) {
-      if (err.response?.data?.errors) {
-        const backendErrs = {};
-        err.response.data.errors.forEach(e => {
-          backendErrs[e.path || e.param] = e.msg;
-        });
-        setFieldErrors(prev => ({ ...prev, ...backendErrs }));
-        setError(t('common.errors.validation_failed'));
+      if (err.data && err.data.code === 'USER_ALREADY_EXISTS') {
+        setError('Admin with this email already exists.');
       } else {
-        const msg = err.errorCode ? t(`errors.${err.errorCode}`) : (err.message || t('drivers.messages.op_failed'));
-        setError(msg);
+        setError(err.message || 'An error occurred.');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
-  async function handleDelete(id) {
-    setConfirmData({ isOpen: true, type: 'delete', data: { id } });
-  }
-
-  async function handleApprove(driver) {
-    setConfirmData({ isOpen: true, type: 'approve', data: { id: driver.id, name: driver.name } });
+  function closeModal() {
+    setShowModal(false);
+    setForm({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
+    setError(null);
   }
 
   async function onConfirmAction() {
-    const { type, data } = confirmData;
     try {
-      if (type === 'delete') {
-        await api.deleteDriver(data.id);
-      } else if (type === 'approve') {
-        await api.reviewIdentity(data.id, { action: 'approve' });
-      }
+      await adminService.deactivateAdmin(promptData.adminId);
+      addToast('Admin deactivated successfully', 'success');
       load();
     } catch (err) {
-      const msg = err.errorCode ? t(`errors.${err.errorCode}`) : (err.message || t('common.error'));
-      addToast(msg, 'error');
+      if (err.data?.code === 'CANNOT_DELETE_SELF') {
+         addToast('You cannot deactivate yourself.', 'warning');
+      } else {
+         addToast(err.message || t('common.error'), 'error');
+      }
     }
   }
 
@@ -165,38 +90,29 @@ export default function DriversPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('drivers.title')}</h1>
-          <p className="page-subtitle">{t('drivers.subtitle')}</p>
+          <h1 className="page-title">{t('nav.admins') || 'Admins'}</h1>
+          <p className="page-subtitle">Manage system administrators across the business.</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <Plus size={18} /> {t('drivers.add_btn')}
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+          <Plus size={18} /> Create Admin
         </button>
       </div>
 
-      <div className="card mb-md">
-        <div className="flex items-center gap-md">
-          <Search size={18} className="text-muted" />
+      <div className="card mb-md flex items-center justify-between" style={{ padding: '0.75rem var(--space-md)' }}>
+        <div className="flex items-center gap-sm">
+          <Search size={16} className="text-muted" />
           <input
             type="text"
-            className="form-input"
-            placeholder={t('drivers.search_placeholder')}
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
+            className="input flex-1"
+            style={{ border: 'none', background: 'transparent', boxShadow: 'none', padding: 0 }}
+            placeholder={t('common.search')}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && load()}
           />
         </div>
+        <button className="btn btn-sm btn-secondary" onClick={load}>{t('common.search')}</button>
       </div>
-
-      {!loading && (
-        <div className="card mb-md" style={{ padding: '0.75rem var(--space-md)' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-sm">
-              <span className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('drivers.title')}</span>
-            </div>
-            <span className="badge badge-info">{drivers.length}</span>
-          </div>
-        </div>
-      )}
 
       {loading ? (
         <div className="loading-page"><div className="spinner"></div></div>
@@ -205,53 +121,31 @@ export default function DriversPage() {
           <table>
             <thead>
               <tr>
-                <th>{t('drivers.table.name')}</th>
-                <th>{t('drivers.table.email')}</th>
-                <th>{t('drivers.table.phone')}</th>
-                <th>{t('drivers.table.license')}</th>
-                <th>{t('drivers.table.status')}</th>
-                <th>{t('drivers.table.identity')}</th>
-                <th>{t('drivers.table.actions')}</th>
+                <th>{t('auth.name')}</th>
+                <th>{t('auth.email')}</th>
+                <th>Role</th>
+                <th>Created</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {drivers.length === 0 ? (
-                <tr><td colSpan={7} className="empty-state">{t('drivers.table.empty')}</td></tr>
-              ) : drivers.map(d => (
-                <tr key={d.id}>
-                  <td style={{ fontWeight: 500 }}>{d.name}</td>
-                  <td>{d.email}</td>
-                  <td>{d.phone}</td>
-                  <td>{d.licenseNumber || '—'}</td>
+              {admins.length === 0 ? (
+                <tr><td colSpan={5} className="empty-state">No administrators found</td></tr>
+              ) : admins.map(a => (
+                <tr key={a.id}>
+                  <td className="font-bold">{a.name}</td>
+                  <td className="text-muted">{a.email}</td>
                   <td>
-                    <span className={`badge ${d.isActive ? 'badge-success' : 'badge-danger'}`}>
-                      {d.isActive ? t('drivers.table.active') : t('drivers.table.inactive')}
-                    </span>
+                    {a.adminRole === 'SUPER_ADMIN' ? (
+                      <span className="badge badge-warning flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldAlert size={12}/> Super Admin</span>
+                    ) : (
+                       <span className="badge badge-info flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldCheck size={12}/> System Admin</span>
+                    )}
                   </td>
-                  <td>
-                    {d.identityVerified
-                      ? <span className="badge badge-success"><UserCheck size={12} /> {t('common.shift_verification_status.verified')}</span>
-                      : <span className="badge badge-warning"><UserX size={12} /> {t('common.shift_verification_status.pending')}</span>
-                    }
-                  </td>
+                  <td className="text-muted">{new Date(a.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div className="flex gap-sm">
-                      <button className="btn-icon" onClick={() => openEdit(d)} title={t('common.edit')}>
-                        <Edit size={16} />
-                      </button>
-                      {!d.identityVerified && (
-                        <button
-                          className="btn-icon"
-                          onClick={() => handleApprove(d)}
-                          title={t('nav.verification')}
-                          style={{ color: 'var(--color-success)' }}
-                        >
-                          <UserCheck size={16} />
-                        </button>
-                      )}
-                      <button className="btn-icon" onClick={() => handleDelete(d.id)} title={t('common.delete')} style={{ color: 'var(--color-danger)' }}>
-                        <Trash2 size={16} />
-                      </button>
+                      <button className="btn-icon" onClick={() => setPromptData({ isOpen: true, adminId: a.id })} title={t('common.delete')} style={{ color: 'var(--color-danger)' }}><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -263,148 +157,62 @@ export default function DriversPage() {
 
       {pagination.totalPages > 1 && (
         <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
+          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('common.pagination.prev')}</button>
           <span className="text-sm text-muted">
-            {t('vehicles.pagination.info', { current: page, total: pagination.totalPages })}
+            {t('common.pagination.info', { current: page, total: pagination.totalPages })}
           </span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
+          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('common.pagination.next')}</button>
         </div>
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">{editDriver ? t('drivers.modal.edit_title') : t('drivers.modal.add_title')}</h2>
-              <button className="btn-icon" onClick={() => setShowModal(false)}><X size={18} /></button>
+              <h2 className="modal-title">Create System Admin</h2>
+              <button className="btn-icon" onClick={closeModal}><XCircle size={18} /></button>
             </div>
 
-            {error && <div className="alert alert-error">{error}</div>}
+            {error && <div className="alert alert-error mb-md">{error}</div>}
 
             <form onSubmit={handleSubmit} className="modal-body">
-              <div className="form-section mb-md">
-                <label className="form-label mb-sm" style={{ display: 'block' }}>{t('drivers.modal.photos_section')}</label>
-                <div className="grid grid-3 gap-md">
-                  {['avatar', 'idCardFront', 'idCardBack'].map(key => (
-                    <div key={key} className="text-center">
-                      <label className="block text-xs font-semibold mb-xs uppercase opacity-70">{t(`drivers.modal.${key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`)}`)}</label>
-                      <div
-                        onClick={() => document.getElementById(`file-${key}`).click()}
-                        style={{
-                          width: '100%', aspectRatio: '4/3',
-                          background: 'var(--color-bg-tertiary)', borderRadius: 8,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', overflow: 'hidden', border: '1px dashed var(--color-border-light)'
-                        }}
-                      >
-                        {previews[key] ? (
-                          <img src={previews[key]} alt={key} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div className="flex flex-col items-center gap-xs">
-                            <Plus size={20} className="text-muted" />
-                            <span className="text-xs text-muted">{t('drivers.modal.tap_upload')}</span>
-                          </div>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        id={`file-${key}`}
-                        hidden
-                        accept="image/*"
-                        onChange={e => {
-                          const file = e.target.files[0];
-                          if (file) {
-                            setFiles(prev => ({ ...prev, [key]: file }));
-                            setPreviews(prev => ({ ...prev, [key]: URL.createObjectURL(file) }));
-                          }
-                        }}
-                      />
-                    </div>
-                  ))}
+              <div className="grid grid-2 gap-md mb-md">
+                <div className="form-group">
+                  <label className="form-label">{t('auth.name')}</label>
+                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{t('auth.email')}</label>
+                  <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
                 </div>
               </div>
 
-              <div className="grid grid-2 gap-md">
+              <div className="grid grid-2 gap-md mb-lg">
                 <div className="form-group">
-                  <label className="form-label">{t('drivers.modal.name_label')}</label>
-                  <input
-                    className={`form-input ${fieldErrors.name ? 'border-danger' : ''}`}
-                    name="name"
-                    value={form.name}
-                    onChange={e => { setForm({ ...form, name: e.target.value }); validateField('name', e.target.value); }}
-                    required
-                  />
-                  {fieldErrors.name && <span className="text-xs text-danger">{fieldErrors.name}</span>}
+                  <label className="form-label">Role Configuration</label>
+                   <select className="form-input" value={form.adminRole} onChange={e => setForm({ ...form, adminRole: e.target.value })}>
+                    <option value="SYSTEM_ADMIN">System Admin</option>
+                    <option value="SUPER_ADMIN">Super Admin (Highest Privilege)</option>
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">{t('drivers.modal.email_label')}</label>
-                  <input
-                    type="email"
-                    className={`form-input ${fieldErrors.email ? 'border-danger' : ''}`}
-                    name="email"
-                    value={form.email}
-                    onChange={e => { setForm({ ...form, email: e.target.value }); validateField('email', e.target.value); }}
-                    required
-                    disabled={!!editDriver}
+                  <label className="form-label">Temporary Password</label>
+                  <input 
+                     type="password" 
+                     className="form-input" 
+                     placeholder="Must be changed on login" 
+                     value={form.temporaryPassword} 
+                     onChange={e => setForm({ ...form, temporaryPassword: e.target.value })} 
+                     required 
                   />
-                  {fieldErrors.email && <span className="text-xs text-danger">{fieldErrors.email}</span>}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('drivers.modal.phone_label')}</label>
-                  <input
-                    className={`form-input ${fieldErrors.phone ? 'border-danger' : ''}`}
-                    name="phone"
-                    value={form.phone}
-                    onChange={e => {
-                      const val = e.target.value.replace(/[^\d+]/g, ''); // Restrict to digits and +
-                      setForm({ ...form, phone: val });
-                      validateField('phone', val);
-                    }}
-                    required
-                    placeholder={t('drivers.modal.phone_placeholder')}
-                  />
-                  {fieldErrors.phone && <span className="text-xs text-danger">{fieldErrors.phone}</span>}
-                </div>
-                <div className="form-group">
-                  <label className="form-label">{t('drivers.modal.license_label')}</label>
-                  <input
-                    className={`form-input ${fieldErrors.licenseNumber ? 'border-danger' : ''}`}
-                    name="licenseNumber"
-                    value={form.licenseNumber}
-                    onChange={e => {
-                      const val = e.target.value.toUpperCase(); // Preach uppercase
-                      setForm({ ...form, licenseNumber: val });
-                      validateField('licenseNumber', val);
-                    }}
-                    placeholder={t('drivers.modal.license_placeholder')}
-                  />
-                  {fieldErrors.licenseNumber && <span className="text-xs text-danger">{fieldErrors.licenseNumber}</span>}
-                </div>
-                <div className="form-group col-span-2">
-                  <label className="form-label">
-                    {t('drivers.modal.password_label')} {editDriver && t('drivers.modal.password_keep')} {!editDriver && '*'}
-                  </label>
-                  <input
-                    className={`form-input ${fieldErrors.password ? 'border-danger' : ''}`}
-                    name="password"
-                    type="password"
-                    value={form.password}
-                    onChange={e => { setForm({ ...form, password: e.target.value }); validateField('password', e.target.value); }}
-                    required={!editDriver}
-                    placeholder={t('drivers.modal.password_hint')}
-                  />
-                  {fieldErrors.password && <span className="text-xs text-danger">{fieldErrors.password}</span>}
+                  <div className="text-xs text-muted mt-xs">Required: 1 uppercase, 1 number, 8 chars min.</div>
                 </div>
               </div>
-              {!editDriver && (
-                <div className="alert alert-info" style={{ marginTop: '0.5rem' }}>
-                  {t('drivers.modal.first_login_alert')}
-                </div>
-              )}
-              <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
-                <button type="submit" className="btn btn-primary">
-                  {editDriver ? t('drivers.modal.update_btn') : t('drivers.modal.create_btn')}
+
+              <div className="modal-actions mt-xl pt-md border-t border-subtle">
+                <button type="button" className="btn btn-secondary" onClick={closeModal}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? t('auth.login_progress') : 'Create'}
                 </button>
               </div>
             </form>
@@ -412,16 +220,15 @@ export default function DriversPage() {
         </div>
       )}
 
-      <ConfirmModal
-        isOpen={confirmData.isOpen}
-        onClose={() => setConfirmData({ isOpen: false, type: '', data: null })}
+      <PromptModal
+        isOpen={promptData.isOpen}
+        onClose={() => setPromptData({ isOpen: false, adminId: null })}
         onConfirm={onConfirmAction}
-        title={confirmData.type === 'delete' ? t('common.delete') : t('common.shift_verification_status.verified')}
-        message={confirmData.type === 'delete'
-          ? t('drivers.messages.delete_confirm')
-          : t('drivers.messages.approve_confirm', { name: confirmData.data?.name })}
-        variant={confirmData.type === 'delete' ? 'danger' : 'success'}
+        title="Deactivate Admin"
+        message="Are you sure you want to deactivate this system administrator?"
+        placeholder="Type 'DEACTIVATE' to confirm"
       />
     </div>
   );
 }
+

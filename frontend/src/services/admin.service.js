@@ -1,0 +1,15 @@
+import { http } from './http.service';
+
+export const adminService = {
+    getAdmins(params = '') {
+        return http.get(`/admins?${params}`);
+    },
+
+    createAdmin(data) {
+        return http.post('/admins', data);
+    },
+
+    deactivateAdmin(id) {
+        return http.delete(`/admins/${id}`);
+    }
+};
