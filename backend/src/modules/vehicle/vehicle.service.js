@@ -141,8 +141,8 @@ async function validateQrCode(qrCode) {
     }
   });
   if (!vehicle || !vehicle.isActive) throw new NotFoundError('Vehicle with this QR code');
-  if (['damaged', 'maintenance'].includes(vehicle.status)) {
-    throw new ConflictError('VEHICLE_LOCKED', `Vehicle is ${vehicle.status}`, { status: vehicle.status });
+  if (vehicle.status !== 'available') {
+    throw new ConflictError('VEHICLE_UNAVAILABLE', `Vehicle is currently ${vehicle.status}`, { status: vehicle.status });
   }
   return vehicle;
 }
@@ -153,8 +153,8 @@ async function validateQrCode(qrCode) {
 async function assignVehicle(vehicleId, driverId, shiftId, adminId, ipAddress) {
   const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle) throw new NotFoundError('Vehicle');
-  if (['damaged', 'maintenance'].includes(vehicle.status)) {
-    throw new ConflictError('VEHICLE_LOCKED', `Vehicle is ${vehicle.status}`);
+  if (vehicle.status !== 'available') {
+    throw new ConflictError('VEHICLE_UNAVAILABLE', `Vehicle is currently ${vehicle.status}`);
   }
 
   // Check for open damage reports

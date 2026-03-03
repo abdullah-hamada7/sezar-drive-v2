@@ -74,7 +74,10 @@ export default function TripsPage() {
     try {
       const res = await driverService.getDrivers('limit=100');
       setDrivers(res.data.drivers || []);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      const msg = err.code ? t(`errors.${err.code}`) : (err.message || t('common.error'));
+      addToast(msg, 'error');
+    }
   }
 
   function toLocalInputValue(date) {

@@ -74,7 +74,7 @@ export default function DriverDamage() {
       setStep('success');
     } catch (err) {
       const code = err.errorCode || err.code;
-      if (code) addToast(t(`errors.${code}`), 'error');
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
       setLoading(false);
     }

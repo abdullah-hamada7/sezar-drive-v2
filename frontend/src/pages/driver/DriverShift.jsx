@@ -45,8 +45,9 @@ export default function DriverShift() {
       await refreshShift();
       // Force face verification for every shift start
       setActiveStep('face');
-    } catch {
-      // Handled by HttpService
+    } catch (err) {
+      const code = err?.code;
+      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
     } finally {
       setActionLoading(false);
     }
@@ -72,8 +73,9 @@ export default function DriverShift() {
       } else {
         addToast(t('shift.failed_alert'), 'error');
       }
-    } catch {
-      // Handled by HttpService
+    } catch (err) {
+      const code = err?.code;
+      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
     } finally {
       setActionLoading(false);
     }
@@ -86,8 +88,9 @@ export default function DriverShift() {
       addToast(t('common.success'), 'success');
       setActiveStep(null);
       await refreshShift();
-    } catch {
-      // Handled by HttpService
+    } catch (err) {
+      const code = err?.code;
+      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
     } finally {
       setActionLoading(false);
     }

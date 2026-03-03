@@ -23,6 +23,7 @@ const DeviceVerificationPage = lazy(() => import("./pages/DeviceVerification"));
 const VerificationQueuePage = lazy(() => import("./pages/admin/VerificationQueue"));
 
 // Admin Pages
+const AdminsPage = lazy(() => import("./pages/admin/Admins"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout/AdminLayout"));
 const DashboardPage = lazy(() => import("./pages/admin/Dashboard"));
 const DriversPage = lazy(() => import("./pages/admin/Drivers"));
@@ -114,6 +115,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="admins" element={<AdminsPage />} />
         <Route path="drivers" element={<DriversPage />} />
         <Route path="vehicles" element={<VehiclesPage />} />
         <Route path="trips" element={<TripsPage />} />
