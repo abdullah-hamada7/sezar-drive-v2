@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sezar/contracts": "workspace:*",
+    "@sezar/contracts": "file:../packages/contracts",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.5",
     "html5-qrcode": "^2.3.8",

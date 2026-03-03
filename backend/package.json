@@ -35,7 +35,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@sezar/contracts": "workspace:*",
+    "@sezar/contracts": "file:../packages/contracts",
     "@aws-sdk/client-rekognition": "^3.990.0",
     "@aws-sdk/client-s3": "^3.990.0",
     "@aws-sdk/s3-request-presigner": "^3.990.0",

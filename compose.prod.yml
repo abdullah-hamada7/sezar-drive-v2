@@ -45,8 +45,8 @@ services:
   # ─── Backend API ────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: fleet-backend-prod
     restart: unless-stopped
     healthcheck:
@@ -73,8 +73,8 @@ services:
   # ─── Frontend ───────────────────────────────────
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: fleet-frontend-prod
     restart: unless-stopped
     depends_on:

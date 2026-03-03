@@ -8,9 +8,12 @@ WORKDIR /app
 # Install system dependencies needed for Prisma
 RUN apk add --no-cache openssl
 
-# Copy package manifests and Prisma schema
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma/
+# Copy shared contracts first
+COPY packages/contracts /packages/contracts
+
+# Copy package manifests and Prisma schema from backend/
+COPY backend/package.json backend/package-lock.json* ./
+COPY backend/prisma ./prisma/
 
 # Install production dependencies only
 RUN npm ci --omit=dev
@@ -30,10 +33,10 @@ RUN apk add --no-cache openssl
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# Copy application source & schema
-COPY src ./src/
-COPY scripts ./scripts/
-COPY prisma ./prisma/
+# Copy application source & schema from backend/
+COPY backend/src ./src/
+COPY backend/scripts ./scripts/
+COPY backend/prisma ./prisma/
 
 # Security: Set ownership and run as non-root user
 RUN chown -R node:node /app

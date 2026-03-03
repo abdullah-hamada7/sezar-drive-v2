@@ -1,8 +1,5 @@
 # Fleet Management Platform — Docker Compose
 # Usage: docker-compose up -d
-#
-# Security: For production, use env_file or secrets for JWT_SECRET and
-# database passwords. See backend/.env.example. Do not commit real secrets.
 
 services:
   # ─── PostgreSQL Database ────────────────────────
@@ -27,8 +24,8 @@ services:
   # ─── Backend API ────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: fleet-backend
     restart: unless-stopped
     depends_on:
@@ -55,8 +52,8 @@ services:
   # ─── Frontend (Nginx) ──────────────────────────
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: fleet-frontend
     restart: unless-stopped
     depends_on:
