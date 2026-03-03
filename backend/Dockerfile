@@ -16,7 +16,7 @@ COPY backend/package.json backend/package-lock.json* ./
 COPY backend/prisma ./prisma/
 
 # Install production dependencies only
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Generate Prisma client
 RUN DATABASE_URL="postgresql://dummy:5432/mydb" npx prisma generate
