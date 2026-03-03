@@ -1,0 +1,146 @@
+.driver-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 600px; /* Slightly wider for modern phones and tablet-lite feel */
+  margin-inline: auto;
+  background: var(--color-bg);
+  position: relative;
+}
+
+/* ── Header ── */
+.driver-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  height: var(--header-height);
+  background: var(--color-bg-secondary);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  background: var(--color-primary);
+  color: white;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-glow);
+}
+
+.brand-text {
+  font-size: 1.125rem;
+  font-weight: 800;
+  font-family: var(--font-family-display);
+  text-transform: uppercase;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+}
+
+/* ── Bottom Nav ── */
+.driver-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: var(--color-bg-secondary);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-xs) 0;
+  padding-bottom: env(safe-area-inset-bottom, 1rem); /* iPhone notch support */
+  z-index: 50;
+}
+
+.driver-nav-item {
+  color: var(--color-text-muted);
+  transition: all var(--transition-base);
+}
+
+.driver-nav-item.active {
+  color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+.driver-nav-item.active svg {
+  filter: var(--shadow-glow);
+}
+
+/* ── Mobile-first action cards ── */
+.action-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  transition: all var(--transition-base);
+  cursor: pointer;
+}
+.action-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+.action-card .action-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-sm);
+}
+.action-card .action-label {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+.action-card .action-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-top: var(--space-xs);
+}
+/* ── Main Content Area ── */
+.driver-main {
+  flex: 1;
+  padding: var(--space-md);
+  padding-bottom: calc(
+    85px + env(safe-area-inset-bottom, 1rem)
+  ); /* Ensure content clears bottom nav */
+  position: relative;
+}
+
+.driver-nav-item span {
+  font-size: 0.625rem;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .driver-nav-item span {
+    display: none; /* Icons only on tiny screens to avoid overcrowding */
+  }
+  .driver-bottom-nav {
+    height: 60px;
+    padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+  }
+  .driver-main {
+    padding-bottom: calc(65px + env(safe-area-inset-bottom, 0.5rem));
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:migrate:prod": "npx prisma migrate deploy",
+    "prisma:studio": "npx prisma studio",
+    "db:setup": "npm run prisma:migrate:prod && npm run seed",
+    "db:repair": "node scripts/repair_db.js",
+    "seed": "node prisma/seed.js",
+    "test": "jest --passWithNoTests",
+    "lint": "eslint ."
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": [
+      "./tests/setup.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "verbose": true,
+    "forceExit": true,
+    "detectOpenHandles": true
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@sezar/contracts": "workspace:*",
+    "@aws-sdk/client-rekognition": "^3.990.0",
+    "@aws-sdk/client-s3": "^3.990.0",
+    "@aws-sdk/s3-request-presigner": "^3.990.0",
+    "@prisma/client": "^5.18.0",
+    "arabic-persian-reshaper": "^1.0.1",
+    "bcryptjs": "^3.0.3",
+    "bidi-js": "^1.0.3",
+    "compression": "^1.8.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "exceljs": "^4.4.0",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "multer": "^2.0.2",
+    "pdfkit": "^0.17.2",
+    "pg": "^8.18.0",
+    "prisma": "^5.18.0",
+    "uuid": "^13.0.0",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/jest": "^30.0.0",
+    "eslint": "^10.0.0",
+    "globals": "^17.3.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
+    "supertest": "^7.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "lodash": "^4.17.22",
+    "hono": "^4.11.7",
+    "chevrotain": "^11.0.0"
+  }
+}

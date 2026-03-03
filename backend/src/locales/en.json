@@ -1,0 +1,21 @@
+{
+  "errors": {
+    "UNAUTHORIZED": "Unauthorized access",
+    "INVALID_CREDENTIALS": "Invalid email or password",
+    "FORBIDDEN": "Access denied",
+    "NOT_FOUND": "Resource not found",
+    "VALIDATION_ERROR": "Validation failed",
+    "CONFLICT": "Conflict with an existing record",
+    "PAYLOAD_TOO_LARGE": "File too large",
+    "TOO_MANY_REQUESTS": "Too many requests. Please try again later.",
+    "INTERNAL_ERROR": "An internal server error occurred",
+    "BIOMETRIC_FAILED": "Face verification required active shift",
+    "MUST_CHANGE_PASSWORD": "You must change your password before accessing this resource",
+    "IDENTITY_NOT_VERIFIED": "Identity verification required",
+    "TOKEN_EXPIRED": "Token expired",
+    "INVALID_TOKEN": "Invalid token",
+    "MISSING_HEADER": "Missing or invalid authorization header",
+    "REPORT_EMPTY_DATA": "No completed trips found in this period"
+  }
+
+}

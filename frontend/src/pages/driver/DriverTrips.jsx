@@ -1,0 +1,153 @@
+import { useState, useEffect, useContext } from 'react';
+import { useTranslation } from 'react-i18next';
+import { tripService as api } from '../../services/trip.service';
+import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle } from 'lucide-react';
+import { ToastContext } from '../../contexts/toastContext';
+import { useShift } from '../../contexts/ShiftContext';
+
+const STATUS_BADGES = { ASSIGNED: 'badge-info', IN_PROGRESS: 'badge-warning', COMPLETED: 'badge-success', CANCELLED: 'badge-danger' };
+
+export default function DriverTrips() {
+  const { t } = useTranslation();
+  const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(null);
+  const { addToast } = useContext(ToastContext);
+  const { activeShift } = useShift();
+
+  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      load();
+    };
+
+    window.addEventListener('ws:trip_assigned', handleUpdate);
+    window.addEventListener('ws:trip_cancelled', handleUpdate);
+    window.addEventListener('ws:trip_completed', handleUpdate);
+
+    return () => {
+      window.removeEventListener('ws:trip_assigned', handleUpdate);
+      window.removeEventListener('ws:trip_cancelled', handleUpdate);
+      window.removeEventListener('ws:trip_completed', handleUpdate);
+    };
+  }, []);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await api.getTrips('limit=20');
+      setTrips(res.data.trips || []);
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  }
+
+  async function handleStart(id) {
+    setActionLoading(id);
+    try {
+      await api.startTrip(id);
+      load();
+    } catch (err) {
+      const code = err.errorCode || err.code;
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleComplete(id) {
+    setActionLoading(id);
+    try {
+      await api.completeTrip(id);
+      load();
+    } catch (err) {
+      const code = err.errorCode || err.code;
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  if (loading) return <div className="loading-page"><div className="spinner"></div></div>;
+
+  return (
+    <div>
+      <h2 className="page-title" style={{ marginBottom: 'var(--space-lg)' }}>{t('trip.my_trips')}</h2>
+
+      {!activeShift && (
+        <div className="alert alert-warning mb-md">
+          <AlertTriangle size={20} />
+          <div>{t('trip.no_active_shift_warning') || 'You must start a shift to begin trips.'}</div>
+        </div>
+      )}
+
+      {trips.length === 0 ? (
+        <div className="card empty-state">
+          <Route size={40} style={{ opacity: 0.3, margin: '0 auto 0.5rem' }} />
+          <p>{t('trip.no_trips')}</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          {trips.map(trip => (
+            <div key={trip.id} className="card">
+              <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-md)' }}>
+                <span className={`badge ${STATUS_BADGES[trip.status]}`}>{t(`common.trip_status.${trip.status.toLowerCase()}`, trip.status)}</span>
+                <span className="text-sm text-muted">{trip.price} {t('trip.price_unit')}</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 'var(--space-md)' }}>
+                <div className="flex items-center gap-sm">
+                  <MapPin size={14} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
+                  <span className="text-sm">{trip.pickupLocation}</span>
+                </div>
+                <div className="flex items-center gap-sm">
+                  <MapPin size={14} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
+                  <span className="text-sm">{trip.dropoffLocation}</span>
+                </div>
+                {trip.scheduledTime && (
+                  <div className="flex items-center gap-sm">
+                    <Clock size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
+                    <span className="text-sm text-muted">{new Date(trip.scheduledTime).toLocaleString()}</span>
+                  </div>
+                )}
+
+                {/* Passenger Info */}
+                {trip.passengers && trip.passengers.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #eee' }}>
+                    <div className="text-xs font-bold text-muted uppercase mb-xs">{t('trip.passenger')}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-sm">
+                        <User size={14} />
+                        <span className="text-sm">{trip.passengers[0].name || t('trip.passenger')}</span>
+                      </div>
+                      <div className="flex items-center gap-sm text-primary">
+                        <Phone size={14} />
+                        <a href={`tel:${trip.passengers[0].phone}`} className="text-sm font-medium" style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {trip.passengers[0].phone || t('trip.no_phone')}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-sm text-muted">
+                        <span className="text-sm font-medium">{t('trip.bags')}: {trip.passengers[0].bags || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {trip.status === 'ASSIGNED' && (
+                <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
+                  <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
+                </button>
+              )}
+              {trip.status === 'IN_PROGRESS' && (
+                <button className="btn btn-success" onClick={() => handleComplete(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
+                  <CheckCircle size={16} /> {t('trip.complete_trip')}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

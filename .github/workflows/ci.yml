@@ -1,0 +1,103 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ main]
+  pull_request:
+    branches: [ main]
+  workflow_dispatch:
+
+jobs:
+  backend-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+        
+      - name: Run Lint
+        working-directory: backend
+        run: npm run lint
+        
+      - name: Run Tests
+        working-directory: backend
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: test-secret-key-at-least-32-characters-long
+
+  frontend-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run Build
+        working-directory: frontend
+        run: npm run build
+          
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Validate Backend Docker Build
+        working-directory: backend
+        run: |
+          docker build . --file Dockerfile --tag fleet-backend-test:latest
+          
+      - name: Validate Frontend Docker Build
+        working-directory: frontend
+        run: |
+          docker build . --file Dockerfile --tag fleet-frontend-test:latest
+          
+  infrastructure-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        
+      - name: Terraform Format Check
+        working-directory: terraform
+        run: terraform fmt -check
+        
+      - name: Terraform Init
+        working-directory: terraform
+        run: |
+          export TF_DATA_DIR="$(mktemp -d)"
+          terraform init -backend=false -input=false
+        
+      - name: Terraform Validate
+        working-directory: terraform
+        run: |
+          export TF_DATA_DIR="$(mktemp -d)"
+          terraform init -backend=false -input=false
+          terraform validate

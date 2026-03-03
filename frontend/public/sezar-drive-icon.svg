@@ -1,0 +1,34 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rounded Square Base with Premium Gradient -->
+  <rect width="512" height="512" rx="120" fill="url(#bg_gradient)"/>
+  
+  <!-- Subtle Glassmorphism Effect -->
+  <rect x="0" y="0" width="512" height="512" rx="120" fill="white" fill-opacity="0.03"/>
+  <rect x="1" y="1" width="510" height="510" rx="119" stroke="white" stroke-opacity="0.1" stroke-width="2"/>
+
+  <!-- Steering Wheel & Car Front Silhouette -->
+  <!-- Inner Ring / Horizon -->
+  <circle cx="256" cy="240" r="180" stroke="url(#accent_gradient)" stroke-width="12" stroke-opacity="0.2"/>
+  
+  <!-- Car Silhouette (Modern Sleek) -->
+  <path d="M160 320C160 320 170 280 200 270C230 260 282 260 312 270C342 280 352 320 352 320L360 350H152L160 320Z" fill="url(#accent_gradient)" fill-opacity="0.9"/>
+  <path d="M200 300L220 310H292L312 300" stroke="white" stroke-width="4" stroke-opacity="0.5" stroke-linecap="round"/>
+  
+  <!-- Steering Wheel Arc -->
+  <path d="M120 280C100 240 100 180 140 130C180 80 260 70 320 90C380 110 410 170 400 240C390 280 360 315 320 335" 
+        stroke="url(#accent_gradient)" stroke-width="32" stroke-linecap="round"/>
+
+  <!-- Logo Monogram 'SD' -->
+  <text x="256" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="64" fill="white" style="text-shadow: 0 0 20px #22D3EE">SD</text>
+
+  <defs>
+    <linearGradient id="bg_gradient" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <linearGradient id="accent_gradient" x1="120" y1="80" x2="400" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22D3EE"/>
+      <stop offset="1" stop-color="#818CF8"/>
+    </linearGradient>
+  </defs>
+</svg>

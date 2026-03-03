@@ -1,0 +1,14 @@
+# --- Required Variables ---
+
+# Your public IP address for SSH access. Get it from: https://ifconfig.me/ip
+# Example: ssh_cidr_blocks = ["1.2.3.4/32"]
+ssh_cidr_blocks = ["REPLACE_WITH_YOUR_IP/32"]
+
+# The name of your existing AWS EC2 Key Pair
+key_name        = "your-aws-ssh-key-name"
+
+# --- Optional Overrides ---
+
+# aws_region    = "us-east-1"
+# project_name  = "sezar-drive"
+# instance_type = "c7i-flex.large"

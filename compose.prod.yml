@@ -1,0 +1,96 @@
+# Fleet Management Platform — Production Docker Compose
+# Usage: docker compose -f compose.prod.yml up -d
+
+services:
+  # ─── Reverse Proxy (SSL) ────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: fleet-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+      EMAIL_FOR_SSL: ${EMAIL_FOR_SSL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ─── Redis (Cache/Socket.IO) ──────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: fleet-redis-prod
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - app-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ─── Backend API ────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fleet-backend-prod
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/api/v1/ready', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    env_file: .env
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      RUN_MIGRATIONS_ON_STARTUP: "true"
+      RUN_SEED_ON_STARTUP: "true"
+    networks:
+      - app-net
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ─── Frontend ───────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fleet-frontend-prod
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - app-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  redis_data_prod:
+  caddy_data:
+  caddy_config:

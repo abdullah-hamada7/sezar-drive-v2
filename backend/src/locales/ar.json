@@ -1,0 +1,21 @@
+{
+  "errors": {
+    "UNAUTHORIZED": "دخول غير مصرح به",
+    "INVALID_CREDENTIALS": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+    "FORBIDDEN": "تم رفض الوصول",
+    "NOT_FOUND": "المورد غير موجود",
+    "VALIDATION_ERROR": "فشل التحقق من البيانات",
+    "CONFLICT": "تعارض مع سجل موجود",
+    "PAYLOAD_TOO_LARGE": "الملف كبير جداً",
+    "TOO_MANY_REQUESTS": "طلبات كثيرة جداً. يرجى المحاولة لاحقاً.",
+    "INTERNAL_ERROR": "حدث خطأ داخلي في الخادم",
+    "BIOMETRIC_FAILED": "مطلوب التحقق من الوجه قبل تفعيل المناوبة",
+    "MUST_CHANGE_PASSWORD": "يجب تغيير كلمة المرور قبل الوصول إلى هذا المورد",
+    "IDENTITY_NOT_VERIFIED": "مطلوب التحقق من الهوية",
+    "TOKEN_EXPIRED": "انتهت صلاحية الجلسة",
+    "INVALID_TOKEN": "رمز غير صالح",
+    "MISSING_HEADER": "رأس التفويض مفقود",
+    "REPORT_EMPTY_DATA": "لا توجد رحلات مكتملة في هذه الفترة"
+  }
+
+}
