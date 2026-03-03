@@ -23,38 +23,8 @@ async function createDriver(data, adminId, ipAddress) {
   });
   if (existing) {
     if (!existing.isActive) {
-      // Reactivate and update existing soft-deleted driver
-      const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
-      const updated = await prisma.user.update({
-        where: { id: existing.id },
-        data: {
-          name,
-          email, // potentially same
-          phone, // potentially same
-          passwordHash,
-          licenseNumber,
-          avatarUrl,
-          idCardFront,
-          idCardBack,
-          isActive: true,
-          mustChangePassword: true,
-          identityVerified: !!(idCardFront && idCardBack), // Verify only if docs are provided
-        },
-      });
-
-      await AuditService.log({
-        actorId: adminId,
-        actionType: 'driver.reactivated',
-        entityType: 'driver',
-        entityId: existing.id,
-        newState: { name, email, phone, licenseNumber, isActive: true },
-        ipAddress,
-      });
-
-      delete updated.passwordHash;
-      return updated;
+      throw new ConflictError('USER_DEACTIVATED', 'A deactivated user with this email or phone already exists. Please reactivate them instead.');
     }
-
     if (existing.email === email) {
       throw new ConflictError('EMAIL_ALREADY_EXISTS', 'User with this email already exists');
     }
@@ -240,4 +210,34 @@ function validatePasswordPolicy(password) {
   if (!/[0-9]/.test(password)) throw new ValidationError('Password must contain a number');
 }
 
-module.exports = { createDriver, getDrivers, getDriverById, updateDriver, deactivateDriver };
+/**
+ * Reactivate a deactivated driver.
+ */
+async function reactivateDriver(id, adminId, ipAddress) {
+  const driver = await prisma.user.findUnique({ where: { id } });
+  if (!driver) throw new NotFoundError('Driver');
+
+  if (driver.isActive) {
+    throw new ConflictError('ALREADY_ACTIVE', 'Driver is already active');
+  }
+
+  const updated = await prisma.user.update({
+    where: { id },
+    data: { isActive: true },
+  });
+
+  await AuditService.log({
+    actorId: adminId,
+    actionType: 'driver.reactivated',
+    entityType: 'driver',
+    entityId: id,
+    previousState: { isActive: false },
+    newState: { isActive: true },
+    ipAddress,
+  });
+
+  delete updated.passwordHash;
+  return await fileService.signDriverUrls(updated);
+}
+
+module.exports = { createDriver, getDrivers, getDriverById, updateDriver, deactivateDriver, reactivateDriver };

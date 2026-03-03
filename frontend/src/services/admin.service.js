@@ -11,5 +11,9 @@ export const adminService = {
 
     deactivateAdmin(id) {
         return http.delete(`/admins/${id}`);
+    },
+
+    reactivateAdmin(id) {
+        return http.patch(`/admins/${id}/reactivate`);
     }
 };

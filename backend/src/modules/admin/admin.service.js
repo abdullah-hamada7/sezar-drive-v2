@@ -17,30 +17,7 @@ async function createAdmin(data, superAdminId, ipAddress) {
     });
     if (existing) {
         if (!existing.isActive) {
-            // Reactivate soft-deleted admin
-            const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
-            const updated = await prisma.user.update({
-                where: { id: existing.id },
-                data: {
-                    name,
-                    passwordHash,
-                    adminRole: adminRole || 'SYSTEM_ADMIN',
-                    isActive: true,
-                    mustChangePassword: true,
-                },
-            });
-
-            await AuditService.log({
-                actorId: superAdminId,
-                actionType: 'admin.reactivated',
-                entityType: 'admin',
-                entityId: existing.id,
-                newState: { name, email, adminRole },
-                ipAddress,
-            });
-
-            delete updated.passwordHash;
-            return updated;
+            throw new ConflictError('USER_DEACTIVATED', 'A deactivated admin with this email exists. Please reactivate them instead.');
         }
 
         throw new ConflictError('USER_ALREADY_EXISTS', 'User with this email already exists');
@@ -128,4 +105,31 @@ async function deactivateAdmin(id, superAdminId, ipAddress) {
     return { message: 'Admin deactivated' };
 }
 
-module.exports = { createAdmin, getAdmins, deactivateAdmin };
+async function reactivateAdmin(id, superAdminId, ipAddress) {
+    const admin = await prisma.user.findUnique({ where: { id } });
+    if (!admin) throw new NotFoundError('Admin');
+
+    if (admin.isActive) {
+        throw new ConflictError('ALREADY_ACTIVE', 'Admin is already active');
+    }
+
+    const updated = await prisma.user.update({
+        where: { id },
+        data: { isActive: true },
+    });
+
+    await AuditService.log({
+        actorId: superAdminId,
+        actionType: 'admin.reactivated',
+        entityType: 'admin',
+        entityId: id,
+        previousState: { isActive: false },
+        newState: { isActive: true },
+        ipAddress,
+    });
+
+    delete updated.passwordHash;
+    return updated;
+}
+
+module.exports = { createAdmin, getAdmins, deactivateAdmin, reactivateAdmin };

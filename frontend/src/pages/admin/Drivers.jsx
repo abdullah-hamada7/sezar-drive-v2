@@ -153,6 +153,9 @@ export default function DriversPage() {
         await api.deleteDriver(data.id);
       } else if (type === 'approve') {
         await api.reviewIdentity(data.id, { action: 'approve' });
+      } else if (type === 'reactivate') {
+        await api.reactivateDriver(data.id);
+        addToast(t('drivers.messages.updated') || 'Driver reactivated successfully', 'success');
       }
       load();
     } catch (err) {
@@ -241,17 +244,29 @@ export default function DriversPage() {
                       </button>
                       {!d.identityVerified && (
                         <button
-                          className="btn-icon"
+                          className="btn-icon text-success"
                           onClick={() => handleApprove(d)}
                           title={t('nav.verification')}
-                          style={{ color: 'var(--color-success)' }}
                         >
                           <UserCheck size={16} />
                         </button>
                       )}
-                      <button className="btn-icon" onClick={() => handleDelete(d.id)} title={t('common.delete')} style={{ color: 'var(--color-danger)' }}>
-                        <Trash2 size={16} />
-                      </button>
+                      {d.isActive ? (
+                        <button
+                          className="btn-icon text-danger"
+                          onClick={() => handleDelete(d.id)}
+                          title={t('common.delete')}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => setConfirmData({ isOpen: true, type: 'reactivate', data: { id: d.id, name: d.name } })}
+                        >
+                          {t('drivers.actions.reactivate')}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -416,10 +431,16 @@ export default function DriversPage() {
         isOpen={confirmData.isOpen}
         onClose={() => setConfirmData({ isOpen: false, type: '', data: null })}
         onConfirm={onConfirmAction}
-        title={confirmData.type === 'delete' ? t('common.delete') : t('common.shift_verification_status.verified')}
-        message={confirmData.type === 'delete'
-          ? t('drivers.messages.delete_confirm')
-          : t('drivers.messages.approve_confirm', { name: confirmData.data?.name })}
+        title={
+          confirmData.type === 'delete' ? t('common.delete')
+            : confirmData.type === 'reactivate' ? t('common.actions.reactivate')
+              : t('common.shift_verification_status.verified')
+        }
+        message={
+          confirmData.type === 'delete' ? t('drivers.messages.delete_confirm')
+            : confirmData.type === 'reactivate' ? t('drivers.messages.reactivate_confirm', { name: confirmData.data?.name })
+              : t('drivers.messages.approve_confirm', { name: confirmData.data?.name })
+        }
         variant={confirmData.type === 'delete' ? 'danger' : 'success'}
       />
     </div>

@@ -18,7 +18,7 @@ test.describe('Fleet Management E2E', () => {
     await page.click('button[type="submit"]');
 
     // Verify Admin Dashboard
-    await expect(page.getByText('Fleet operations overview')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sezar Drive overview')).toBeVisible({ timeout: 10000 });
 
     // 2. Create Driver
     await page.click('a[href="/admin/drivers"]');

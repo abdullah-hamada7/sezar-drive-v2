@@ -21,5 +21,8 @@ export const driverService = {
   },
   reviewIdentity(id, data) {
     return http.put(`/auth/identity/${id}/review`, data);
+  },
+  reactivateDriver(id) {
+    return http.patch(`/drivers/${id}/reactivate`);
   }
 };

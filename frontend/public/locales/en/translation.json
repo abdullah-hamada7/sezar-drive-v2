@@ -13,7 +13,8 @@
     "audit_logs": "Audit Logs",
     "verification": "Verification",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "admins": "Admins"
   },
   "nav_driver": {
     "home": "Home",
@@ -288,6 +289,9 @@
       "rejected": "Rejected",
       "failed_match": "Failed Match",
       "manual_review": "Manual Review"
+    },
+    "actions": {
+      "reactivate": "Reactivate"
     }
   },
   "errors": {

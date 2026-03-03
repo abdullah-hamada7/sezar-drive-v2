@@ -64,4 +64,18 @@ router.delete(
     }
 );
 
+// ─── PATCH /api/v1/admins/:id/reactivate ──────────
+router.patch(
+    '/:id/reactivate',
+    authenticate, enforcePasswordChanged, authorizeSuperAdmin,
+    [param('id').isUUID()],
+    async (req, res, next) => {
+        try {
+            handleValidation(req);
+            const result = await adminService.reactivateAdmin(req.params.id, req.user.id, req.clientIp);
+            res.json(result);
+        } catch (err) { next(err); }
+    }
+);
+
 module.exports = router;

@@ -13,7 +13,8 @@
     "audit_logs": "سجلات التدقيق",
     "verification": "التحقق",
     "settings": "الإعدادات",
-    "logout": "تسجيل الخروج"
+    "logout": "تسجيل الخروج",
+    "admins": "المشرفين"
   },
   "nav_driver": {
     "home": "الرئيسية",
@@ -287,6 +288,9 @@
       "rejected": "مرفوض",
       "failed_match": "فشل التطابق",
       "manual_review": "مراجعة يدوية"
+    },
+    "actions": {
+      "reactivate": "تفعيل"
     }
   },
   "errors": {
