@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ToastContext } from '../contexts/toastContext';
+import { useContext } from 'react';
 import { Camera, ShieldAlert, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { authService as api } from '../services/auth.service';
@@ -13,8 +15,8 @@ export default function DeviceVerificationPage() {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const { addToast } = useContext(ToastContext);
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
 
@@ -52,10 +54,9 @@ export default function DeviceVerificationPage() {
         }
       });
       setStream(s);
-      setError('');
     } catch (err) {
       console.error('Camera Access Error:', err);
-      setError(t('inspection.camera_error'));
+      addToast(t('inspection.camera_error'), 'error');
     }
   };
 
@@ -70,7 +71,6 @@ export default function DeviceVerificationPage() {
     if (!videoRef.current || !stream) return;
 
     setLoading(true);
-    setError('');
 
     try {
       const video = videoRef.current;
@@ -123,7 +123,7 @@ export default function DeviceVerificationPage() {
         return;
       }
       const code = err.errorCode || err.code;
-      setError(code ? t(`errors.${code}`) : (err.message || t('common.error')));
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
       setLoading(false);
     }
@@ -146,12 +146,6 @@ export default function DeviceVerificationPage() {
             {t('auth.device_security_desc')}
           </p>
         </div>
-
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
 
         {success ? (
           <div className="verification-success" style={{ textAlign: 'center', padding: '2rem' }}>

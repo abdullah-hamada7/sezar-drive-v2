@@ -108,14 +108,13 @@ export default function TripsPage() {
 
   async function handleCreate(e) {
     e.preventDefault();
-    setError('');
     if (!form.driverId) {
-      setError(t('trips.modal.select_driver'));
+      addToast(t('trips.modal.select_driver'), 'error');
       return;
     }
     const parsedPrice = parseFloat(form.price);
     if (Number.isNaN(parsedPrice)) {
-      setError(t('trips.modal.price_label', { unit: t('common.currency') }));
+      addToast(t('trips.modal.price_label', { unit: t('common.currency') }), 'error');
       return;
     }
     try {
@@ -133,7 +132,7 @@ export default function TripsPage() {
       setRefresh(r => r + 1);
     } catch (err) {
       const driverName = selectedDriverName || drivers.find(d => String(d.id) === String(form.driverId))?.name || '';
-      setError(err.code ? t(`errors.${err.code}`, { name: driverName }) : err.message);
+      addToast(err.code ? t(`errors.${err.code}`, { name: driverName }) : err.message, 'error');
     }
   }
 
@@ -172,7 +171,7 @@ export default function TripsPage() {
             className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => { setStatusFilter(s); setPage(1); }}
           >
-            {s ? t(`common.status.${s.toLowerCase()}`) : t('trips.filter_all')}
+            {s ? t(`common.trip_status.${s.toLowerCase()}`) : t('trips.filter_all')}
           </button>
         ))}
       </div>
@@ -221,14 +220,14 @@ export default function TripsPage() {
                   </td>
                   <td><span className="flex items-center gap-sm"><DollarSign size={14} /> {t_obj.price} {t('common.currency')}</span></td>
                   <td>
-                    <span className={`badge ${STATUS_BADGES[t_obj.status] || 'badge-neutral'}`}>{t(`common.status.${t_obj.status.toLowerCase()}`)}</span>
+                    <span className={`badge ${STATUS_BADGES[t_obj.status] || 'badge-neutral'}`}>{t(`common.trip_status.${t_obj.status.toLowerCase()}`)}</span>
                   </td>
                   <td className="text-muted text-sm">{formatDate(t_obj.createdAt)}</td>
                   <td>
                     <div className="flex gap-sm">
                       <button className="btn-icon" onClick={() => setSelectedTrip(t_obj)} title={t('common.view')}><Eye size={16} /></button>
                       {(t_obj.status === 'ASSIGNED' || t_obj.status === 'IN_PROGRESS') && (
-                        <button className="btn-icon" onClick={() => handleCancel(t_obj.id)} title={t('common.cancel')} style={{ color: 'var(--color-danger)' }}>
+                        <button className="btn-icon text-danger" onClick={() => handleCancel(t_obj.id)} title={t('common.cancel')}>
                           <XCircle size={16} />
                         </button>
                       )}
@@ -258,9 +257,6 @@ export default function TripsPage() {
               <h2 className="modal-title">{t('trips.modal.assign_title')}</h2>
               <button className="btn-icon" onClick={() => setShowCreateModal(false)}><XCircle size={18} /></button>
             </div>
-
-            {error && <div className="alert alert-error">{error}</div>}
-
             <form onSubmit={handleCreate} className="modal-body">
               <div className="form-section mb-md">
                 <div className="form-group mb-md">
@@ -273,7 +269,6 @@ export default function TripsPage() {
                       const selected = drivers.find(d => String(d.id) === String(value));
                       setForm({ ...form, driverId: value });
                       setSelectedDriverName(selected?.name || '');
-                      setError('');
                     }}
                     required
                   >
@@ -298,7 +293,7 @@ export default function TripsPage() {
                 <div className="grid grid-2 gap-md">
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.price_label', { unit: t('common.currency') })}</label>
-                    <input type="number" step="0.01" className="form-input" value={form.price} onChange={e => { setForm({ ...form, price: e.target.value }); setError(''); }} required placeholder="0.00" />
+                    <input type="number" step="0.01" className="form-input" value={form.price} onChange={e => { setForm({ ...form, price: e.target.value }); setError(''); }} required placeholder="0.00" min="0" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.time_label')}</label>
@@ -360,10 +355,13 @@ export default function TripsPage() {
                               setForm({ ...form, passengers: newPassengers });
                             }}
                             required
+                            minLength={2}
+                            maxLength={100}
                           />
                         </div>
                         <div className="form-group">
                           <input
+                            type="tel"
                             className="form-input text-sm"
                             placeholder={t('trips.modal.phone_ph')}
                             value={p.phone}
@@ -372,6 +370,7 @@ export default function TripsPage() {
                               newPassengers[idx].phone = e.target.value;
                               setForm({ ...form, passengers: newPassengers });
                             }}
+                            pattern="^\+?(\d[\d\-\s\(\)]*){6,20}$"
                           />
                         </div>
                         <div className="form-group">
@@ -384,6 +383,7 @@ export default function TripsPage() {
                               newPassengers[idx].pickup = e.target.value;
                               setForm({ ...form, passengers: newPassengers });
                             }}
+                            maxLength={200}
                           />
                         </div>
                         <div className="form-group">
@@ -432,7 +432,7 @@ export default function TripsPage() {
                   <div className="flex flex-col gap-md">
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.details.status')}</span>
-                      <span className={`badge ${STATUS_BADGES[selectedTrip.status]}`}>{t(`common.status.${selectedTrip.status.toLowerCase()}`)}</span>
+                      <span className={`badge ${STATUS_BADGES[selectedTrip.status]}`}>{t(`common.trip_status.${selectedTrip.status.toLowerCase()}`)}</span>
                     </div>
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.table.driver')}</span>
@@ -481,7 +481,7 @@ export default function TripsPage() {
                   </h3>
                   <div className="flex flex-col gap-sm">
                     {!selectedTrip.passengers || selectedTrip.passengers.length === 0 ? (
-                      <p className="text-sm text-muted italic">{t('trips.table.empty')}</p>
+                      <p className="text-sm text-muted italic">{t('trips.modal.no_passengers')}</p>
                     ) : selectedTrip.passengers.map((p, idx) => (
                       <div key={idx} className="card p-md" style={{ background: 'var(--color-bg-subtle)' }}>
                         <div className="font-semibold text-primary mb-xs">{p.name}</div>

@@ -130,10 +130,10 @@ export default function DriversPage() {
           backendErrs[e.path || e.param] = e.msg;
         });
         setFieldErrors(prev => ({ ...prev, ...backendErrs }));
-        setError(t('common.errors.validation_failed'));
+        addToast(t('common.errors.validation_failed'), 'error');
       } else {
         const msg = err.errorCode ? t(`errors.${err.errorCode}`) : (err.message || t('drivers.messages.op_failed'));
-        setError(msg);
+        addToast(msg, 'error');
       }
     }
   }
@@ -293,9 +293,6 @@ export default function DriversPage() {
               <h2 className="modal-title">{editDriver ? t('drivers.modal.edit_title') : t('drivers.modal.add_title')}</h2>
               <button className="btn-icon" onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
-
-            {error && <div className="alert alert-error">{error}</div>}
-
             <form onSubmit={handleSubmit} className="modal-body">
               <div className="form-section mb-md">
                 <label className="form-label mb-sm" style={{ display: 'block' }}>{t('drivers.modal.photos_section')}</label>
@@ -348,6 +345,8 @@ export default function DriversPage() {
                     value={form.name}
                     onChange={e => { setForm({ ...form, name: e.target.value }); validateField('name', e.target.value); }}
                     required
+                    minLength={2}
+                    maxLength={100}
                   />
                   {fieldErrors.name && <span className="text-xs text-danger">{fieldErrors.name}</span>}
                 </div>
@@ -361,6 +360,7 @@ export default function DriversPage() {
                     onChange={e => { setForm({ ...form, email: e.target.value }); validateField('email', e.target.value); }}
                     required
                     disabled={!!editDriver}
+                    maxLength={150}
                   />
                   {fieldErrors.email && <span className="text-xs text-danger">{fieldErrors.email}</span>}
                 </div>
@@ -377,6 +377,8 @@ export default function DriversPage() {
                     }}
                     required
                     placeholder={t('drivers.modal.phone_placeholder')}
+                    type="tel"
+                    pattern="^\+?(\d[\d\-\s\(\)]*){6,20}$"
                   />
                   {fieldErrors.phone && <span className="text-xs text-danger">{fieldErrors.phone}</span>}
                 </div>
@@ -392,6 +394,8 @@ export default function DriversPage() {
                       validateField('licenseNumber', val);
                     }}
                     placeholder={t('drivers.modal.license_placeholder')}
+                    minLength={2}
+                    maxLength={50}
                   />
                   {fieldErrors.licenseNumber && <span className="text-xs text-danger">{fieldErrors.licenseNumber}</span>}
                 </div>
@@ -407,6 +411,8 @@ export default function DriversPage() {
                     onChange={e => { setForm({ ...form, password: e.target.value }); validateField('password', e.target.value); }}
                     required={!editDriver}
                     placeholder={t('drivers.modal.password_hint')}
+                    minLength={8}
+                    maxLength={100}
                   />
                   {fieldErrors.password && <span className="text-xs text-danger">{fieldErrors.password}</span>}
                 </div>

@@ -88,7 +88,7 @@ export default function VehiclesPage() {
       load();
     } catch (err) {
       const msg = err.errorCode ? t(`errors.${err.errorCode}`) : (err.message || t('vehicles.messages.op_failed'));
-      setError(msg);
+      addToast(msg, 'error');
     }
   }
 
@@ -227,19 +227,16 @@ export default function VehiclesPage() {
                 <h2 className="modal-title">{editVehicle ? t('vehicles.modal.edit_title') : t('vehicles.modal.add_title')}</h2>
                 <button className="btn-icon" onClick={() => setShowModal(false)}><X size={18} /></button>
               </div>
-
-              {error && <div className="alert alert-error">{error}</div>}
-
               <form onSubmit={handleSubmit} className="modal-body">
                 <div className="form-section mb-md">
                   <div className="grid grid-2 gap-md">
                     <div className="form-group">
                       <label className="form-label">{t('vehicles.modal.plate_label')}</label>
-                      <input className="form-input" name="plateNumber" value={form.plateNumber} onChange={e => setForm({ ...form, plateNumber: e.target.value })} required placeholder={t('vehicles.modal.plate_placeholder')} />
+                      <input className="form-input" name="plateNumber" value={form.plateNumber} onChange={e => setForm({ ...form, plateNumber: e.target.value })} required placeholder={t('vehicles.modal.plate_placeholder')} minLength={2} maxLength={50} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">{t('vehicles.modal.model_label')}</label>
-                      <input className="form-input" name="model" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} required placeholder={t('vehicles.modal.model_placeholder')} />
+                      <input className="form-input" name="model" value={form.model} onChange={e => setForm({ ...form, model: e.target.value })} required placeholder={t('vehicles.modal.model_placeholder')} minLength={2} maxLength={100} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">{t('vehicles.modal.year_label')}</label>

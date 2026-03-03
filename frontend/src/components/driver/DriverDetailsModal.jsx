@@ -45,7 +45,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
               <h3 className="text-xl font-bold mb-xs" style={{ color: 'var(--color-text-primary)' }}>{driver.name}</h3>
               <div className="flex items-center gap-xs" style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                 <CreditCard size={14} />
-                {driver.licenseNumber || t('common.not_provided') || 'Not Provided'}
+                {driver.licenseNumber || t('drivers.modal.not_provided')}
               </div>
             </div>
           </div>
@@ -54,7 +54,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
           <div className="grid grid-2 gap-lg mb-xl">
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="text-xs uppercase tracking-wider font-bold mb-xs block" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('common.email') || 'Email'}
+                {t('drivers.table.email')}
               </label>
               <div style={{
                 padding: 'var(--space-sm) var(--space-md)',
@@ -69,7 +69,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="text-xs uppercase tracking-wider font-bold mb-xs block" style={{ color: 'var(--color-text-secondary)' }}>
-                {t('common.phone') || 'Phone'}
+                {t('drivers.table.phone')}
               </label>
               <div style={{
                 padding: 'var(--space-sm) var(--space-md)',
@@ -78,7 +78,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                 border: '1px solid var(--color-border-subtle)',
                 color: 'var(--color-text-primary)'
               }}>
-                {driver.phone || '—'}
+                {driver.phone || t('drivers.modal.not_provided')}
               </div>
             </div>
           </div>
@@ -86,12 +86,12 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
           {/* ID Cards Section */}
           <div>
             <label className="text-xs uppercase tracking-wider font-bold mb-sm block" style={{ color: 'var(--color-text-secondary)' }}>
-              {t('drivers.modal.id_cards') || 'Identity Documents'}
+              {t('drivers.modal.id_cards')}
             </label>
             <div className="grid grid-2 gap-md">
               <div className="flex flex-col gap-xs">
                 <span className="text-xs mb-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('drivers.modal.id_card_front') || 'ID Front'}
+                  {t('drivers.modal.id_card_front')}
                 </span>
                 {driver.idCardFront ? (
                   <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-subtle)', height: '140px' }}>
@@ -104,13 +104,13 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'var(--color-text-muted)', fontSize: '0.875rem'
                   }}>
-                    {t('common.not_uploaded') || 'Pending'}
+                    {t('drivers.modal.not_uploaded')}
                   </div>
                 )}
               </div>
               <div className="flex flex-col gap-xs">
                 <span className="text-xs mb-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {t('drivers.modal.id_card_back') || 'ID Back'}
+                  {t('drivers.modal.id_card_back')}
                 </span>
                 {driver.idCardBack ? (
                   <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-subtle)', height: '140px' }}>
@@ -123,7 +123,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'var(--color-text-muted)', fontSize: '0.875rem'
                   }}>
-                    {t('common.not_uploaded') || 'Pending'}
+                    {t('drivers.modal.not_uploaded')}
                   </div>
                 )}
               </div>
@@ -133,7 +133,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
 
         <div className="modal-footer" style={{ padding: 'var(--space-md) var(--space-lg)', borderTop: '1px solid var(--color-border-subtle)', background: 'var(--color-bg-secondary)' }}>
           <button className="btn btn-secondary w-full" onClick={onClose} style={{ padding: '0.75rem' }}>
-            {t('common.close') || 'Close'}
+            {t('drivers.modal.close')}
           </button>
         </div>
       </div>

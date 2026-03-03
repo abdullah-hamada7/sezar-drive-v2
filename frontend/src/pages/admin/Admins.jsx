@@ -194,18 +194,15 @@ export default function AdminsPage() {
               <h2 className="modal-title">Create System Admin</h2>
               <button className="btn-icon" onClick={closeModal}><XCircle size={18} /></button>
             </div>
-
-            {error && <div className="alert alert-error mb-md">{error}</div>}
-
             <form onSubmit={handleSubmit} className="modal-body">
               <div className="grid grid-2 gap-md mb-md">
                 <div className="form-group">
                   <label className="form-label">{t('auth.name')}</label>
-                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required minLength={2} maxLength={100} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('auth.email')}</label>
-                  <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+                  <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required maxLength={150} />
                 </div>
               </div>
 
@@ -226,6 +223,9 @@ export default function AdminsPage() {
                     value={form.temporaryPassword}
                     onChange={e => setForm({ ...form, temporaryPassword: e.target.value })}
                     required
+                    minLength={8}
+                    maxLength={100}
+                    pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
                   />
                   <div className="text-xs text-muted mt-xs">Required: 1 uppercase, 1 number, 8 chars min.</div>
                 </div>

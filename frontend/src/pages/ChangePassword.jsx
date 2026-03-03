@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { ToastContext } from '../contexts/toastContext';
 import { useAuth } from '../hooks/useAuth';
 import { authService as api } from '../services/auth.service';
 import { http } from '../services/http.service';
@@ -15,20 +16,19 @@ export default function ChangePasswordPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { addToast } = useContext(ToastContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
 
     if (newPassword !== confirmPassword) {
-      setError(t('auth.passwords_dont_match'));
+      addToast(t('auth.passwords_dont_match'), 'error');
       return;
     }
     if (newPassword.length < 8) {
-      setError(t('drivers.modal.password_invalid'));
+      addToast(t('drivers.modal.password_invalid'), 'error');
       return;
     }
 
@@ -56,7 +56,7 @@ export default function ChangePasswordPage() {
     } catch (err) {
       const code = err.errorCode || err.code;
       const msg = code ? t(`errors.${code}`) : (err.message || t('auth.change_password_failed'));
-      setError(msg);
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -88,8 +88,6 @@ export default function ChangePasswordPage() {
           </div>
         ) : (
           <>
-            {error && <div className="alert alert-error">{error}</div>}
-
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
                 <label className="form-label">{t('auth.current_password')}</label>

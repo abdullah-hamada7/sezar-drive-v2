@@ -111,9 +111,8 @@ export default function DriverTrips() {
                   </div>
                 )}
 
-                {/* Passenger Info */}
                 {trip.passengers && trip.passengers.length > 0 && (
-                  <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #eee' }}>
+                  <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--color-border-subtle)' }}>
                     <div className="text-xs font-bold text-muted uppercase mb-xs">{t('trip.passenger')}</div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-sm">

@@ -65,52 +65,21 @@ export default function DriverHome() {
 
   const isShiftActive = activeShift?.status === 'Active';
   const isShiftPending = activeShift?.status === 'PendingVerification';
-  const isLight = theme === 'light';
-
-  const pageStyle = isLight
-    ? {
-        background: 'linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%)',
-        border: '1px solid #e2e8f0',
-        borderRadius: 'var(--radius-xl)',
-        padding: 'var(--space-lg)'
-      }
-    : undefined;
-
-  const profileCardStyle = isLight
-    ? {
-        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.08)'
-      }
-    : undefined;
-
-  const statusCardStyle = (accent, bg) => (
-    isLight
-      ? {
-          borderColor: accent,
-          background: bg,
-          boxShadow: '0 6px 16px rgba(15, 23, 42, 0.06)'
-        }
-      : {
-          borderColor: accent,
-          background: bg
-        }
-  );
 
   return (
-    <div style={pageStyle}>
+    <div>
 
       {/* Profile & Avatar */}
-      <div className="card glass-card mb-md flex items-center justify-between" style={profileCardStyle}>
+      <div className="card glass-card mb-md flex items-center justify-between">
         <div className="flex items-center gap-md">
-          <div className="glow-effect" style={{ width: 64, height: 64, borderRadius: 'var(--radius-full)', background: isLight ? '#f1f5f9' : 'var(--color-bg-tertiary)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${isLight ? '#0f172a' : 'var(--color-primary)'}`, boxShadow: isLight ? '0 6px 16px rgba(15, 23, 42, 0.12)' : 'var(--shadow-glow)' }}>
+          <div className="glow-effect" style={{ width: 64, height: 64, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-tertiary)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--color-primary)', boxShadow: 'var(--shadow-glow)' }}>
             {user?.avatarUrl || user?.profilePhotoUrl
               ? <img src={user.avatarUrl || user.profilePhotoUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : <User size={32} className="text-primary" />}
           </div>
           <div>
-            <div className={isLight ? 'text-xl font-bold leading-tight' : 'text-xl font-bold text-gradient leading-tight'} style={isLight ? { color: '#0f172a' } : undefined}>{user?.name}</div>
-            <div className="text-sm text-muted opacity-80" style={isLight ? { color: '#475569' } : undefined}>{user?.email}</div>
+            <div className="text-xl font-bold text-gradient leading-tight">{user?.name}</div>
+            <div className="text-sm text-muted opacity-80">{user?.email}</div>
             <div className="mt-xs">
               <span className={`badge ${user?.identityVerified ? 'badge-success' : 'badge-warning'} text-[10px] px-sm py-0`}>
                 {user?.identityVerified ? t('common.status.verified') : t('common.status.pending')}
@@ -133,7 +102,7 @@ export default function DriverHome() {
 
       {/* Shift Status */}
       {isShiftActive && (
-        <div className="card mb-md" style={statusCardStyle('var(--color-success)', 'var(--color-success-bg)')}>
+        <div className="card mb-md" style={{ borderColor: 'var(--color-success)', background: 'rgba(34, 197, 94, 0.1)' }}>
           <div className="flex items-center gap-md">
             <ClipboardCheck size={24} style={{ color: 'var(--color-success)' }} />
             <div>
@@ -144,7 +113,7 @@ export default function DriverHome() {
         </div>
       )}
       {isShiftPending && (
-        <div className="card mb-md" style={statusCardStyle('var(--color-warning)', 'var(--color-warning-bg)')}>
+        <div className="card mb-md" style={{ borderColor: 'var(--color-warning)', background: 'rgba(245, 158, 11, 0.1)' }}>
           <div className="flex items-center gap-md">
             <ClipboardCheck size={24} style={{ color: 'var(--color-warning)' }} />
             <div>

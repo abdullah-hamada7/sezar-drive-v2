@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { ToastContext } from '../contexts/toastContext';
 import { useTranslation } from 'react-i18next';
 import { authService as api } from '../services/auth.service';
 import LanguageSwitcher from '../components/LanguageSwitcher';
@@ -18,8 +19,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [validating, setValidating] = useState(true);
   const [isValid, setIsValid] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const { addToast } = useContext(ToastContext);
 
   const getErrorMessage = useCallback((err) => {
     const code = err.errorCode || err.code;
@@ -39,8 +40,8 @@ export default function ResetPasswordPage() {
         await api.verifyResetToken(token);
         setIsValid(true);
       } catch (err) {
+        addToast(getErrorMessage(err), 'error');
         setIsValid(false);
-        setError(getErrorMessage(err));
       } finally {
         setValidating(false);
       }
@@ -52,17 +53,16 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      return setError(t('auth.passwords_dont_match'));
+      return addToast(t('auth.passwords_dont_match'), 'error');
     }
 
-    setError('');
     setLoading(true);
     try {
       await api.resetPassword(token, newPassword);
       setSuccess(true);
       setTimeout(() => navigate('/login'), 3000);
     } catch (err) {
-      setError(getErrorMessage(err));
+      addToast(getErrorMessage(err), 'error');
       setLoading(false);
     }
   };
@@ -124,8 +124,6 @@ export default function ResetPasswordPage() {
           </div>
         ) : (
           <>
-            {error && <div className="alert alert-error">{error}</div>}
-
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
                 <label className="form-label">{t('auth.new_password')}</label>

@@ -199,9 +199,9 @@ export default function DriverShift() {
         </div>
       ) : shift.status === 'PendingVerification' ? (
         <div className="security-gate-container">
-          <div className="card glass-card" style={{ marginBottom: 'var(--space-lg)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+          <div className="card glass-card" style={{ marginBottom: 'var(--space-lg)', border: '1px solid var(--color-warning)' }}>
             <div className="flex items-center gap-md mb-lg">
-              <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}>
+              <div className="stat-icon" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)' }}>
                 <ShieldCheck size={24} />
               </div>
               <div>
@@ -218,7 +218,7 @@ export default function DriverShift() {
                 style={{
                   cursor: isVerified ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem', background: isVerified ? 'rgba(34, 197, 94, 0.05)' : 'var(--color-bg-secondary)'
+                  padding: '1rem', background: isVerified ? 'var(--color-success-bg)' : 'var(--color-bg-secondary)'
                 }}
               >
                 <div style={{ color: isVerified ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
@@ -238,7 +238,7 @@ export default function DriverShift() {
                 style={{
                   cursor: hasVehicle ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '1rem', background: hasVehicle ? 'rgba(34, 197, 94, 0.05)' : 'var(--color-bg-secondary)'
+                  padding: '1rem', background: hasVehicle ? 'var(--color-success-bg)' : 'var(--color-bg-secondary)'
                 }}
               >
                 <div style={{ color: hasVehicle ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
@@ -275,8 +275,10 @@ export default function DriverShift() {
         <div className="card">
           <div className="flex items-center gap-md" style={{ marginBottom: 'var(--space-lg)' }}>
             <div className="stat-icon" style={{
-              background: 'rgba(16, 185, 129, 0.12)',
-              color: '#10b981'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
+              padding: '1.5rem', borderRadius: '0.5rem',
+              background: 'var(--color-success-bg)',
+              color: 'var(--color-success)'
             }}>
               <ShieldCheck size={24} />
             </div>

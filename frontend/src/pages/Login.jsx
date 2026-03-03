@@ -50,7 +50,7 @@ export default function LoginPage() {
         });
       }
     } catch (err) {
-      setError(getErrorMessage(err));
+      addToast(getErrorMessage(err), 'error');
     }
   };
 
@@ -64,7 +64,7 @@ export default function LoginPage() {
       setView('rescue-verify');
       if (res?.message) addToast(res.message, 'success');
     } catch (err) {
-      setError(getErrorMessage(err));
+      addToast(getErrorMessage(err), 'error');
       setRescueLoading(false);
     }
   };
@@ -77,7 +77,7 @@ export default function LoginPage() {
       const res = await api.verifyRescueCode(email, rescueCode);
       navigate(`/reset-password?token=${res.data.resetToken}`);
     } catch (err) {
-      setError(getErrorMessage(err));
+      addToast(getErrorMessage(err), 'error');
       setRescueLoading(false);
     }
   };
@@ -111,12 +111,6 @@ export default function LoginPage() {
             {t('nav.dashboard')}
           </p>
         </div>
-
-        {error && (
-          <div className="alert alert-error">
-            {error}
-          </div>
-        )}
 
         {view === 'login' ? (
           <form onSubmit={handleSubmit} className="login-form">
