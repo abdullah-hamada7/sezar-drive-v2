@@ -9,6 +9,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -26,9 +32,9 @@ jobs:
         working-directory: apps/driver-mobile
         run: npm install
 
-      - name: Build APK (Local)
+      - name: Prebuild Android
         working-directory: apps/driver-mobile
-        run: npx expo export:embed --platform android --dev false
+        run: npx expo prebuild --platform android --no-install
 
       - name: Build Android App (Gradle)
         working-directory: apps/driver-mobile/android
