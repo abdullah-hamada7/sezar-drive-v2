@@ -42,6 +42,38 @@ services:
         limits:
           memory: 256M
 
+  # ─── PostgreSQL Database ────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: fleet-postgres-prod
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - app-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=50"
+      - "-c"
+      - "shared_buffers=64MB"
+      - "-c"
+      - "effective_cache_size=192MB"
+
   # ─── Backend API ────────────────────────────────
   backend:
     build:
@@ -51,20 +83,21 @@ services:
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/api/v1/ready', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
     env_file: .env
     environment:
       PORT: 3000
       NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: redis://redis:6379
       RUN_MIGRATIONS_ON_STARTUP: "true"
       RUN_SEED_ON_STARTUP: "true"
     networks:
       - app-net
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -91,6 +124,7 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data_prod:
   redis_data_prod:
   caddy_data:
   caddy_config:

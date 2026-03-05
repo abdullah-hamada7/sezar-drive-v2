@@ -193,61 +193,6 @@ resource "aws_instance" "sezar_drive" {
   })
 }
 
-# --- RDS PostgreSQL ---
-resource "aws_db_subnet_group" "db_subnet" {
-  name       = "${var.project_name}-db-subnet"
-  subnet_ids = [aws_subnet.public.id, aws_subnet.private_b.id] # RDS normally needs 2 subnets in diff AZs
-  tags       = local.common_tags
-}
-
-resource "aws_subnet" "private_b" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "${var.aws_region}b"
-  tags = merge(local.common_tags, {
-    Name = "${var.project_name}-private-b"
-  })
-}
-
-resource "aws_security_group" "rds_sg" {
-  name        = "${var.project_name}-rds-sg"
-  description = "Allow postgres traffic"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sezar_sg.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_db_instance" "postgres" {
-  identifier             = "${var.project_name}-db"
-  allocated_storage      = 20
-  storage_type           = "gp3"
-  engine                 = "postgres"
-  engine_version         = "16"
-  instance_class         = "db.t4g.micro"
-  db_name                = "sezar_drive"
-  username               = var.db_username
-  password               = var.db_password
-  parameter_group_name   = "default.postgres16"
-  skip_final_snapshot    = true
-  publicly_accessible    = false
-  vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.db_subnet.name
-
-  tags = local.common_tags
-}
-
 # --- DNS & Static IP ---
 resource "aws_eip" "sezar_eip" {
   instance = aws_instance.sezar_drive.id
