@@ -1,0 +1,43 @@
+name: Build Android APK
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: apps/driver-mobile/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-cache: true
+
+      - name: Install dependencies
+        working-directory: apps/driver-mobile
+        run: npm install
+
+      - name: Build APK (Local)
+        working-directory: apps/driver-mobile
+        run: npx expo export:embed --platform android --dev false
+
+      - name: Build Android App (Gradle)
+        working-directory: apps/driver-mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: driver-mobile-apk
+          path: apps/driver-mobile/android/app/build/outputs/apk/release/app-release.apk
