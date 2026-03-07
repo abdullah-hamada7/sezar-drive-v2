@@ -20,6 +20,7 @@ export default function AdminsPage() {
   const [pagination, setPagination] = useState({});
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
 
   const [promptData, setPromptData] = useState({ isOpen: false, adminId: null, actionType: null });
 
@@ -43,6 +44,11 @@ export default function AdminsPage() {
   }, [page, searchTerm, addToast, t]);
 
   useEffect(() => { load(); }, [load]);
+
+  function applySearch() {
+    setPage(1);
+    setSearchTerm(searchInput.trim());
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -116,12 +122,12 @@ export default function AdminsPage() {
             className="input flex-1"
             style={{ border: 'none', background: 'transparent', boxShadow: 'none', padding: 0 }}
             placeholder={t('common.search')}
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && load()}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && applySearch()}
           />
         </div>
-        <button className="btn btn-sm btn-secondary" onClick={load}>{t('common.search')}</button>
+        <button className="btn btn-sm btn-secondary" onClick={applySearch}>{t('common.search')}</button>
       </div>
 
       {loading ? (

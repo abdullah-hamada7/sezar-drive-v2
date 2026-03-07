@@ -77,29 +77,7 @@ async function main() {
       console.log(`  ✅ Super Admin created: ${admin.email}`);
     }
 
-    // 2. Create 5 standard Admins
-    console.log('  ℹ️ Ensuring 5 standard admin accounts exist...');
-    const defaultPasswordHash = await bcrypt.hash('StandardAdmin123!', 12);
-    for (let i = 1; i <= 5; i++) {
-      const email = `admin${i}@sezar.com`;
-      const existing = await prisma.user.findUnique({ where: { email } });
-      if (!existing) {
-        await prisma.user.create({
-          data: {
-            email,
-            phone: `000000001${i}`,
-            name: `Standard Admin ${i}`,
-            passwordHash: defaultPasswordHash,
-            role: 'admin',
-            adminRole: 'ADMIN',
-            mustChangePassword: true,
-            identityVerified: true,
-            isActive: true,
-          }
-        });
-      }
-    }
-    console.log('  ✅ 5 standard admins ensured.');
+
 
     // 3. Create default expense categories
     const defaultCategories = [
