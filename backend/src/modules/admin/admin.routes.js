@@ -20,7 +20,9 @@ router.post(
         body('name').notEmpty().withMessage('Name is required').trim().escape(),
         body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
         body('phone').notEmpty().withMessage('Phone is required').matches(/^\+?[0-9]{10,15}$/).withMessage('Phone must be 10-15 digits (optional leading +)'),
-        body('temporaryPassword').isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters long'),
+        body('temporaryPassword')
+            .isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters long')
+            .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/).withMessage('Temporary password must include uppercase and number'),
         body('adminRole').isIn(['SUPER_ADMIN', 'ADMIN']).withMessage('Role must be SUPER_ADMIN or ADMIN'),
     ],
     async (req, res, next) => {
@@ -74,6 +76,30 @@ router.patch(
         try {
             handleValidation(req);
             const result = await adminService.reactivateAdmin(req.params.id, req.user.id, req.clientIp);
+            res.json(result);
+        } catch (err) { next(err); }
+    }
+);
+
+// ─── PATCH /api/v1/admins/:id/reset-password ──────
+router.patch(
+    '/:id/reset-password',
+    authenticate, enforcePasswordChanged, authorizeSuperAdmin,
+    [
+        param('id').isUUID(),
+        body('temporaryPassword')
+            .isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters long')
+            .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/).withMessage('Temporary password must include uppercase and number'),
+    ],
+    async (req, res, next) => {
+        try {
+            handleValidation(req);
+            const result = await adminService.resetAdminPassword(
+                req.params.id, 
+                req.body.temporaryPassword, 
+                req.user.id, 
+                req.clientIp
+            );
             res.json(result);
         } catch (err) { next(err); }
     }

@@ -665,7 +665,8 @@
       "super_admin_full": "مسؤول أعلى (أعلى صلاحية)"
     },
     "actions": {
-      "deactivate": "إلغاء التفعيل"
+      "deactivate": "إلغاء التفعيل",
+      "reset_password": "إعادة تعيين كلمة المرور"
     },
     "modal": {
       "title": "إنشاء مسؤول نظام",
@@ -681,16 +682,21 @@
       "reactivated": "تمت إعادة تفعيل المسؤول بنجاح",
       "deactivated": "تم إلغاء تفعيل المسؤول بنجاح",
       "cannot_deactivate_self": "لا يمكنك إلغاء تفعيل حسابك.",
+      "cannot_reset_self": "لا يمكنك إعادة تعيين كلمة مرور حسابك من هذه الصفحة.",
+      "password_reset": "تمت إعادة تعيين كلمة مرور المسؤول بنجاح",
       "password_min": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
       "phone_invalid": "يجب أن يكون الهاتف من 10 إلى 15 رقمًا (مع + اختياريًا في البداية)"
     },
     "prompt": {
       "reactivate_title": "إعادة تفعيل المسؤول",
       "deactivate_title": "إلغاء تفعيل المسؤول",
+      "reset_password_title": "إعادة تعيين كلمة مرور المسؤول",
       "reactivate_message": "هل أنت متأكد أنك تريد استعادة صلاحية هذا المسؤول؟",
       "deactivate_message": "هل أنت متأكد أنك تريد إلغاء تفعيل مسؤول النظام هذا؟",
+      "reset_password_message": "أدخل كلمة مرور مؤقتة. سيُطلب من المسؤول تغييرها عند تسجيل الدخول القادم.",
       "reactivate_placeholder": "اكتب 'REACTIVATE' للتأكيد",
-      "deactivate_placeholder": "اكتب 'DEACTIVATE' للتأكيد"
+      "deactivate_placeholder": "اكتب 'DEACTIVATE' للتأكيد",
+      "reset_password_placeholder": "كلمة مرور مؤقتة"
     }
   },
   "admin_damage": {

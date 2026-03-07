@@ -669,7 +669,8 @@
       "super_admin_full": "Super Admin (Highest Privilege)"
     },
     "actions": {
-      "deactivate": "Deactivate"
+      "deactivate": "Deactivate",
+      "reset_password": "Reset Password"
     },
     "modal": {
       "title": "Create System Admin",
@@ -685,16 +686,21 @@
       "reactivated": "Admin reactivated successfully",
       "deactivated": "Admin deactivated successfully",
       "cannot_deactivate_self": "You cannot deactivate yourself.",
+      "cannot_reset_self": "You cannot reset your own password from this page.",
+      "password_reset": "Admin password reset successfully",
       "password_min": "Password must be at least 8 characters",
       "phone_invalid": "Phone must be 10-15 digits (optional leading +)"
     },
     "prompt": {
       "reactivate_title": "Reactivate Admin",
       "deactivate_title": "Deactivate Admin",
+      "reset_password_title": "Reset Admin Password",
       "reactivate_message": "Are you sure you want to restore this administrator's access?",
       "deactivate_message": "Are you sure you want to deactivate this system administrator?",
+      "reset_password_message": "Enter a temporary password. The admin will be required to change it at next login.",
       "reactivate_placeholder": "Type 'REACTIVATE' to confirm",
-      "deactivate_placeholder": "Type 'DEACTIVATE' to confirm"
+      "deactivate_placeholder": "Type 'DEACTIVATE' to confirm",
+      "reset_password_placeholder": "Temporary password"
     }
   },
   "admin_damage": {

@@ -2,7 +2,7 @@ import { useEffect, useState, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { adminService } from '../../services/admin.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Trash2, XCircle, Search, ShieldAlert, ShieldCheck, Plus } from 'lucide-react';
+import { Trash2, XCircle, Search, ShieldAlert, ShieldCheck, Plus, RefreshCw } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 
 export default function AdminsPage() {
@@ -22,6 +22,7 @@ export default function AdminsPage() {
   const [searchInput, setSearchInput] = useState('');
 
   const [promptData, setPromptData] = useState({ isOpen: false, adminId: null, actionType: null });
+  const [resetPrompt, setResetPrompt] = useState({ isOpen: false, adminId: null });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,6 +98,21 @@ export default function AdminsPage() {
     }
   }
 
+  async function onConfirmResetPassword(temporaryPassword) {
+    try {
+      await adminService.resetAdminPassword(resetPrompt.adminId, temporaryPassword);
+      addToast(t('admins_page.messages.password_reset'), 'success');
+      setResetPrompt({ isOpen: false, adminId: null });
+    } catch (err) {
+      const errorCode = err?.data?.error?.code || err?.data?.code || err?.code;
+      if (errorCode === 'CANNOT_RESET_SELF') {
+        addToast(t('admins_page.messages.cannot_reset_self'), 'warning');
+      } else {
+        addToast(err?.data?.error?.message || err?.message || t('common.error'), 'error');
+      }
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -164,6 +180,13 @@ export default function AdminsPage() {
                   <td className="text-muted">{new Date(a.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div className="flex gap-sm">
+                      <button
+                        className="btn-icon text-warning"
+                        onClick={() => setResetPrompt({ isOpen: true, adminId: a.id })}
+                        title={t('admins_page.actions.reset_password')}
+                      >
+                        <RefreshCw size={16} />
+                      </button>
                       {a.isActive ? (
                         <button className="btn-icon text-danger" onClick={() => setPromptData({ isOpen: true, adminId: a.id, actionType: 'deactivate' })} title={t('admins_page.actions.deactivate')}><Trash2 size={16} /></button>
                       ) : (
@@ -254,6 +277,16 @@ export default function AdminsPage() {
         title={promptData.actionType === 'reactivate' ? t('admins_page.prompt.reactivate_title') : t('admins_page.prompt.deactivate_title')}
         message={promptData.actionType === 'reactivate' ? t('admins_page.prompt.reactivate_message') : t('admins_page.prompt.deactivate_message')}
         placeholder={promptData.actionType === 'reactivate' ? t('admins_page.prompt.reactivate_placeholder') : t('admins_page.prompt.deactivate_placeholder')}
+      />
+
+      <PromptModal
+        isOpen={resetPrompt.isOpen}
+        onClose={() => setResetPrompt({ isOpen: false, adminId: null })}
+        onConfirm={onConfirmResetPassword}
+        title={t('admins_page.prompt.reset_password_title')}
+        message={t('admins_page.prompt.reset_password_message')}
+        placeholder={t('admins_page.prompt.reset_password_placeholder')}
+        confirmText={t('admins_page.actions.reset_password')}
       />
     </div>
   );

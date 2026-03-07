@@ -152,4 +152,37 @@ async function reactivateAdmin(id, superAdminId, ipAddress) {
     return updated;
 }
 
-module.exports = { createAdmin, getAdmins, deactivateAdmin, reactivateAdmin };
+async function resetAdminPassword(id, temporaryPassword, superAdminId, ipAddress) {
+    const admin = await prisma.user.findUnique({ where: { id } });
+    if (!admin) throw new NotFoundError('Admin');
+    if (admin.role !== 'admin') {
+        throw new ConflictError('INVALID_TARGET', 'Password reset is allowed for admin users only');
+    }
+
+    if (admin.id === superAdminId) {
+        throw new ConflictError('CANNOT_RESET_SELF', 'Cannot reset your own password here. Use standard change password flow.');
+    }
+
+    const passwordHash = await bcrypt.hash(temporaryPassword, config.bcryptRounds);
+
+    const updated = await prisma.user.update({
+        where: { id },
+        data: { 
+            passwordHash,
+            mustChangePassword: true
+        },
+    });
+
+    await AuditService.log({
+        actorId: superAdminId,
+        actionType: 'admin.password_reset',
+        entityType: 'admin',
+        entityId: id,
+        newState: { passwordReset: true },
+        ipAddress,
+    });
+
+    return { message: 'Admin password reset successfully' };
+}
+
+module.exports = { createAdmin, getAdmins, deactivateAdmin, reactivateAdmin, resetAdminPassword };

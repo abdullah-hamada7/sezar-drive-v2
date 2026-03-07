@@ -15,5 +15,9 @@ export const adminService = {
 
     reactivateAdmin(id) {
         return http.patch(`/admins/${id}/reactivate`);
+    },
+
+    resetAdminPassword(id, temporaryPassword) {
+        return http.patch(`/admins/${id}/reset-password`, { temporaryPassword });
     }
 };
