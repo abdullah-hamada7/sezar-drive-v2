@@ -44,11 +44,6 @@ export default function AdminsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  function applySearch() {
-    setPage(1);
-    setSearchTerm(searchInput.trim());
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -125,20 +120,23 @@ export default function AdminsPage() {
         </button>
       </div>
 
-      <div className="card mb-md flex items-center justify-between gap-sm" style={{ padding: '0.75rem var(--space-md)' }}>
-        <div className="flex items-center gap-sm flex-1" style={{ minWidth: 0 }}>
-          <Search size={16} className="text-muted" />
+      <div className="card mb-md">
+        <div className="flex items-center gap-md">
+          <Search size={18} className="text-muted" />
           <input
             type="text"
             className="form-input"
-            style={{ width: '100%', minWidth: '220px' }}
+            style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
             placeholder={t('admins_page.search_placeholder')}
             value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && applySearch()}
+            onChange={e => {
+              const value = e.target.value;
+              setSearchInput(value);
+              setPage(1);
+              setSearchTerm(value.trim());
+            }}
           />
         </div>
-        <button className="btn btn-sm btn-secondary" onClick={applySearch}>{t('common.search')}</button>
       </div>
 
       {loading ? (
