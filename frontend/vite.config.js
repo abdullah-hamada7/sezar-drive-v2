@@ -15,7 +15,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         description: 'Fleet Transportation & Trip Management Platform',
-        theme_color: '#ffffff',
+        theme_color: '#3b82f6',
         background_color: '#ffffff',
         icons: [
           {
@@ -27,6 +27,12 @@ export default defineConfig({
             src: 'icon-512.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: 'sezar-drive-icon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any'
           },
           {
             src: 'icon-512.png',
