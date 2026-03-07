@@ -391,6 +391,13 @@ export default function DriverInspection() {
         [data-theme="dark"] .inspection-page .text-muted {
           color: var(--color-text-secondary);
         }
+        .inspection-page button.card {
+          color: var(--color-text);
+        }
+        .inspection-page button.card .text-sm,
+        .inspection-page button.card .text-xs {
+          color: inherit;
+        }
         .inspection-page .card {
           border: 1px solid var(--color-border);
           background: var(--color-bg-secondary);

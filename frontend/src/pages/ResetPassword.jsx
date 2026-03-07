@@ -131,6 +131,7 @@ export default function ResetPasswordPage() {
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     className="form-input"
+                    placeholder={t('common.new_password_placeholder')}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
@@ -154,6 +155,7 @@ export default function ResetPasswordPage() {
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     className="form-input"
+                    placeholder={t('common.confirm_password_placeholder')}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required

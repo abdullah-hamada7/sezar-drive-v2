@@ -15,6 +15,14 @@ i18n
     backend: {
       loadPath: '/locales/{{lng}}/translation.json',
     },
+    parseMissingKeyHandler: (key) => {
+      if (typeof key === 'string' && key.startsWith('common.')) {
+        const raw = key.slice('common.'.length);
+        const tail = raw.split('.').pop() || raw;
+        return tail.replace(/_/g, ' ');
+      }
+      return key;
+    },
     react: {
       useSuspense: true,
     },

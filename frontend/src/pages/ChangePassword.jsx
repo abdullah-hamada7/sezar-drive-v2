@@ -95,6 +95,7 @@ export default function ChangePasswordPage() {
                   type={showPassword ? 'text' : 'password'}
                   name="currentPassword"
                   className="form-input"
+                  placeholder={t('common.current_password_placeholder')}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
@@ -107,6 +108,7 @@ export default function ChangePasswordPage() {
                   type={showPassword ? 'text' : 'password'}
                   name="newPassword"
                   className="form-input"
+                  placeholder={t('common.new_password_placeholder')}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
@@ -120,6 +122,7 @@ export default function ChangePasswordPage() {
                   type={showPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   className="form-input"
+                  placeholder={t('common.confirm_password_placeholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

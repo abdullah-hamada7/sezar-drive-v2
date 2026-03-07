@@ -342,6 +342,7 @@ export default function DriversPage() {
                   <input
                     className={`form-input ${fieldErrors.name ? 'border-danger' : ''}`}
                     name="name"
+                    placeholder={t('common.full_name_placeholder')}
                     value={form.name}
                     onChange={e => { setForm({ ...form, name: e.target.value }); validateField('name', e.target.value); }}
                     required
@@ -356,6 +357,7 @@ export default function DriversPage() {
                     type="email"
                     className={`form-input ${fieldErrors.email ? 'border-danger' : ''}`}
                     name="email"
+                    placeholder={t('common.email_placeholder')}
                     value={form.email}
                     onChange={e => { setForm({ ...form, email: e.target.value }); validateField('email', e.target.value); }}
                     required

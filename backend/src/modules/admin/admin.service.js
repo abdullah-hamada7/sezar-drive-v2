@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const prisma = require('../../config/database');
 const config = require('../../config');
 const { ValidationError, NotFoundError, ConflictError } = require('../../errors');
@@ -12,8 +13,11 @@ async function createAdmin(data, superAdminId, ipAddress) {
         throw new ValidationError('Password is required');
     }
 
+    const uniqueConditions = [{ email }];
+    if (data.phone) uniqueConditions.push({ phone: data.phone });
+
     const existing = await prisma.user.findFirst({
-        where: { OR: [{ email }, { phone: data.phone }] },
+        where: { OR: uniqueConditions },
     });
     if (existing) {
         if (!existing.isActive) {
@@ -27,18 +31,28 @@ async function createAdmin(data, superAdminId, ipAddress) {
     }
 
     const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
-    const admin = await prisma.user.create({
-        data: {
-            name,
-            email,
-            phone: `admin-${Date.now()}`, // Temporary unique phone for admins not requiring one
-            passwordHash,
-            role: 'admin',
-            adminRole: adminRole || 'SYSTEM_ADMIN',
-            mustChangePassword: true,
-            identityVerified: true,
-        },
-    });
+    const generatedPhone = `admin-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+
+    let admin;
+    try {
+        admin = await prisma.user.create({
+            data: {
+                name,
+                email,
+                phone: generatedPhone, // Temporary unique phone for admins not requiring one
+                passwordHash,
+                role: 'admin',
+                adminRole: adminRole || 'SYSTEM_ADMIN',
+                mustChangePassword: true,
+                identityVerified: true,
+            },
+        });
+    } catch (err) {
+        if (err?.code === 'P2002') {
+            throw new ConflictError('USER_ALREADY_EXISTS', 'User with this email or phone already exists');
+        }
+        throw err;
+    }
 
     await AuditService.log({
         actorId: superAdminId,

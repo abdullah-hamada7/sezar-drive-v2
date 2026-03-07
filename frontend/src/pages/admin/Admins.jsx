@@ -104,14 +104,14 @@ export default function AdminsPage() {
         </button>
       </div>
 
-      <div className="card mb-md flex items-center justify-between" style={{ padding: '0.75rem var(--space-md)' }}>
-        <div className="flex items-center gap-sm">
+      <div className="card mb-md flex items-center justify-between gap-sm" style={{ padding: '0.75rem var(--space-md)' }}>
+        <div className="flex items-center gap-sm flex-1" style={{ minWidth: 0 }}>
           <Search size={16} className="text-muted" />
           <input
             type="text"
-            className="input flex-1"
-            style={{ border: 'none', background: 'transparent', boxShadow: 'none', padding: 0 }}
-            placeholder={t('common.search')}
+            className="form-input"
+            style={{ width: '100%', minWidth: '220px' }}
+            placeholder={t('admins_page.search_placeholder')}
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && applySearch()}
@@ -194,11 +194,11 @@ export default function AdminsPage() {
               <div className="grid grid-2 gap-md mb-md">
                 <div className="form-group">
                   <label className="form-label">{t('auth.name')}</label>
-                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required minLength={2} maxLength={100} />
+                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required minLength={2} maxLength={100} placeholder={t('common.full_name_placeholder')} />
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('auth.email')}</label>
-                  <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required maxLength={150} />
+                  <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required maxLength={150} placeholder={t('common.email_placeholder')} />
                 </div>
               </div>
 

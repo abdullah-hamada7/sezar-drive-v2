@@ -240,11 +240,11 @@ export default function VehiclesPage() {
                     </div>
                     <div className="form-group">
                       <label className="form-label">{t('vehicles.modal.year_label')}</label>
-                      <input type="number" className="form-input" name="year" value={form.year} onChange={e => setForm({ ...form, year: e.target.value })} required min={2000} max={2030} />
+                      <input type="number" className="form-input" name="year" value={form.year} onChange={e => setForm({ ...form, year: e.target.value })} required min={2000} max={2030} placeholder={t('vehicles.modal.year_placeholder')} />
                     </div>
                     <div className="form-group">
                       <label className="form-label">{t('vehicles.modal.capacity_label')}</label>
-                      <input type="number" className="form-input" name="capacity" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} required min={1} max={50} />
+                      <input type="number" className="form-input" name="capacity" value={form.capacity} onChange={e => setForm({ ...form, capacity: e.target.value })} required min={1} max={50} placeholder={t('vehicles.modal.capacity_placeholder')} />
                     </div>
                     <div className="form-group col-span-2">
                       <label className="form-label">{t('vehicles.modal.qr_label')}</label>

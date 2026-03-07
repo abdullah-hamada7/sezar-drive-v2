@@ -68,9 +68,10 @@ export default function VerificationQueue() {
 
         <div className="flex gap-sm">
           <select
-            className="input input-sm"
+            className="form-input"
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
+            style={{ width: 'auto', minWidth: '120px' }}
           >
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
@@ -80,13 +81,14 @@ export default function VerificationQueue() {
           <div className="flex gap-xs">
             <input
               type="text"
-              className="input input-sm"
+              className="form-input"
+              style={{ minWidth: '220px' }}
               placeholder={t('verification.search_driver_placeholder')}
               value={filterName}
               onChange={e => setFilterName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && load()}
             />
-            <button className="btn btn-sm btn-primary" onClick={load}>Search</button>
+            <button className="btn btn-sm btn-primary" onClick={load}>{t('common.search')}</button>
           </div>
         </div>
       </div>
