@@ -636,6 +636,47 @@
       "identity_reviewed": "مراجعة الهوية"
     }
   },
+  "admins_page": {
+    "subtitle": "إدارة مسؤولي النظام عبر المنصة.",
+    "create_btn": "إنشاء مسؤول",
+    "table": {
+      "role": "الدور",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء",
+      "actions": "الإجراءات",
+      "empty": "لا يوجد مسؤولون"
+    },
+    "roles": {
+      "system_admin": "مسؤول نظام",
+      "super_admin": "مسؤول أعلى",
+      "super_admin_full": "مسؤول أعلى (أعلى صلاحية)"
+    },
+    "actions": {
+      "deactivate": "إلغاء التفعيل"
+    },
+    "modal": {
+      "title": "إنشاء مسؤول نظام",
+      "role_config": "إعدادات الدور",
+      "temporary_password": "كلمة مرور مؤقتة",
+      "temporary_password_placeholder": "يجب تغييرها عند تسجيل الدخول",
+      "password_hint": "مطلوب: حرف كبير واحد، رقم واحد، و8 أحرف على الأقل."
+    },
+    "messages": {
+      "created": "تم إنشاء المسؤول بنجاح",
+      "reactivated": "تمت إعادة تفعيل المسؤول بنجاح",
+      "deactivated": "تم إلغاء تفعيل المسؤول بنجاح",
+      "cannot_deactivate_self": "لا يمكنك إلغاء تفعيل حسابك.",
+      "password_min": "يجب أن تكون كلمة المرور 8 أحرف على الأقل"
+    },
+    "prompt": {
+      "reactivate_title": "إعادة تفعيل المسؤول",
+      "deactivate_title": "إلغاء تفعيل المسؤول",
+      "reactivate_message": "هل أنت متأكد أنك تريد استعادة صلاحية هذا المسؤول؟",
+      "deactivate_message": "هل أنت متأكد أنك تريد إلغاء تفعيل مسؤول النظام هذا؟",
+      "reactivate_placeholder": "اكتب 'REACTIVATE' للتأكيد",
+      "deactivate_placeholder": "اكتب 'DEACTIVATE' للتأكيد"
+    }
+  },
   "admin_damage": {
     "title": "تقارير الأضرار",
     "subtitle": "مراجعة تقارير أضرار المركبات من السائقين",

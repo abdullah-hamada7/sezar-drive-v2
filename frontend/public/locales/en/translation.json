@@ -640,6 +640,47 @@
       "identity_reviewed": "Identity Reviewed"
     }
   },
+  "admins_page": {
+    "subtitle": "Manage system administrators across the business.",
+    "create_btn": "Create Admin",
+    "table": {
+      "role": "Role",
+      "status": "Status",
+      "created": "Created",
+      "actions": "Actions",
+      "empty": "No administrators found"
+    },
+    "roles": {
+      "system_admin": "System Admin",
+      "super_admin": "Super Admin",
+      "super_admin_full": "Super Admin (Highest Privilege)"
+    },
+    "actions": {
+      "deactivate": "Deactivate"
+    },
+    "modal": {
+      "title": "Create System Admin",
+      "role_config": "Role Configuration",
+      "temporary_password": "Temporary Password",
+      "temporary_password_placeholder": "Must be changed on login",
+      "password_hint": "Required: 1 uppercase, 1 number, 8 chars min."
+    },
+    "messages": {
+      "created": "Admin created successfully",
+      "reactivated": "Admin reactivated successfully",
+      "deactivated": "Admin deactivated successfully",
+      "cannot_deactivate_self": "You cannot deactivate yourself.",
+      "password_min": "Password must be at least 8 characters"
+    },
+    "prompt": {
+      "reactivate_title": "Reactivate Admin",
+      "deactivate_title": "Deactivate Admin",
+      "reactivate_message": "Are you sure you want to restore this administrator's access?",
+      "deactivate_message": "Are you sure you want to deactivate this system administrator?",
+      "reactivate_placeholder": "Type 'REACTIVATE' to confirm",
+      "deactivate_placeholder": "Type 'DEACTIVATE' to confirm"
+    }
+  },
   "admin_damage": {
     "title": "Damage Reports",
     "subtitle": "Review vehicle damage reports from drivers",

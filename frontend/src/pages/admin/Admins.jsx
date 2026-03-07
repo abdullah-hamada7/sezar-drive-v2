@@ -11,7 +11,6 @@ export default function AdminsPage() {
 
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [, setError] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
@@ -26,7 +25,6 @@ export default function AdminsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const qs = new URLSearchParams({ page, limit: 10 });
       if (searchTerm) qs.append('search', searchTerm);
@@ -52,26 +50,19 @@ export default function AdminsPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError(null);
     setIsSubmitting(true);
     try {
       if (form.temporaryPassword && form.temporaryPassword.length < 8) {
-        setError('Password must be at least 8 characters');
+        addToast(t('admins_page.messages.password_min'), 'error');
         setIsSubmitting(false);
         return;
       }
       await adminService.createAdmin(form);
-      addToast('Admin created successfully', 'success');
+      addToast(t('admins_page.messages.created'), 'success');
       closeModal();
       load();
     } catch (err) {
-      if (err.data && err.data.code === 'USER_ALREADY_EXISTS') {
-        setError('Admin with this email already exists.');
-      } else if (err.data && err.data.code === 'USER_DEACTIVATED') {
-        setError(err.data.message);
-      } else {
-        setError(err.message || 'An error occurred.');
-      }
+      addToast(err.message || t('common.error'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,22 +71,21 @@ export default function AdminsPage() {
   function closeModal() {
     setShowModal(false);
     setForm({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
-    setError(null);
   }
 
   async function onConfirmAction() {
     try {
       if (promptData.actionType === 'reactivate') {
         await adminService.reactivateAdmin(promptData.adminId);
-        addToast('Admin reactivated successfully', 'success');
+        addToast(t('admins_page.messages.reactivated'), 'success');
       } else {
         await adminService.deactivateAdmin(promptData.adminId);
-        addToast('Admin deactivated successfully', 'success');
+        addToast(t('admins_page.messages.deactivated'), 'success');
       }
       load();
     } catch (err) {
       if (err.data?.code === 'CANNOT_DELETE_SELF') {
-        addToast('You cannot deactivate yourself.', 'warning');
+        addToast(t('admins_page.messages.cannot_deactivate_self'), 'warning');
       } else {
         addToast(err.message || t('common.error'), 'error');
       }
@@ -107,10 +97,10 @@ export default function AdminsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('nav.admins') || 'Admins'}</h1>
-          <p className="page-subtitle">Manage system administrators across the business.</p>
+          <p className="page-subtitle">{t('admins_page.subtitle')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <Plus size={18} /> Create Admin
+          <Plus size={18} /> {t('admins_page.create_btn')}
         </button>
       </div>
 
@@ -139,38 +129,38 @@ export default function AdminsPage() {
               <tr>
                 <th>{t('auth.name')}</th>
                 <th>{t('auth.email')}</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>{t('admins_page.table.role')}</th>
+                <th>{t('admins_page.table.status')}</th>
+                <th>{t('admins_page.table.created')}</th>
+                <th>{t('admins_page.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {admins.length === 0 ? (
-                <tr><td colSpan={6} className="empty-state">No administrators found</td></tr>
+                <tr><td colSpan={6} className="empty-state">{t('admins_page.table.empty')}</td></tr>
               ) : admins.map(a => (
                 <tr key={a.id}>
                   <td className="font-bold">{a.name}</td>
                   <td className="text-muted">{a.email}</td>
                   <td>
                     {a.adminRole === 'SUPER_ADMIN' ? (
-                      <span className="badge badge-warning flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldAlert size={12} /> Super Admin</span>
+                      <span className="badge badge-warning flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldAlert size={12} /> {t('admins_page.roles.super_admin')}</span>
                     ) : (
-                      <span className="badge badge-info flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldCheck size={12} /> System Admin</span>
+                      <span className="badge badge-info flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldCheck size={12} /> {t('admins_page.roles.system_admin')}</span>
                     )}
                   </td>
                   <td>
                     {a.isActive ? (
-                      <span className="badge badge-success">Active</span>
+                      <span className="badge badge-success">{t('common.status.active')}</span>
                     ) : (
-                      <span className="badge badge-danger">Inactive</span>
+                      <span className="badge badge-danger">{t('common.status.inactive')}</span>
                     )}
                   </td>
                   <td className="text-muted">{new Date(a.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div className="flex gap-sm">
                       {a.isActive ? (
-                        <button className="btn-icon text-danger" onClick={() => setPromptData({ isOpen: true, adminId: a.id, actionType: 'deactivate' })} title="Deactivate"><Trash2 size={16} /></button>
+                        <button className="btn-icon text-danger" onClick={() => setPromptData({ isOpen: true, adminId: a.id, actionType: 'deactivate' })} title={t('admins_page.actions.deactivate')}><Trash2 size={16} /></button>
                       ) : (
                         <button className="btn btn-sm btn-secondary" onClick={() => setPromptData({ isOpen: true, adminId: a.id, actionType: 'reactivate' })}>{t('common.actions.reactivate')}</button>
                       )}
@@ -197,7 +187,7 @@ export default function AdminsPage() {
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Create System Admin</h2>
+              <h2 className="modal-title">{t('admins_page.modal.title')}</h2>
               <button className="btn-icon" onClick={closeModal}><XCircle size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="modal-body">
@@ -214,18 +204,18 @@ export default function AdminsPage() {
 
               <div className="grid grid-2 gap-md mb-lg">
                 <div className="form-group">
-                  <label className="form-label">Role Configuration</label>
+                  <label className="form-label">{t('admins_page.modal.role_config')}</label>
                   <select className="form-input" value={form.adminRole} onChange={e => setForm({ ...form, adminRole: e.target.value })}>
-                    <option value="SYSTEM_ADMIN">System Admin</option>
-                    <option value="SUPER_ADMIN">Super Admin (Highest Privilege)</option>
+                    <option value="SYSTEM_ADMIN">{t('admins_page.roles.system_admin')}</option>
+                    <option value="SUPER_ADMIN">{t('admins_page.roles.super_admin_full')}</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Temporary Password</label>
+                  <label className="form-label">{t('admins_page.modal.temporary_password')}</label>
                   <input
                     type="password"
                     className="form-input"
-                    placeholder="Must be changed on login"
+                    placeholder={t('admins_page.modal.temporary_password_placeholder')}
                     value={form.temporaryPassword}
                     onChange={e => setForm({ ...form, temporaryPassword: e.target.value })}
                     required
@@ -233,14 +223,14 @@ export default function AdminsPage() {
                     maxLength={100}
                     pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$"
                   />
-                  <div className="text-xs text-muted mt-xs">Required: 1 uppercase, 1 number, 8 chars min.</div>
+                  <div className="text-xs text-muted mt-xs">{t('admins_page.modal.password_hint')}</div>
                 </div>
               </div>
 
               <div className="modal-actions mt-xl pt-md border-t border-subtle">
                 <button type="button" className="btn btn-secondary" onClick={closeModal}>{t('common.cancel')}</button>
                 <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? t('auth.login_progress') : 'Create'}
+                  {isSubmitting ? t('auth.login_progress') : t('admins_page.create_btn')}
                 </button>
               </div>
             </form>
@@ -252,9 +242,9 @@ export default function AdminsPage() {
         isOpen={promptData.isOpen}
         onClose={() => setPromptData({ isOpen: false, adminId: null, actionType: null })}
         onConfirm={onConfirmAction}
-        title={promptData.actionType === 'reactivate' ? "Reactivate Admin" : "Deactivate Admin"}
-        message={promptData.actionType === 'reactivate' ? "Are you sure you want to restore this administrator's access?" : "Are you sure you want to deactivate this system administrator?"}
-        placeholder={promptData.actionType === 'reactivate' ? "Type 'REACTIVATE' to confirm" : "Type 'DEACTIVATE' to confirm"}
+        title={promptData.actionType === 'reactivate' ? t('admins_page.prompt.reactivate_title') : t('admins_page.prompt.deactivate_title')}
+        message={promptData.actionType === 'reactivate' ? t('admins_page.prompt.reactivate_message') : t('admins_page.prompt.deactivate_message')}
+        placeholder={promptData.actionType === 'reactivate' ? t('admins_page.prompt.reactivate_placeholder') : t('admins_page.prompt.deactivate_placeholder')}
       />
     </div>
   );
