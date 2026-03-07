@@ -19,8 +19,9 @@ router.post(
     [
         body('name').notEmpty().withMessage('Name is required').trim().escape(),
         body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
+        body('phone').notEmpty().withMessage('Phone is required').matches(/^\+?[0-9]{10,15}$/).withMessage('Phone must be 10-15 digits (optional leading +)'),
         body('temporaryPassword').isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters long'),
-        body('adminRole').isIn(['SUPER_ADMIN', 'SYSTEM_ADMIN']).withMessage('Role must be SUPER_ADMIN or SYSTEM_ADMIN'),
+        body('adminRole').isIn(['SUPER_ADMIN', 'ADMIN']).withMessage('Role must be SUPER_ADMIN or ADMIN'),
     ],
     async (req, res, next) => {
         try {

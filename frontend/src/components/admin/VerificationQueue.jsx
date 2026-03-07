@@ -176,9 +176,9 @@ export default function VerificationQueue() {
                 className="btn btn-danger flex-1"
                 onClick={() => setPromptData({ isOpen: true, itemId: item.id })}
                 disabled={processing === item.id}
-                title="Reject Verification"
+                title={t('verification.card.reject')}
               >
-                <X size={18} /> Reject
+                <X size={18} /> {t('verification.card.reject')}
               </button>
             </div>
           </div>
@@ -188,9 +188,9 @@ export default function VerificationQueue() {
         isOpen={promptData.isOpen}
         onClose={() => setPromptData({ isOpen: false, itemId: null })}
         onConfirm={(reason) => handleReview(promptData.itemId, 'REJECT', reason)}
-        title="Reject Verification"
-        message="Enter rejection reason:"
-        initialValue="Face does not match profile photo"
+        title={t('verification.card.reject')}
+        message={t('verification.messages.reject_prompt')}
+        placeholder={t('verification.messages.reject_reason_placeholder')}
       />
     </div>
   );

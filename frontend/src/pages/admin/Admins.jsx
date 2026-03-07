@@ -13,7 +13,7 @@ export default function AdminsPage() {
   const [loading, setLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', temporaryPassword: '', adminRole: 'ADMIN' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [pagination, setPagination] = useState({});
@@ -57,6 +57,11 @@ export default function AdminsPage() {
         setIsSubmitting(false);
         return;
       }
+      if (!/^\+?[0-9]{10,15}$/.test(form.phone)) {
+        addToast(t('admins_page.messages.phone_invalid'), 'error');
+        setIsSubmitting(false);
+        return;
+      }
       await adminService.createAdmin(form);
       addToast(t('admins_page.messages.created'), 'success');
       closeModal();
@@ -70,7 +75,7 @@ export default function AdminsPage() {
 
   function closeModal() {
     setShowModal(false);
-    setForm({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
+    setForm({ name: '', email: '', phone: '', temporaryPassword: '', adminRole: 'ADMIN' });
   }
 
   async function onConfirmAction() {
@@ -200,13 +205,17 @@ export default function AdminsPage() {
                   <label className="form-label">{t('auth.email')}</label>
                   <input type="email" className="form-input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required maxLength={150} placeholder={t('common.email_placeholder')} />
                 </div>
+                <div className="form-group">
+                  <label className="form-label">{t('admins_page.modal.phone')}</label>
+                  <input type="tel" className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required placeholder={t('admins_page.modal.phone_placeholder')} pattern="^\+?[0-9]{10,15}$" />
+                </div>
               </div>
 
               <div className="grid grid-2 gap-md mb-lg">
                 <div className="form-group">
                   <label className="form-label">{t('admins_page.modal.role_config')}</label>
                   <select className="form-input" value={form.adminRole} onChange={e => setForm({ ...form, adminRole: e.target.value })}>
-                    <option value="SYSTEM_ADMIN">{t('admins_page.roles.system_admin')}</option>
+                    <option value="ADMIN">{t('admins_page.roles.system_admin')}</option>
                     <option value="SUPER_ADMIN">{t('admins_page.roles.super_admin_full')}</option>
                   </select>
                 </div>

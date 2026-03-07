@@ -31,7 +31,10 @@ async function createAdmin(data, superAdminId, ipAddress) {
     }
 
     const passwordHash = await bcrypt.hash(password, config.bcryptRounds);
-    const generatedPhone = `admin-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+    // user.phone column is VARCHAR(20) and unique.
+    // Keep generated admin phone deterministic-length and collision-resistant.
+    const generatedPhone = `a${Date.now()}${crypto.randomBytes(3).toString('hex')}`;
+    const phone = data.phone || generatedPhone;
 
     let admin;
     try {
@@ -39,10 +42,10 @@ async function createAdmin(data, superAdminId, ipAddress) {
             data: {
                 name,
                 email,
-                phone: generatedPhone, // Temporary unique phone for admins not requiring one
+                phone,
                 passwordHash,
                 role: 'admin',
-                adminRole: adminRole || 'SYSTEM_ADMIN',
+                adminRole: adminRole || 'ADMIN',
                 mustChangePassword: true,
                 identityVerified: true,
             },
