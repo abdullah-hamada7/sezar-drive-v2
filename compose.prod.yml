@@ -88,7 +88,7 @@ services:
     networks:
       - app-net
     restart: "no"
-    command: ["sh", "-c", "npm run migrate"]
+    command: ["sh", "-c", "npm run prisma:migrate:prod"]
 
   backend:
     build:
