@@ -244,6 +244,7 @@
     "current_password_placeholder": "أدخل كلمة المرور الحالية",
     "new_password_placeholder": "أدخل كلمة المرور الجديدة",
     "confirm_password_placeholder": "أكّد كلمة المرور الجديدة",
+    "enter_value_placeholder": "أدخل قيمة",
     "now": "الآن",
     "no_data": "لا يوجد بيانات متاحة",
     "last_updated": "آخر التحديثات",

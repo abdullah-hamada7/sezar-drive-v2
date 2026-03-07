@@ -50,7 +50,7 @@ export default function PromptModal({
                 className="form-input" 
                 value={value} 
                 onChange={e => setValue(e.target.value)}
-                placeholder={placeholder}
+                placeholder={placeholder || t('enter_value_placeholder')}
                 required={required}
                 style={{ width: '100%' }}
               />

@@ -245,6 +245,7 @@
     "current_password_placeholder": "Enter current password",
     "new_password_placeholder": "Enter new password",
     "confirm_password_placeholder": "Confirm new password",
+    "enter_value_placeholder": "Enter value",
     "now": "Just now",
     "no_data": "No data available",
     "last_updated": "Latest updates",
