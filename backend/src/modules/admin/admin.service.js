@@ -165,7 +165,7 @@ async function resetAdminPassword(id, temporaryPassword, superAdminId, ipAddress
 
     const passwordHash = await bcrypt.hash(temporaryPassword, config.bcryptRounds);
 
-    const updated = await prisma.user.update({
+    await prisma.user.update({
         where: { id },
         data: { 
             passwordHash,
