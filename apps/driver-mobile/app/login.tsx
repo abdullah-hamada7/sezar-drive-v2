@@ -1,183 +1,132 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, View, Text, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
+import { Car, LogIn, Eye, EyeOff } from 'lucide-react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import TechnicalBackground from '../components/TechnicalBackground';
+import { GlassCard } from '../components/GlassCard';
 
 export default function LoginScreen() {
-    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const { login, loading } = useAuth();
+    const { addToast } = useToast();
     const router = useRouter();
 
-    const handleLogin = () => {
-        // Auth logic will go here
-        console.log('Login attempt:', phone);
-        // router.replace('/(tabs)');
+    const handleLogin = async () => {
+        if (!email || !password) {
+            addToast('Please enter both email and password', 'warning');
+            return;
+        }
+
+        try {
+            const res = await login(email, password);
+            if (res?.requiresVerification) {
+                router.replace({
+                    pathname: '/verify-device',
+                    params: { userId: res.userId, deviceFingerprint: res.deviceFingerprint }
+                });
+            }
+        } catch (error: any) {
+            addToast(error.message || 'Login failed', 'error');
+        }
     };
 
     return (
         <>
             <Stack.Screen options={{ headerShown: false }} />
-            <LinearGradient
-                colors={['#1F1D1B', '#141311', '#0B0A0A']}
-                style={styles.background}
-            />
+            <TechnicalBackground />
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.container}
+                className="flex-1"
             >
-                <ScrollView contentContainerStyle={styles.scrollContent}>
-                    <ThemedView style={styles.logoContainer}>
-                        <ThemedText style={styles.title}>SEZAR DRIVE</ThemedText>
-                        <ThemedText style={styles.subtitle}>Tactile Driver Portal</ThemedText>
-                    </ThemedView>
+                <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
 
-                    <ThemedView style={styles.formCard}>
-                        <ThemedText style={styles.formTitle}>Terminal Access</ThemedText>
+                    <GlassCard variant="login" className="p-8">
+                        <View className="items-center mb-8">
+                            <View className="w-16 h-16 rounded-xl bg-[#1F2937] border border-white/10 items-center justify-center shadow-lg shadow-black/30 mb-4 overflow-hidden">
+                                <LinearGradient
+                                    colors={['rgba(59, 130, 246, 0.2)', 'transparent']}
+                                    style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                                />
+                                <Car color="#3B82F6" size={32} />
+                            </View>
+                            <Text className="text-3xl font-black text-[#F9FAFB] tracking-widest text-center shadow-sm shadow-blue-500/20">
+                                SEZAR DRIVE
+                            </Text>
+                            <Text className="text-xs text-[#9CA3AF] mt-1 tracking-widest font-semibold uppercase text-center">
+                                Driver Portal
+                            </Text>
+                        </View>
 
-                        <ThemedView style={styles.inputContainer}>
-                            <ThemedText style={styles.label}>Identification (Phone)</ThemedText>
+                        <View className="mb-5 bg-transparent">
+                            <Text className="text-[#9CA3AF] text-xs mb-2 font-bold tracking-wider uppercase">Email / Identification</Text>
                             <TextInput
-                                style={styles.input}
-                                placeholder="+966..."
-                                placeholderTextColor="#8A867D"
-                                value={phone}
-                                onChangeText={setPhone}
-                                keyboardType="phone-pad"
+                                className="bg-[#030712]/50 rounded-lg px-4 py-3 text-[#F9FAFB] border border-white/10 font-medium"
+                                placeholder="driver@example.com"
+                                placeholderTextColor="#6B7280"
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
                                 autoCapitalize="none"
                             />
-                        </ThemedView>
+                        </View>
 
-                        <ThemedView style={styles.inputContainer}>
-                            <ThemedText style={styles.label}>Access Code</ThemedText>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="••••••••"
-                                placeholderTextColor="#8A867D"
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                            />
-                        </ThemedView>
+                        <View className="bg-transparent mb-2">
+                            <View className="flex-row justify-between mb-2">
+                                <Text className="text-[#9CA3AF] text-xs font-bold tracking-wider uppercase">Access Code</Text>
+                            </View>
+                            <View className="relative">
+                                <TextInput
+                                    className="bg-[#030712]/50 rounded-lg px-4 py-3 text-[#F9FAFB] border border-white/10 font-medium pr-12"
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#6B7280"
+                                    value={password}
+                                    onChangeText={setPassword}
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity
+                                    className="absolute right-3 top-3"
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
+                                    {showPassword ? <EyeOff size={20} color="#9CA3AF" /> : <Eye size={20} color="#9CA3AF" />}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
-                        <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
+                        <TouchableOpacity
+                            className="rounded-lg overflow-hidden mt-6 shadow-lg shadow-[#3B82F6]/30"
+                            onPress={handleLogin}
+                            activeOpacity={0.8}
+                            disabled={loading}
+                        >
                             <LinearGradient
-                                colors={['#D46340', '#B54D2E']}
-                                style={styles.buttonGradient}
+                                colors={['#3B82F6', '#2563EB']}
+                                className="py-3.5 items-center justify-center flex-row"
                             >
-                                <ThemedText style={styles.loginButtonText}>Engage Shift</ThemedText>
+                                {loading ? (
+                                    <ActivityIndicator color="#fff" className="mr-2" />
+                                ) : (
+                                    <LogIn size={18} color="#fff" className="mr-2" />
+                                )}
+                                <Text className="text-[#F9FAFB] text-sm font-bold tracking-wider uppercase">
+                                    {loading ? 'Authenticating...' : 'Sign In'}
+                                </Text>
                             </LinearGradient>
                         </TouchableOpacity>
-                    </ThemedView>
+
+                        <TouchableOpacity className="mt-4 py-3 items-center" activeOpacity={0.7} onPress={() => router.push('/reset-password')}>
+                            <Text className="text-[#9CA3AF] font-semibold text-sm">Recover Password</Text>
+                        </TouchableOpacity>
+                    </GlassCard>
+
                 </ScrollView>
             </KeyboardAvoidingView>
         </>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    background: {
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        top: 0,
-        height: '100%',
-    },
-    scrollContent: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        padding: 24,
-    },
-    logoContainer: {
-        alignItems: 'center',
-        marginBottom: 48,
-        backgroundColor: 'transparent',
-    },
-    title: {
-        fontSize: 36,
-        fontWeight: '900',
-        color: '#F7F3EB',
-        letterSpacing: 3,
-        textShadowColor: 'rgba(212, 99, 64, 0.4)',
-        textShadowOffset: { width: 0, height: 4 },
-        textShadowRadius: 10,
-    },
-    subtitle: {
-        fontSize: 14,
-        color: '#C5A880',
-        marginTop: 8,
-        letterSpacing: 2,
-        fontWeight: '600',
-        textTransform: 'uppercase',
-    },
-    formCard: {
-        backgroundColor: 'rgba(20, 19, 17, 0.85)',
-        borderRadius: 24,
-        padding: 30,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.5,
-        shadowRadius: 30,
-        elevation: 15,
-    },
-    formTitle: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#F7F3EB',
-        marginBottom: 30,
-        textAlign: 'center',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-    },
-    inputContainer: {
-        marginBottom: 24,
-        backgroundColor: 'transparent',
-    },
-    label: {
-        color: '#8A867D',
-        fontSize: 13,
-        marginBottom: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-    },
-    input: {
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-        borderRadius: 16,
-        padding: 18,
-        color: '#F7F3EB',
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        fontWeight: '500',
-    },
-    loginButton: {
-        borderRadius: 16,
-        overflow: 'hidden',
-        marginTop: 16,
-        shadowColor: '#D46340',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-    buttonGradient: {
-        padding: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    loginButtonText: {
-        color: '#F7F3EB',
-        fontSize: 17,
-        fontWeight: '800',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-    },
-});

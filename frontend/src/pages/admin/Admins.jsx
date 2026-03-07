@@ -11,7 +11,7 @@ export default function AdminsPage() {
 
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [, setError] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', temporaryPassword: '', adminRole: 'SYSTEM_ADMIN' });
@@ -253,4 +253,3 @@ export default function AdminsPage() {
     </div>
   );
 }
-

@@ -20,6 +20,20 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Biometric rate limiter for expensive Rekognition calls
+const biometricLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: config.isProduction ? 10 : 200, // Very strict in production
+  message: { 
+    error: { 
+      code: 'TOO_MANY_BIOMETRIC_REQUESTS', 
+      message: 'Too many face verification attempts. Please try again in an hour.' 
+    } 
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Module routes
 const authRoutes = require('./modules/auth/auth.routes');
 const driverRoutes = require('./modules/driver/driver.routes');
@@ -103,6 +117,7 @@ app.get('/api/v1/ready', async (req, res) => {
   }
 });
 
+app.use('/api/v1/auth/verify-device', biometricLimiter);
 app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1/drivers', driverRoutes);
 app.use('/api/v1/vehicles', vehicleRoutes);
@@ -114,7 +129,7 @@ app.use('/api/v1/damage-reports', damageRoutes);
 app.use('/api/v1/tracking', trackingRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/stats', statsRoutes);
-app.use('/api/v1/verify', verificationRoutes);
+app.use('/api/v1/verify', biometricLimiter, verificationRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/admins', adminRoutes);
 

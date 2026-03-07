@@ -7,8 +7,8 @@ const { ConflictError, ForbiddenError } = require('../../errors');
  */
 class ShiftValidator {
   /**
-   * Validate preconditions for activating a shift.
-   */
+    * Validate preconditions for activating a shift.
+    */
   static async validateActivationPreconditions(shiftId, driverId) {
     const shift = await prisma.shift.findUnique({ 
       where: { id: shiftId },
@@ -20,6 +20,9 @@ class ShiftValidator {
     }
 
     // Check biometric verification
+    if (shift.verificationStatus === 'MANUAL_REVIEW') {
+      throw new ForbiddenError('BIOMETRIC_MANUAL_REVIEW', 'Your face verification requires manual review by an administrator before shift activation.');
+    }
     if (shift.verificationStatus !== 'VERIFIED') {
       throw new ForbiddenError('BIOMETRIC_FAILED', 'Face verification must be passed before activating shift');
     }
@@ -48,8 +51,8 @@ class ShiftValidator {
   }
 
   /**
-   * Validate preconditions for closing a shift.
-   */
+    * Validate preconditions for closing a shift.
+    */
   static async validateClosurePreconditions(shiftId, driverId, startedAt) {
     // If shift hasn't started, no end inspection is required.
     if (!startedAt) {

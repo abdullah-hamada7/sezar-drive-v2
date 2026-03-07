@@ -10,6 +10,7 @@ jest.mock('../src/middleware/auth', () => ({
   enforcePasswordChanged: (req, res, next) => next(),
   authorize: () => (req, res, next) => next(),
   requireIdentityVerified: (req, res, next) => next(),
+  authorizeSuperAdmin: (req, res, next) => next(),
 }));
 
 // Mock Driver Service

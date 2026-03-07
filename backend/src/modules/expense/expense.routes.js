@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const expenseService = require('./expense.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
@@ -53,8 +53,16 @@ router.post(
 router.get(
   '/',
   authenticate, enforcePasswordChanged,
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('status').optional().isIn(['pending', 'approved', 'rejected']),
+    query('driverId').optional().isUUID(),
+    query('shiftId').optional().isUUID(),
+  ],
   async (req, res, next) => {
     try {
+      handleValidation(req);
       const filters = req.user.role === 'driver' ? { ...req.query, driverId: req.user.id } : req.query;
       const result = await expenseService.getExpenses(filters);
       res.json(result);
@@ -121,7 +129,11 @@ router.post(
 router.put(
   '/categories/:id',
   authenticate, enforcePasswordChanged, authorize('admin'),
-  [param('id').isUUID()],
+  [
+    param('id').isUUID(),
+    body('name').optional().notEmpty().trim().escape(),
+    body('requiresApproval').optional().isBoolean()
+  ],
   async (req, res, next) => {
     try {
       handleValidation(req);

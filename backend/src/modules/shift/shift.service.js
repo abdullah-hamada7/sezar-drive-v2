@@ -170,6 +170,7 @@ async function adminCloseShift(shiftId, adminId, reason, ipAddress) {
         status: 'CANCELLED',
         cancellationReason: 'Admin emergency shift close',
         cancelledBy: adminId,
+        version: { increment: 1 }
       },
     });
 
@@ -184,8 +185,8 @@ async function adminCloseShift(shiftId, adminId, reason, ipAddress) {
     }, 'Admin emergency shift close');
   }
 
-  await prisma.shift.update({
-    where: { id: shiftId },
+  const updated = await prisma.shift.updateMany({
+    where: { id: shiftId, version: shift.version },
     data: {
       status: 'Closed',
       closedAt: new Date(),
@@ -193,6 +194,10 @@ async function adminCloseShift(shiftId, adminId, reason, ipAddress) {
       version: { increment: 1 },
     },
   });
+
+  if (updated.count === 0) {
+    throw new ConflictError('CONCURRENT_MODIFICATION', 'Shift was modified concurrently');
+  }
 
   // Release vehicle
   const assignment = await prisma.vehicleAssignment.findFirst({

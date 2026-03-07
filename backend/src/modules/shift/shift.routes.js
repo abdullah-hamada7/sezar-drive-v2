@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const shiftService = require('./shift.service');
 const { authenticate, enforcePasswordChanged, authorize, requireIdentityVerified } = require('../../middleware/auth');
@@ -139,8 +139,15 @@ router.get(
 router.get(
   '/',
   authenticate, enforcePasswordChanged, authorize('admin'),
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('driverId').optional().isUUID(),
+    query('status').optional().isString(),
+  ],
   async (req, res, next) => {
     try {
+      handleValidation(req);
       const result = await shiftService.getShifts(req.query);
       res.json(result);
     } catch (err) { next(err); }

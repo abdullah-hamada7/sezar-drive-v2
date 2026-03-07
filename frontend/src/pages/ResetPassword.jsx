@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
     };
 
     verifyToken();
-  }, [token, getErrorMessage]);
+  }, [token, getErrorMessage, addToast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

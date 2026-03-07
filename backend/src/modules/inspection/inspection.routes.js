@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const inspectionService = require('./inspection.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
@@ -102,8 +102,10 @@ router.put(
 router.get(
   '/',
   authenticate, enforcePasswordChanged,
+  [query('shiftId').optional().isUUID().withMessage('Valid shift ID is required')],
   async (req, res, next) => {
     try {
+      handleValidation(req);
       const inspections = await inspectionService.getInspections(req.query.shiftId, req.user);
       res.json(inspections);
     } catch (err) { next(err); }

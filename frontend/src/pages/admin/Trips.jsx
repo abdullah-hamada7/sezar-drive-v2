@@ -34,7 +34,7 @@ export default function TripsPage() {
     passengers: []
   });
   const [selectedDriverName, setSelectedDriverName] = useState('');
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [promptData, setPromptData] = useState({ isOpen: false, tripId: null });
   const filterLabel = statusFilter ? t(`common.status.${statusFilter.toLowerCase()}`) : t('trips.filter_all');

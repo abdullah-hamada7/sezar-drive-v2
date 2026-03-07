@@ -8,7 +8,7 @@ class FaceVerificationService {
       region: config.s3.region,
     });
     this.bucket = config.s3.bucket;
-    this.threshold = 90; // Verified threshold
+    this.verifiedThreshold = 90; // Verified threshold
     this.manualReviewThreshold = 75; // Manual review threshold
   }
 
@@ -42,7 +42,7 @@ class FaceVerificationService {
       }
 
       let status = DriverVerificationStatus.FAILED_MATCH;
-      if (similarity >= this.threshold) {
+      if (similarity >= this.verifiedThreshold) {
         status = DriverVerificationStatus.VERIFIED;
       } else if (similarity >= this.manualReviewThreshold) {
         status = DriverVerificationStatus.MANUAL_REVIEW;
@@ -51,7 +51,7 @@ class FaceVerificationService {
       return {
         status,
         similarity,
-        matched: similarity >= this.threshold
+        matched: similarity >= this.verifiedThreshold
       };
     } catch (error) {
       console.error("Rekognition Error:", error);

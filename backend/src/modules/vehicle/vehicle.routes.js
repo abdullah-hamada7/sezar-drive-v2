@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const vehicleService = require('./vehicle.service');
 const shiftService = require('../shift/shift.service');
@@ -45,8 +45,15 @@ router.post(
 router.get(
   '/',
   authenticate, enforcePasswordChanged, authorize('admin'),
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('search').optional().trim().escape(),
+    query('status').optional().isIn(['available', 'damaged', 'maintenance']),
+  ],
   async (req, res, next) => {
     try {
+      handleValidation(req);
       const result = await vehicleService.getVehicles(req.query);
       res.json(result);
     } catch (err) { next(err); }

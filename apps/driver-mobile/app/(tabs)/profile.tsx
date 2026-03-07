@@ -1,68 +1,40 @@
 import React from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity, Image } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { User, Lock, LogOut } from 'lucide-react-native';
+import TechnicalBackground from '../../components/TechnicalBackground';
+import { GlassCard } from '../../components/GlassCard';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function ProfileScreen() {
     const router = useRouter();
+    const { user, logout } = useAuth();
 
-    const handleLogout = () => {
-        router.replace('/login');
-    };
+    const displayName = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Driver';
 
     return (
-        <>
-            <LinearGradient colors={['#1a1a2e', '#16213e']} style={styles.background} />
-            <ScrollView contentContainerStyle={styles.container}>
-                <ThemedView style={styles.profileHeader}>
-                    <View style={styles.avatar}>
-                        <IconSymbol name="person.fill" size={50} color="#fff" />
+        <View className="flex-1 bg-[#030712]">
+            <TechnicalBackground />
+            <ScrollView contentContainerStyle={{ padding: 24, paddingTop: 64, paddingBottom: 100 }}>
+                <View className="items-center mb-8">
+                    <View className="w-24 h-24 rounded-full bg-[#1F2937] border-2 border-[#3B82F6]/40 items-center justify-center mb-4">
+                        <User size={40} color="#3B82F6" />
                     </View>
-                    <ThemedText style={styles.name}>Abdullah Driver</ThemedText>
-                    <ThemedText style={styles.phone}>+966 50 123 4567</ThemedText>
-                </ThemedView>
+                    <Text className="text-white text-2xl font-black tracking-wide text-center">{displayName}</Text>
+                    <Text className="text-[#9CA3AF] text-sm mt-1">{user?.email}</Text>
+                </View>
 
-                <ThemedView style={styles.menu}>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <IconSymbol name="lock.fill" size={20} color="#6366f1" />
-                        <ThemedText style={styles.menuText}>Change Password</ThemedText>
-                        <ThemedText style={styles.arrow}>›</ThemedText>
+                <GlassCard className="mb-6 p-0 overflow-hidden">
+                    <TouchableOpacity className="flex-row items-center px-5 py-4 border-b border-white/5" onPress={() => router.push('/change-password')}>
+                        <Lock size={18} color="#3B82F6" />
+                        <Text className="text-[#F9FAFB] font-semibold ml-3">Change Password</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <IconSymbol name="globe" size={20} color="#6366f1" />
-                        <ThemedText style={styles.menuText}>Language: English</ThemedText>
-                        <ThemedText style={styles.arrow}>›</ThemedText>
+                    <TouchableOpacity className="flex-row items-center px-5 py-4" onPress={logout}>
+                        <LogOut size={18} color="#EF4444" />
+                        <Text className="text-[#EF4444] font-semibold ml-3">Sign Out</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuItem}>
-                        <IconSymbol name="info.circle.fill" size={20} color="#6366f1" />
-                        <ThemedText style={styles.menuText}>About sezar drive</ThemedText>
-                        <ThemedText style={styles.arrow}>›</ThemedText>
-                    </TouchableOpacity>
-                </ThemedView>
-
-                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                    <ThemedText style={styles.logoutText}>Sign Out</ThemedText>
-                </TouchableOpacity>
+                </GlassCard>
             </ScrollView>
-        </>
+        </View>
     );
 }
-
-const styles = StyleSheet.create({
-    background: { position: 'absolute', left: 0, right: 0, top: 0, height: '100%' },
-    container: { padding: 20, paddingTop: 60 },
-    profileHeader: { alignItems: 'center', backgroundColor: 'transparent', marginBottom: 40 },
-    avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(99, 102, 241, 0.4)', justifyContent: 'center', alignItems: 'center', marginBottom: 15, borderWidth: 2, borderColor: '#6366f1' },
-    name: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
-    phone: { fontSize: 14, color: '#a0aec0', marginTop: 5 },
-    menu: { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 20, overflow: 'hidden' },
-    menuItem: { flexDirection: 'row', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    menuText: { flex: 1, color: '#fff', marginLeft: 15, fontSize: 16 },
-    arrow: { color: 'rgba(255,255,255,0.3)', fontSize: 24 },
-    logoutButton: { marginTop: 30, padding: 18, borderRadius: 15, alignItems: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.2)' },
-    logoutText: { color: '#ef4444', fontWeight: 'bold', fontSize: 16 },
-});

@@ -14,7 +14,7 @@ export const authService = {
     return http.request('/verify/identity', { method: 'POST', body: formData });
   },
   uploadIdentity(formData) {
-    return http.request('/auth/identity', { method: 'POST', body: formData, headers: { 'Content-Type': 'multipart/form-data' } });
+    return http.request('/verify/identity', { method: 'POST', body: formData, headers: { 'Content-Type': 'multipart/form-data' } });
   },
   getPendingShiftVerifications(params) {
     return http.get(`/verify/pending?${params}`);

@@ -30,5 +30,5 @@ build/
 *.tfplan
 plan
 terraform.tfvars
-.agents/
+.agent/
 *.pem

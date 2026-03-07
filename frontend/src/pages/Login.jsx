@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [view, setView] = useState('login'); // login | rescue-request | rescue-verify
   const [rescueCode, setRescueCode] = useState('');
   const [rescueLoading, setRescueLoading] = useState(false);
@@ -38,7 +37,6 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     try {
       const result = await login(email, password);
       if (result?.requiresVerification) {
@@ -56,7 +54,6 @@ export default function LoginPage() {
 
   const handleRequestRescue = async (e) => {
     e.preventDefault();
-    setError('');
     setRescueLoading(true);
     try {
       const res = await api.requestRescue(email);
@@ -71,7 +68,6 @@ export default function LoginPage() {
 
   const handleVerifyRescue = async (e) => {
     e.preventDefault();
-    setError('');
     setRescueLoading(true);
     try {
       const res = await api.verifyRescueCode(email, rescueCode);
@@ -134,11 +130,10 @@ export default function LoginPage() {
                 <button
                   type="button"
                   className="forgot-password-trigger"
-                  onClick={() => {
-                    setView('rescue-request');
-                    setError('');
-                  }}
-                >
+                   onClick={() => {
+                     setView('rescue-request');
+                   }}
+                 >
                   {t('auth.forgot_password')}
                 </button>
               </div>

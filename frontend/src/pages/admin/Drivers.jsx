@@ -18,7 +18,7 @@ export default function DriversPage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
   const [files, setFiles] = useState({});
   const [previews, setPreviews] = useState({});
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [confirmData, setConfirmData] = useState({ isOpen: false, type: '', data: null });
 

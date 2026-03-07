@@ -19,9 +19,10 @@ function handleValidation(req) {
 router.put(
   '/profile',
   authenticate,
+  enforcePasswordChanged,
   upload.single('avatar'),
   [
-    body('phone').optional().trim(),
+    body('phone').optional().trim().escape(),
     body('language_preference').optional().isString().isIn(['en', 'ar']).withMessage('Invalid language preference'),
   ],
   async (req, res, next) => {
@@ -84,10 +85,11 @@ router.get(
   [
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
-    query('search').optional().trim(),
+    query('search').optional().trim().escape(),
   ],
   async (req, res, next) => {
     try {
+      handleValidation(req);
       const result = await driverService.getDrivers(req.query);
       res.json(result);
     } catch (err) { next(err); }

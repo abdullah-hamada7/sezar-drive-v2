@@ -6,7 +6,6 @@ import { authService } from '../../services/auth.service';
 import { http } from '../../services/http.service';
 import { ClipboardCheck, User } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
-import { ThemeContext } from '../../contexts/theme';
 
 import DriverDetailsModal from '../../components/driver/DriverDetailsModal';
 import DailyEarningsChart from '../../components/driver/DailyEarningsChart';
@@ -16,7 +15,6 @@ export default function DriverHome() {
   const { t } = useTranslation();
   const { user, updateUser } = useAuth();
   const { addToast } = useContext(ToastContext);
-  const { theme } = useContext(ThemeContext);
   const { activeShift, loading: shiftLoading } = useShift();
   const [showDetails, setShowDetails] = useState(false);
 

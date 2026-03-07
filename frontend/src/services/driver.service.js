@@ -17,7 +17,7 @@ export const driverService = {
     return http.delete(`/drivers/${id}`);
   },
   updateAvatar(id, formData) {
-    return http.post(`/drivers/${id}/avatar`, formData);
+    return http.request(`/drivers/${id}`, { method: 'PUT', body: formData });
   },
   reviewIdentity(id, data) {
     return http.put(`/auth/identity/${id}/review`, data);

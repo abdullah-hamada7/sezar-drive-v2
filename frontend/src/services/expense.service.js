@@ -7,8 +7,9 @@ export const expenseService = {
   createExpense(data) {
     return http.request('/expenses', { method: 'POST', body: data });
   },
-  uploadReceipt(id, formData) {
-    return http.request(`/expenses/${id}/receipt`, { method: 'POST', body: formData });
+  uploadReceipt(id, data) {
+    const payload = data instanceof FormData ? Object.fromEntries(data.entries()) : data;
+    return http.request(`/expenses/${id}`, { method: 'PUT', body: payload });
   },
   reviewExpense(id, data) {
     return http.request(`/expenses/${id}/review`, { method: 'PUT', body: data });

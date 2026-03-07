@@ -13,14 +13,17 @@ async function createAdmin(data, superAdminId, ipAddress) {
     }
 
     const existing = await prisma.user.findFirst({
-        where: { email },
+        where: { OR: [{ email }, { phone: data.phone }] },
     });
     if (existing) {
         if (!existing.isActive) {
-            throw new ConflictError('USER_DEACTIVATED', 'A deactivated admin with this email exists. Please reactivate them instead.');
+            throw new ConflictError('USER_DEACTIVATED', 'A deactivated user with this email or phone exists. Please reactivate them instead.');
         }
 
-        throw new ConflictError('USER_ALREADY_EXISTS', 'User with this email already exists');
+        if (existing.email === email) {
+            throw new ConflictError('EMAIL_ALREADY_EXISTS', 'User with this email already exists');
+        }
+        throw new ConflictError('USER_ALREADY_EXISTS', 'User with this email or phone already exists');
     }
 
     const passwordHash = await bcrypt.hash(password, config.bcryptRounds);

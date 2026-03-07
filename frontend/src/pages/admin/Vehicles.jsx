@@ -28,7 +28,7 @@ export default function VehiclesPage() {
   const [qrVehicle, setQrVehicle] = useState(null);
   const [editVehicle, setEditVehicle] = useState(null);
   const [form, setForm] = useState({ plateNumber: '', model: '', year: 2024, capacity: 4, qrCode: '' });
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [confirmData, setConfirmData] = useState({ isOpen: false, vehicleId: null });
 
   const load = useCallback(async () => {

@@ -1,8 +1,8 @@
-# Fleet Management Platform — Production Docker Compose
-# Usage: docker compose -f compose.prod.yml up -d
+# docker compose -f compose.prod.yml --profile ops run --rm migrate
+# docker compose -f compose.prod.yml up -d
+# docker compose -f compose.prod.yml run --rm backend npm run seed
 
 services:
-  # ─── Reverse Proxy (SSL) ────────────────────────
   caddy:
     image: caddy:2-alpine
     container_name: fleet-caddy
@@ -14,35 +14,35 @@ services:
       DOMAIN_NAME: ${DOMAIN_NAME}
       EMAIL_FOR_SSL: ${EMAIL_FOR_SSL}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - frontend
-      - backend
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
     networks:
       - app-net
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ─── Redis (Cache/Socket.IO) ──────────────────
   redis:
     image: redis:7-alpine
     container_name: fleet-redis-prod
     restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning
-    volumes:
-      - redis_data_prod:/data
+    command: ["redis-server", "--loglevel", "warning", "--appendonly", "no", "--save", ""]
     networks:
       - app-net
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ─── PostgreSQL Database ────────────────────────
   postgres:
     image: postgres:16-alpine
     container_name: fleet-postgres-prod
@@ -54,56 +54,81 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
+      - ./infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     networks:
       - app-net
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER}" ]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
       timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    command:
-      - "postgres"
-      - "-c"
-      - "max_connections=50"
-      - "-c"
-      - "shared_buffers=64MB"
-      - "-c"
-      - "effective_cache_size=192MB"
+      retries: 10
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ─── Backend API ────────────────────────────────
-  backend:
+  migrate:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: fleet-backend-prod
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3000/api/v1/ready', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));" ]
+    container_name: fleet-backend-migrate
+    profiles: ["ops"]
     env_file: .env
     environment:
       PORT: 3000
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: redis://redis:6379
-      RUN_MIGRATIONS_ON_STARTUP: "true"
-      RUN_SEED_ON_STARTUP: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - app-net
+    restart: "no"
+    command: ["sh", "-c", "npm run migrate"]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: fleet-backend-prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      RUN_MIGRATIONS_ON_STARTUP: "false"
+      RUN_SEED_ON_STARTUP: "false"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_started
-    deploy:
-      resources:
-        limits:
-          memory: 512M
+    networks:
+      - app-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/api/v1/ready', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));"
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ─── Frontend ───────────────────────────────────
   frontend:
     build:
       context: .
@@ -111,13 +136,15 @@ services:
     container_name: fleet-frontend-prod
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - app-net
-    deploy:
-      resources:
-        limits:
-          memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   app-net:
@@ -125,6 +152,5 @@ networks:
 
 volumes:
   postgres_data_prod:
-  redis_data_prod:
   caddy_data:
   caddy_config:

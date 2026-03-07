@@ -2,7 +2,7 @@
 
 ## Fleet Transportation & Trip Management Platform
 
-### Agent Governance Specification (Revised v2.0)
+### Agent Governance Specification (Revised v2.2)
 
 ---
 
@@ -72,7 +72,7 @@ The platform is a fleet-based transportation management system with:
 * Expense logging with optional approval
 * Daily revenue aggregation
 * PDF and Excel reporting
-* Asynchronous iTrack GPS integration
+* Daily Database Backups to S3 (7 daily, 4 weekly, 3 monthly retention)
 * Immutable audit logging
 * Damage reporting workflow
 * Vehicle locking and maintenance state
@@ -187,16 +187,15 @@ Inspection policy must be configurable.
 
 ---
 
-### 5.7 GPS Tracking (iTrack)
+### 5.7 Backup & Retention Policy
 
-* Integration must be asynchronous.
-* Core system must operate if tracking unavailable.
-* Adapter service required.
-* Store:
-
-  * Last known location
-  * Historical tracking logs
-* Polling or webhook model must be explicitly defined.
+* PostgreSQL kept in Docker Compose on EC2.
+* Live data stored in persistent Docker volumes.
+* Automated `pg_dump` every day at 03:00 UTC.
+* Backups uploaded to S3 with prefixes: `daily/`, `weekly/`, `monthly/`.
+* Retention: 7 daily, 4 weekly, 3 monthly (enforced via S3 Lifecycle Rules).
+* Local backup files deleted immediately after S3 upload.
+* Backup logs managed via `logrotate` on the host.
 
 ---
 
@@ -296,7 +295,7 @@ Gemini must ensure outputs consider:
 * RBAC
 * Audit logging
 * Concurrency handling
-* iTrack adapter
+
 * Reporting engine (PDF/Excel)
 * OpenAPI compliance
 
@@ -344,7 +343,7 @@ Gemini must explicitly design for:
 * Image upload failure
 * Network interruption
 * App crash
-* GPS outage
+
 * Admin reassignment during active shift
 
 Recovery mechanisms must maintain consistency.
@@ -384,6 +383,9 @@ No blind patching.
 * Containerized deployment
 * HTTPS-only communication
 * Server-side validation mandatory
+* EC2 Instance: `t3.small` (2 vCPUs, 2GB RAM) for stability.
+* Networking: Public IPv4 enabled (standard AWS billing applies).
+* Icons: PWA and UI branding synchronized using `Car` icon from `lucide-react`.
 
 Any deviation must be justified in Architecture documentation.
 

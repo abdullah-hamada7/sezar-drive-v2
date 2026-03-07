@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const tripService = require('./trip.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
@@ -74,7 +74,7 @@ router.patch(
   [
     param('id').isUUID(),
     body('state').isIn(['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
-    body('reason').optional().isString().trim(),
+    body('reason').optional().isString().trim().escape(),
   ],
   async (req, res, next) => {
     try {
@@ -97,7 +97,7 @@ router.patch(
   [
     param('id').isUUID(),
     body('state').isIn(['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
-    body('reason').optional().isString().trim(),
+    body('reason').optional().isString().trim().escape(),
   ],
   async (req, res, next) => {
     try {
@@ -258,13 +258,20 @@ router.get(
 router.get(
   '/',
   authenticate, enforcePasswordChanged,
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('status').optional().isIn(['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
+    query('driverId').optional().isUUID(),
+  ],
   async (req, res, next) => {
     try {
-      const query = { ...req.query };
+      handleValidation(req);
+      const queryParams = { ...req.query };
       if (req.user.role === 'driver') {
-        query.driverId = req.user.id;
+        queryParams.driverId = req.user.id;
       }
-      const result = await tripService.getTrips(query);
+      const result = await tripService.getTrips(queryParams);
       res.json(result);
     } catch (err) { next(err); }
   }

@@ -185,7 +185,8 @@ resource "aws_instance" "sezar_drive" {
   }
 
   user_data = templatefile("${path.module}/scripts/install_docker.sh", {
-    s3_bucket = aws_s3_bucket.photos.id
+    s3_bucket        = aws_s3_bucket.photos.id
+    backup_s3_bucket = aws_s3_bucket.db_backups.id
   })
 
   tags = merge(local.common_tags, {

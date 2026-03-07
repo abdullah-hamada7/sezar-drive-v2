@@ -3,10 +3,11 @@ set -e
 
 # Environment variables from Terraform
 S3_BUCKET="${s3_bucket}"
+BACKUP_S3_BUCKET="${backup_s3_bucket}"
 
 # Update and install dependencies
 sudo apt-get update
-sudo apt-get install -y ca-certificates curl gnupg lsb-release unzip libcurl4-openssl-dev
+sudo apt-get install -y ca-certificates curl gnupg lsb-release unzip libcurl4-openssl-dev logrotate
 
 # Install AWS CLI v2 (required for S3 backups)
 if ! command -v aws &> /dev/null; then
@@ -41,8 +42,26 @@ sudo systemctl start docker
 sudo usermod -aG docker ubuntu || true
 
 # Setup Daily Backup Cron (idempotent)
-CRON_JOB="0 3 * * * S3_BUCKET=$S3_BUCKET /home/ubuntu/scripts/backup.sh >> /home/ubuntu/backups/backup.log 2>&1"
+# Runs at 03:00 UTC every day. Sundays automatically also upload to weekly/.
+# 1st of each month also uploads to monthly/.
+CRON_JOB="0 3 * * * BACKUP_BUCKET=$BACKUP_S3_BUCKET /home/ubuntu/scripts/backup.sh >> /var/log/db-backup.log 2>&1"
 (crontab -l 2>/dev/null | grep -F "/home/ubuntu/scripts/backup.sh") || (crontab -l 2>/dev/null; echo "$CRON_JOB") | crontab -
+
+# Setup db backup log rotation (idempotent)
+sudo touch /var/log/db-backup.log
+sudo chown ubuntu:ubuntu /var/log/db-backup.log
+sudo tee /etc/logrotate.d/db-backup <<'EOF'
+/var/log/db-backup.log {
+  weekly
+  rotate 12
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+  create 0640 ubuntu ubuntu
+}
+EOF
 
 # Setup Docker Log Rotation to prevent disk exhaustion
 if [ ! -f /etc/docker/daemon.json ]; then

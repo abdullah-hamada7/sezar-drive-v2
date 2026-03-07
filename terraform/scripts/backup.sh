@@ -1,41 +1,81 @@
 #!/bin/bash
-# Sezar Drive Database Backup Script
-# Retention: 7 days
+# ==============================================================================
+# Sezar Drive - PostgreSQL Backup Script
+# ==============================================================================
+# Uploads encrypted pg_dump backups to S3 under a date-based prefix,
+# enforcing the 7/4/3 retention policy via S3 Lifecycle rules on:
+#   s3://$BACKUP_BUCKET/daily/
+#   s3://$BACKUP_BUCKET/weekly/    (Sundays)
+#   s3://$BACKUP_BUCKET/monthly/   (1st of month)
+#
+# Local temp files are deleted immediately after a successful S3 upload.
+# Local files NEVER accumulate on EC2.
+# ==============================================================================
+set -euo pipefail
 
-BACKUP_DIR="/home/ubuntu/backups"
+# ── Configuration ─────────────────────────────────────────────────────────────
+BACKUP_BUCKET="${BACKUP_BUCKET:?BACKUP_BUCKET environment variable must be set}"
+POSTGRES_DB="${POSTGRES_DB:-sezar_drive}"
+POSTGRES_USER="${POSTGRES_USER:-postgres}"
+CONTAINER_NAME="fleet-postgres-prod"
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-DATABASE_NAME="${DATABASE_NAME:-sezar_drive}"
-CONTAINER_NAME="fleet-postgres-prod" # Matches compose.prod.yml
+DOW=$(date +"%u")   # 1=Mon … 7=Sun
+DOM=$(date +"%d")   # Day of month (01-31)
+FILENAME="db_backup_${TIMESTAMP}.sql.gz"
+TMP_FILE="/tmp/${FILENAME}"
 
-mkdir -p $BACKUP_DIR
+# ── Helper ─────────────────────────────────────────────────────────────────────
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
 
-echo "Starting backup for $DATABASE_NAME at $TIMESTAMP..."
+cleanup() {
+  if [ -f "$TMP_FILE" ]; then
+    rm -f "$TMP_FILE"
+    log "Cleaned up temporary local file."
+  fi
+}
+trap cleanup EXIT   # Always delete /tmp file (even on error)
 
-# Perform backup using docker exec (assuming postgres is in a container)
-echo "Executing pg_dump..."
-docker exec $CONTAINER_NAME pg_dump -U postgres $DATABASE_NAME | gzip > "$BACKUP_DIR/db_backup_$TIMESTAMP.sql.gz"
+# ── pg_dump ────────────────────────────────────────────────────────────────────
+log "Starting backup for ${POSTGRES_DB}..."
+docker exec "${CONTAINER_NAME}" pg_dump \
+  -U "${POSTGRES_USER}" \
+  "${POSTGRES_DB}" \
+  | gzip > "${TMP_FILE}"
 
-if [ $? -eq 0 ]; then
-    echo "Backup successful: $BACKUP_DIR/db_backup_$TIMESTAMP.sql.gz"
-    
-    # Upload to S3 if BUCKET_NAME is provided
-    if [ ! -z "$S3_BUCKET" ]; then
-        echo "Uploading to S3: s3://$S3_BUCKET/backups/db_backup_$TIMESTAMP.sql.gz"
-        aws s3 cp "$BACKUP_DIR/db_backup_$TIMESTAMP.sql.gz" "s3://$S3_BUCKET/backups/db_backup_$TIMESTAMP.sql.gz"
-        if [ $? -eq 0 ]; then
-            echo "S3 upload successful."
-        else
-            echo "S3 upload failed!"
-        fi
-    else
-        echo "S3_BUCKET not set, skipping remote upload."
-    fi
-else
-    echo "Backup failed!"
-    exit 1
+log "pg_dump complete: ${TMP_FILE}"
+
+# ── Determine S3 prefix ───────────────────────────────────────────────────────
+# Every backup is a daily. Sundays are also weeklies. 1st of month is also monthly.
+PREFIXES=("daily")
+
+if [ "$DOW" -eq 7 ]; then
+  PREFIXES+=("weekly")
 fi
 
-# Rotate backups: Keep only the 7 most recent
-ls -t $BACKUP_DIR/db_backup_*.sql.gz | tail -n +8 | xargs -r rm
+if [ "$DOM" -eq "01" ]; then
+  PREFIXES+=("monthly")
+fi
 
-echo "Backup rotation complete."
+# ── Upload to S3 ──────────────────────────────────────────────────────────────
+UPLOAD_FAILED=0
+for PREFIX in "${PREFIXES[@]}"; do
+  S3_TARGET="s3://${BACKUP_BUCKET}/${PREFIX}/${FILENAME}"
+  log "Uploading to ${S3_TARGET} ..."
+  if aws s3 cp "${TMP_FILE}" "${S3_TARGET}" \
+       --sse AES256 \
+       --storage-class STANDARD_IA \
+       --no-progress; then
+    log "Upload succeeded: ${S3_TARGET}"
+  else
+    log "ERROR: Upload FAILED for ${S3_TARGET}"
+    UPLOAD_FAILED=1
+  fi
+done
+
+if [ "$UPLOAD_FAILED" -eq 1 ]; then
+  log "ERROR: One or more S3 uploads failed. Local temp file will be removed by trap."
+  exit 1
+fi
+
+log "Backup complete. Local temp file will be removed by trap."

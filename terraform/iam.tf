@@ -59,6 +59,29 @@ resource "aws_iam_role_policy" "rekognition_access" {
 
 
 
+# Attach DB Backup S3 Access
+resource "aws_iam_role_policy" "db_backup_s3_access" {
+  name = "${var.project_name}-db-backup-policy"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:PutObject",
+          "s3:ListBucket"
+        ]
+        Effect = "Allow"
+        Resource = [
+          aws_s3_bucket.db_backups.arn,
+          "${aws_s3_bucket.db_backups.arn}/*"
+        ]
+      },
+    ]
+  })
+}
+
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${var.project_name}-instance-profile"
   role = aws_iam_role.ec2_role.name

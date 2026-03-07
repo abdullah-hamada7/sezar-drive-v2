@@ -23,7 +23,7 @@ export const vehicleService = {
     return http.request(`/vehicles/${id}/release`, { method: 'POST' });
   },
   updateVehicleStatus(id, data) {
-    return http.request(`/vehicles/${id}/status`, { method: 'PATCH', body: data });
+    return http.request(`/vehicles/${id}/status`, { method: 'PUT', body: data });
   },
   deleteVehicle(id) {
     return http.request(`/vehicles/${id}`, { method: 'DELETE' });
