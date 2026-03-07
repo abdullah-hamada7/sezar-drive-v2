@@ -55,6 +55,7 @@
     "rescue_verify_title": "أدخل رمز الإنقاذ",
     "rescue_verify_desc": "أدخل رمز الإنقاذ المكون من 6 أرقام والمقدم من المسؤول.",
     "rescue_code": "رمز الإنقاذ",
+    "rescue_code_placeholder": "أدخل الرمز المكون من 6 أرقام",
     "verify_rescue_btn": "التحقق من الرمز",
     "resend_request": "إعادة إرسال الطلب",
     "generate_rescue_code": "إنشاء رمز إنقاذ",
@@ -102,6 +103,7 @@
     "awaiting_verification": "في انتظار التحقق للتفعيل",
     "scan_vehicle": "مسح المركبة",
     "manual_qr_label": "أدخل رمز QR",
+    "manual_qr_placeholder": "مثال: VH-QR-001",
     "biometric_title": "التحقق البيومتري",
     "biometric_desc": "يرجى التقاط صورة سيلفي واضحة للتحقق من هويتك وبدء مناوبتك.",
     "activate_btn": "تفعيل المناوبة",
@@ -229,6 +231,7 @@
     "no": "لا",
     "or": "أو",
     "currency": "ج.م",
+    "amount_placeholder": "مثال: 150.00",
     "close": "إغلاق",
     "back": "عودة",
     "not_provided": "غير متوفر",
@@ -483,8 +486,8 @@
       "name_required": "الاسم مطلوب",
       "password_invalid": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
       "create_btn": "إنشاء السائق",
-      "phone_placeholder": "+201",
-      "license_placeholder": "DL-XXXX-XXX"
+      "phone_placeholder": "مثال: +201234567890",
+      "license_placeholder": "مثال: CAI-123456"
     },
     "messages": {
       "approve_confirm": "الموافقة على هوية {{name}}؟",
@@ -527,7 +530,7 @@
       "name_ph": "الاسم",
       "phone_ph": "الهاتف (اختياري)",
       "pickup_ph": "استلام محدد (اختياري)",
-      "bags_ph": "الحقائب",
+      "bags_ph": "عدد الحقائب",
       "reason_placeholder": "سبب الإلغاء",
       "pickup_placeholder": "أدخل موقع الاستلام",
       "dropoff_placeholder": "أدخل موقع التوصيل"
@@ -708,6 +711,7 @@
   "verification": {
     "title": "طابور التحقق من الهوية",
     "subtitle": "مراجعة وإدارة هويات السائقين",
+    "search_driver_placeholder": "ابحث باسم السائق...",
     "sort": {
       "label": "ترتيب حسب",
       "date": "تاريخ التقديم",

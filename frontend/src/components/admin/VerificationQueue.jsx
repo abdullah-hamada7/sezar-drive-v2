@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { authService as api } from '../../services/auth.service';
 import { Check, X, User, Loader, ClipboardCheck } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import PromptModal from '../common/PromptModal';
 
 export default function VerificationQueue() {
+  const { t } = useTranslation();
   const { addToast } = useContext(ToastContext);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function VerificationQueue() {
             <input
               type="text"
               className="input input-sm"
-              placeholder="Search Driver Name..."
+              placeholder={t('verification.search_driver_placeholder')}
               value={filterName}
               onChange={e => setFilterName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && load()}

@@ -164,7 +164,7 @@ export default function QRScanner({ onScan, onCancel }) {
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. VH-101"
+                  placeholder={t('shift.manual_qr_placeholder')}
                   value={manualCode}
                   autoFocus
                   onChange={(e) => setManualCode(e.target.value)}

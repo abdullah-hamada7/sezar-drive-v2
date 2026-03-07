@@ -55,6 +55,7 @@
     "rescue_verify_title": "Enter Rescue Code",
     "rescue_verify_desc": "Enter the 6-digit rescue code provided by your admin.",
     "rescue_code": "Rescue Code",
+    "rescue_code_placeholder": "Enter 6-digit code",
     "verify_rescue_btn": "Verify Code",
     "resend_request": "Resend Request",
     "generate_rescue_code": "Generate Rescue Code",
@@ -102,6 +103,7 @@
     "awaiting_verification": "Awaiting verification to activate",
     "scan_vehicle": "Scan Vehicle",
     "manual_qr_label": "Enter QR Code",
+    "manual_qr_placeholder": "e.g. VH-QR-001",
     "biometric_title": "Biometric Verification",
     "biometric_desc": "Please capture a clear selfie to verify your identity and start your shift.",
     "activate_btn": "Activate Shift",
@@ -230,6 +232,7 @@
     "no": "No",
     "or": "or",
     "currency": "EGP",
+    "amount_placeholder": "e.g. 150.00",
     "close": "Close",
     "back": "Back",
     "not_provided": "Not Provided",
@@ -487,8 +490,8 @@
       "name_required": "Name is required",
       "password_invalid": "Password must be at least 8 characters",
       "create_btn": "Create Driver",
-      "phone_placeholder": "+201",
-      "license_placeholder": "DL-XXXX-XXX"
+      "phone_placeholder": "e.g. +201234567890",
+      "license_placeholder": "e.g. CAI-123456"
     },
     "messages": {
       "approve_confirm": "Approve identity for {{name}}?",
@@ -531,7 +534,7 @@
       "name_ph": "Name",
       "phone_ph": "Phone (optional)",
       "pickup_ph": "Specific Pickup (optional)",
-      "bags_ph": "Bags",
+      "bags_ph": "Number of bags",
       "reason_placeholder": "Reason for cancellation",
       "pickup_placeholder": "Enter pickup location",
       "dropoff_placeholder": "Enter dropoff location"
@@ -712,6 +715,7 @@
   "verification": {
     "title": "Identity Verification Queue",
     "subtitle": "Review and manage driver identities",
+    "search_driver_placeholder": "Search driver name...",
     "sort": {
       "label": "Sort By",
       "date": "Date Submitted",

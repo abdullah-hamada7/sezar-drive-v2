@@ -324,7 +324,7 @@ export default function ShiftsPage() {
         onConfirm={onConfirmClose}
         title={t('shifts.actions.close')}
         message={t('shifts.modal.close_prompt')}
-        placeholder={t('shifts.modal.reason_placeholder') || 'Reason for closing shift'}
+        placeholder={t('shifts.modal.reason_placeholder')}
       />
 
       <style>{`

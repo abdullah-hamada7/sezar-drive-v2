@@ -182,6 +182,7 @@ export default function LoginPage() {
                   <input
                     type="email"
                     className="form-input"
+                    placeholder={t('auth.enter_email')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -204,7 +205,7 @@ export default function LoginPage() {
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="000000"
+                    placeholder={t('auth.rescue_code_placeholder')}
                     maxLength={6}
                     value={rescueCode}
                     onChange={(e) => setRescueCode(e.target.value)}

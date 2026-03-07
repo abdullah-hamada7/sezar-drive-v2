@@ -293,7 +293,7 @@ export default function TripsPage() {
                 <div className="grid grid-2 gap-md">
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.price_label', { unit: t('common.currency') })}</label>
-                    <input type="number" step="0.01" className="form-input" value={form.price} onChange={e => { setForm({ ...form, price: e.target.value }); setError(''); }} required placeholder="0.00" min="0" />
+                    <input type="number" step="0.01" className="form-input" value={form.price} onChange={e => { setForm({ ...form, price: e.target.value }); setError(''); }} required placeholder={t('common.amount_placeholder')} min="0" />
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.time_label')}</label>

@@ -212,7 +212,7 @@ export default function VerificationQueue() {
         onConfirm={(reason) => handleReview(promptData.item.id, 'REJECT', reason)}
         title={t('verification.card.reject')}
         message={t('verification.messages.reject_prompt')}
-        placeholder={t('verification.messages.reject_reason_placeholder') || 'Reason for rejection'}
+        placeholder={t('verification.messages.reject_reason_placeholder')}
       />
     </div>
   );

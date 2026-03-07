@@ -124,7 +124,7 @@ export default function DriverExpenses() {
               <div className="row">
                 <div className="col form-group mb-md">
                   <label className="form-label">{t('expenses.amount_label')}</label>
-                  <input type="number" step="0.01" className="form-input" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required placeholder="0.00" />
+                  <input type="number" step="0.01" className="form-input" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required placeholder={t('common.amount_placeholder')} />
                 </div>
               </div>
               <div className="form-group mb-md">
