@@ -28,6 +28,16 @@ jobs:
           expo-version: latest
           eas-cache: true
 
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/driver-mobile/android/**/*.gradle', 'apps/driver-mobile/android/gradle.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Install dependencies
         working-directory: apps/driver-mobile
         run: npm install
@@ -40,7 +50,7 @@ jobs:
         working-directory: apps/driver-mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
