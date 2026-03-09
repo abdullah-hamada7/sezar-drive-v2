@@ -16,6 +16,10 @@ async function createDriver(data, adminId, ipAddress) {
     throw new ValidationError('Password is required');
   }
 
+  if (!avatarUrl || !idCardFront || !idCardBack) {
+    throw new ValidationError('Personal photo and national ID front/back are required');
+  }
+
   validatePasswordPolicy(password);
 
   const existing = await prisma.user.findFirst({

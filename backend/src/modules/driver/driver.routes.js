@@ -60,6 +60,9 @@ router.post(
       if (!req.body.password && !req.body.temporaryPassword) {
         throw new Error('Either password or temporaryPassword is required');
       }
+      if (!req.files?.avatar?.[0] || !req.files?.idCardFront?.[0] || !req.files?.idCardBack?.[0]) {
+        throw new Error('Personal photo and national ID front/back are required');
+      }
       return true;
     }),
   ],

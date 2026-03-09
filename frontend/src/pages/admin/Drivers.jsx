@@ -106,6 +106,25 @@ export default function DriversPage() {
       return;
     }
 
+    if (!editDriver) {
+      const missingPhotos = {
+        avatar: !files.avatar,
+        idCardFront: !files.idCardFront,
+        idCardBack: !files.idCardBack,
+      };
+
+      if (missingPhotos.avatar || missingPhotos.idCardFront || missingPhotos.idCardBack) {
+        setFieldErrors(prev => ({
+          ...prev,
+          avatar: missingPhotos.avatar ? t('drivers.modal.photo_required') : '',
+          idCardFront: missingPhotos.idCardFront ? t('drivers.modal.photo_required') : '',
+          idCardBack: missingPhotos.idCardBack ? t('drivers.modal.photo_required') : '',
+        }));
+        setError(t('drivers.modal.required_photos_error'));
+        return;
+      }
+    }
+
     try {
       const formData = new FormData();
       formData.append('name', form.name);
@@ -357,9 +376,11 @@ export default function DriversPage() {
                           if (file) {
                             setFiles(prev => ({ ...prev, [key]: file }));
                             setPreviews(prev => ({ ...prev, [key]: URL.createObjectURL(file) }));
+                            setFieldErrors(prev => ({ ...prev, [key]: '' }));
                           }
                         }}
                       />
+                      {!editDriver && fieldErrors[key] && <span className="text-xs text-danger">{fieldErrors[key]}</span>}
                     </div>
                   ))}
                 </div>

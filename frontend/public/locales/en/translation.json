@@ -503,6 +503,8 @@
       "id_front": "National ID (Front)",
       "id_back": "National ID (Back)",
       "tap_upload": "Tap to upload",
+      "photo_required": "Required",
+      "required_photos_error": "Personal photo and national ID front/back are required",
       "name_label": "Full Name *",
       "email_label": "Email *",
       "phone_label": "Phone *",

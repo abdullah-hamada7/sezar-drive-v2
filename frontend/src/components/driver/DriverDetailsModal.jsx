@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Calendar, CreditCard, User } from 'lucide-react';
+import { X, CreditCard, User, Phone, Mail } from 'lucide-react';
 
 export default function DriverDetailsModal({ driver, isOpen, onClose }) {
   const { t } = useTranslation();
@@ -9,21 +9,21 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px', width: '90%', padding: '0', overflow: 'hidden' }}>
-        <div className="modal-header" style={{ padding: 'var(--space-md) var(--space-lg)', borderBottom: '1px solid var(--color-border-subtle)', background: 'var(--color-bg-secondary)' }}>
-          <h3 className="modal-title m-0 text-lg">{t('drivers.modal.details_title')}</h3>
+      <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 className="modal-title">{t('drivers.modal.details_title')}</h3>
           <button className="btn-icon" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="modal-body" style={{ padding: 'var(--space-lg)' }}>
+        <div className="modal-body">
           {/* Profile Header */}
           <div className="flex items-center gap-md mb-xl" style={{
             padding: 'var(--space-md)',
             background: 'var(--color-bg-tertiary)',
             borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--color-border-subtle)'
+            border: '1px solid var(--color-border)'
           }}>
             <div style={{
               width: 88, height: 88,
@@ -42,7 +42,12 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
               )}
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-bold mb-xs" style={{ color: 'var(--color-text-primary)' }}>{driver.name}</h3>
+              <h3 className="text-xl font-bold mb-xs">{driver.name}</h3>
+              <div className="mb-xs">
+                <span className={`badge badge-status ${driver.identityVerified ? 'badge-success' : 'badge-warning'}`}>
+                  {driver.identityVerified ? t('common.status.verified') : t('common.status.pending')}
+                </span>
+              </div>
               <div className="flex items-center gap-xs" style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
                 <CreditCard size={14} />
                 {driver.licenseNumber || t('drivers.modal.not_provided')}
@@ -60,11 +65,14 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                 padding: 'var(--space-sm) var(--space-md)',
                 background: 'var(--color-bg-tertiary)',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border-subtle)',
+                border: '1px solid var(--color-border)',
                 color: 'var(--color-text-primary)',
                 wordBreak: 'break-all'
               }}>
-                {driver.email}
+                <span className="flex items-center gap-xs">
+                  <Mail size={14} />
+                  {driver.email}
+                </span>
               </div>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -75,10 +83,13 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                 padding: 'var(--space-sm) var(--space-md)',
                 background: 'var(--color-bg-tertiary)',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--color-border-subtle)',
+                border: '1px solid var(--color-border)',
                 color: 'var(--color-text-primary)'
               }}>
-                {driver.phone || t('drivers.modal.not_provided')}
+                <span className="flex items-center gap-xs">
+                  <Phone size={14} />
+                  {driver.phone || t('drivers.modal.not_provided')}
+                </span>
               </div>
             </div>
           </div>
@@ -94,7 +105,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                   {t('drivers.modal.id_card_front')}
                 </span>
                 {driver.idCardFront ? (
-                  <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-subtle)', height: '140px' }}>
+                  <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)', height: '140px' }}>
                     <img src={driver.idCardFront} alt="ID Front" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
@@ -113,7 +124,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                   {t('drivers.modal.id_card_back')}
                 </span>
                 {driver.idCardBack ? (
-                  <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border-subtle)', height: '140px' }}>
+                  <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)', height: '140px' }}>
                     <img src={driver.idCardBack} alt="ID Back" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
@@ -131,7 +142,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
           </div>
         </div>
 
-        <div className="modal-footer" style={{ padding: 'var(--space-md) var(--space-lg)', borderTop: '1px solid var(--color-border-subtle)', background: 'var(--color-bg-secondary)' }}>
+        <div className="modal-actions">
           <button className="btn btn-secondary w-full" onClick={onClose} style={{ padding: '0.75rem' }}>
             {t('drivers.modal.close')}
           </button>

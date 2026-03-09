@@ -23,7 +23,14 @@ jest.mock('../src/modules/driver/driver.service', () => ({
 jest.mock('../src/middleware/upload', () => ({
   createUploader: () => ({
     single: () => (req, res, next) => next(),
-    fields: () => (req, res, next) => next(),
+    fields: () => (req, res, next) => {
+      req.files = req.files || {
+        avatar: [{ originalname: 'avatar.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('a') }],
+        idCardFront: [{ originalname: 'id-front.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('b') }],
+        idCardBack: [{ originalname: 'id-back.jpg', mimetype: 'image/jpeg', buffer: Buffer.from('c') }],
+      };
+      next();
+    },
     array: () => (req, res, next) => next(),
   }),
 }));
