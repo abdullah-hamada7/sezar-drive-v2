@@ -4,7 +4,7 @@ import { statsService } from '../../services/stats.service';
 import { ThemeContext } from '../../contexts/theme';
 
 export default function RecentActivityList() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { theme } = useContext(ThemeContext);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function RecentActivityList() {
         setData(Array.isArray(result) ? result : []);
       } catch (err) {
         console.error('Failed to load activity:', err);
-        setError(t('errors.fetch_failed') || 'Failed to load activity');
+        setError(t('errors.fetch_failed'));
       } finally {
         setLoading(false);
       }
@@ -38,9 +38,13 @@ export default function RecentActivityList() {
     const diffMins = Math.floor(diffMs / (1000 * 60));
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
 
-    if (diffMins < 1) return t('common.now') || 'Now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffMins < 1) return t('common.now');
+    if (diffMins < 60) {
+      return new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(-diffMins, 'minute');
+    }
+    if (diffHours < 24) {
+      return new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(-diffHours, 'hour');
+    }
     return d.toLocaleDateString();
   };
 
@@ -73,7 +77,7 @@ export default function RecentActivityList() {
     <div className="card" style={cardStyle}>
       <div className="flex items-center justify-between mb-sm">
         <h3 className="text-lg font-bold" style={headerStyle}>{t('driver_home.recent_activity')}</h3>
-        <span className="text-xs" style={mutedStyle}>{t('common.last_updated') || 'Latest updates'}</span>
+        <span className="text-xs" style={mutedStyle}>{t('common.last_updated')}</span>
       </div>
       <div className="flex flex-col gap-sm">
         {error ? (
@@ -82,7 +86,7 @@ export default function RecentActivityList() {
           </div>
         ) : data.length === 0 ? (
           <div className="text-muted text-center py-md rounded border border-dashed" style={isLight ? { background: '#f8fafc', borderColor: '#e2e8f0' } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.12)' }}>
-            {t('common.no_data') || 'No recent activity'}
+            {t('common.no_data')}
           </div>
         ) : (
           data.map((item, idx) => (

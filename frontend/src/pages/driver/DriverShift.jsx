@@ -138,7 +138,7 @@ export default function DriverShift() {
         return insp.status === 'completed' && isAfterStart && photoCount >= 4;
       });
       if (startedAt && !hasEndInspection) {
-        addToast(t('errors.INSPECTION_REQUIRED') || t('shift.inspection_required') || 'End-of-shift inspection required', 'warning');
+        addToast(t('errors.INSPECTION_REQUIRED') || t('shift.inspection_required'), 'warning');
         navigate('/driver/inspection');
         return;
       }
@@ -146,7 +146,7 @@ export default function DriverShift() {
       const trips = tripsRes.data?.trips || [];
       const hasActiveTrip = trips.some(t => t.status === 'ASSIGNED' || t.status === 'ACCEPTED' || t.status === 'IN_PROGRESS');
       if (hasActiveTrip) {
-        addToast(t('errors.SHIFT_HAS_ACTIVE_TRIP') || 'You cannot end your shift while you have an assigned or active trip.', 'warning');
+        addToast(t('errors.SHIFT_HAS_ACTIVE_TRIP'), 'warning');
         return;
       }
       await shiftService.closeShift(shift.id);

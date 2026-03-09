@@ -61,9 +61,9 @@ export default function DriverInspection() {
    const inspectionType = shift?.status === 'PendingVerification' ? 'pre' : 'post';
    const stepIndex = STEPS.indexOf(step);
    const stepLabels = {
-     checklist: t('inspection.step_checklist') || 'Checklist',
-     photos: t('inspection.step_photos') || 'Photos',
-     review: t('inspection.step_review') || 'Review'
+     checklist: t('inspection.step_checklist'),
+     photos: t('inspection.step_photos'),
+     review: t('inspection.step_review')
    };
   function isCompletedInspection(insp) {
     const photoCount = Array.isArray(insp.photos) ? insp.photos.length : 0;
@@ -152,7 +152,7 @@ export default function DriverInspection() {
 
   async function completeInspection() {
     if (Object.keys(photos).length < 4) {
-      addToast(t('inspection.photos_missing_error') || 'Please take photos of all 4 sides before completing.', 'error');
+      addToast(t('inspection.photos_missing_error'), 'error');
       return;
     }
     setLoading(true);
@@ -234,7 +234,7 @@ export default function DriverInspection() {
 
       <div className="card" style={{ marginBottom: 'var(--space-lg)', padding: 'var(--space-md)' }}>
         <div className="flex items-center justify-between mb-sm">
-          <span className="text-xs uppercase text-muted" style={{ letterSpacing: '0.08em' }}>{t('inspection.progress') || 'Progress'}</span>
+          <span className="text-xs uppercase text-muted" style={{ letterSpacing: '0.08em' }}>{t('inspection.progress')}</span>
           <span className="text-xs text-muted">{stepIndex + 1}/{STEPS.length}</span>
         </div>
         <div style={{ display: 'flex', gap: '0.25rem', marginBottom: 'var(--space-sm)' }}>

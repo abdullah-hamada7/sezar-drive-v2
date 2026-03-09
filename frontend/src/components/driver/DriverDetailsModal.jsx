@@ -106,7 +106,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                 </span>
                 {driver.idCardFront ? (
                   <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)', height: '140px' }}>
-                    <img src={driver.idCardFront} alt="ID Front" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={driver.idCardFront} alt={t('drivers.modal.id_card_front')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
                   <div style={{
@@ -125,7 +125,7 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
                 </span>
                 {driver.idCardBack ? (
                   <div style={{ borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)', height: '140px' }}>
-                    <img src={driver.idCardBack} alt="ID Back" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={driver.idCardBack} alt={t('drivers.modal.id_card_back')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
                   <div style={{

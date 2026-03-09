@@ -185,6 +185,10 @@
     "photos_missing_error": "Please take photos of all 4 sides before completing.",
     "camera_error": "Could not access camera",
     "mileage": "Current Mileage (KM)"
+    ,"progress": "Progress"
+    ,"step_checklist": "Checklist"
+    ,"step_photos": "Photos"
+    ,"step_review": "Review"
   },
   "driver_home": {
     "identity_pending": "Identity verification pending",
@@ -494,6 +498,9 @@
       "details_title": "Driver Details",
       "view_details": "View Details",
       "id_cards": "Identity Documents",
+      "close": "Close",
+      "not_provided": "Not provided",
+      "not_uploaded": "Not uploaded",
       "photos_section": "Photos",
       "add_title": "Add New Driver",
       "edit_title": "Edit Driver",

@@ -19,6 +19,11 @@ jest.mock('../src/modules/driver/driver.service', () => ({
   updateDriver: jest.fn().mockResolvedValue({ id: 'driver-123', name: 'Updated Driver' }),
 }));
 
+jest.mock('../src/services/FileService', () => ({
+  upload: jest.fn(async () => 'https://example.com/mock-upload.jpg'),
+  signDriverUrls: jest.fn(async (v) => v),
+}));
+
 // Mock Upload Middleware
 jest.mock('../src/middleware/upload', () => ({
   createUploader: () => ({

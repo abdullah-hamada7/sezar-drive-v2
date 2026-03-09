@@ -121,6 +121,7 @@
     "close_confirm": "هل أنت متأكد من رغبتك في إغلاق المناوبة؟",
     "gate_title": "بوابة الأمن",
     "gate_desc": "أكمل إجراءات التحقق لبدء القيادة",
+    "inspection_required": "يرجى إكمال ورفع فحص ما قبل المناوبة قبل تفعيل المناوبة.",
     "face_verification": "التحقق من الوجه",
     "identity_confirmed": "تم تأكيد الهوية",
     "action_required": "مطلوب إجراء",
@@ -183,7 +184,11 @@
     "go_shifts": "الذهاب للمناوبات",
     "photos_missing_error": "يرجى التقاط الصور من الجهات الأربع قبل الإكمال.",
     "camera_error": "تعذر الوصول إلى الكاميرا",
-    "mileage": "قراءة العداد (كم)"
+    "mileage": "قراءة العداد (كم)",
+    "progress": "التقدم",
+    "step_checklist": "قائمة الفحص",
+    "step_photos": "الصور",
+    "step_review": "المراجعة"
   },
   "driver_home": {
     "identity_pending": "التحقق من الهوية قيد المراجعة",
@@ -489,6 +494,9 @@
       "details_title": "تفاصيل السائق",
       "view_details": "عرض التفاصيل",
       "id_cards": "مستندات الهوية",
+      "close": "إغلاق",
+      "not_provided": "غير متوفر",
+      "not_uploaded": "غير مرفوع",
       "photos_section": "الصور",
       "add_title": "إضافة سائق جديد",
       "edit_title": "تعديل السائق",

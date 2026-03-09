@@ -37,7 +37,7 @@ export default function DailyEarningsChart() {
 
     return (
         <div className="card mb-md">
-            <h3 className="text-lg font-bold mb-sm" style={{ color: 'var(--color-primary)' }}>{t('driver_home.daily_earnings') || 'Daily Earnings'}</h3>
+            <h3 className="text-lg font-bold mb-sm" style={{ color: 'var(--color-primary)' }}>{t('driver_home.daily_earnings')}</h3>
             <div style={{ height: 200, width: '100%' }}>
                 <ResponsiveContainer>
                     <AreaChart data={data}>

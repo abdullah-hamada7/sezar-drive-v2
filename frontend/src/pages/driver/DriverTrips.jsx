@@ -103,7 +103,7 @@ export default function DriverTrips() {
       {!activeShift && (
         <div className="alert alert-warning mb-md">
           <AlertTriangle size={20} />
-          <div>{t('trip.no_active_shift_warning') || 'You must start a shift to begin trips.'}</div>
+          <div>{t('trip.no_active_shift_warning')}</div>
         </div>
       )}
 
