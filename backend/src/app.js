@@ -14,7 +14,12 @@ const i18n = require('./middleware/i18n');
 // Rate limit auth endpoints to mitigate brute force and token abuse
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: config.isProduction ? 30 : 1000, // Strict in production, relaxed for dev/testing
+  max: config.isProduction ? 120 : 2000,
+  // Isolate budgets per auth endpoint so /auth/me and /auth/refresh
+  // do not exhaust login/reset request quota.
+  keyGenerator: (req) => `${rateLimit.ipKeyGenerator(req.ip)}:${req.path}`,
+  // Keep brute-force controls on sensitive endpoints only.
+  skip: (req) => ['/me', '/preferences', '/logout'].includes(req.path),
   message: { error: { code: 'TOO_MANY_REQUESTS', message: 'Too many attempts. Try again later.' } },
   standardHeaders: true,
   legacyHeaders: false,
