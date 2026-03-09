@@ -15,6 +15,12 @@ export const tripService = {
   assignTrip(data) {
     return http.request('/trips', { method: 'POST', body: data });
   },
+  acceptTrip(id) {
+    return http.request(`/trips/${id}/accept`, {
+      method: 'PATCH',
+      headers: { 'Idempotency-Key': generateIdempotencyKey() }
+    });
+  },
   startTrip(id) {
     return http.request(`/trips/${id}/start`, {
       method: 'PUT',

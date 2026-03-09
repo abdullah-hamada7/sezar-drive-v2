@@ -1,12 +1,13 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
+const prisma = require('../config/database');
 const { UnauthorizedError, ForbiddenError } = require('../errors');
 
 /**
  * JWT authentication middleware.
  * Extracts and verifies Bearer token from Authorization header.
  */
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(new UnauthorizedError('Missing or invalid authorization header', 'MISSING_HEADER'));
@@ -15,10 +16,33 @@ function authenticate(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
-    if (decoded && decoded.role) {
-      decoded.role = String(decoded.role).toLowerCase();
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        adminRole: true,
+        mustChangePassword: true,
+        identityVerified: true,
+        isActive: true,
+      },
+    });
+
+    if (!user || !user.isActive) {
+      return next(new UnauthorizedError('Session expired. Please login again.', 'SESSION_EXPIRED'));
     }
-    req.user = decoded;
+
+    req.user = {
+      ...decoded,
+      id: user.id,
+      email: user.email,
+      role: String(user.role).toLowerCase(),
+      adminRole: user.adminRole,
+      mustChangePassword: user.mustChangePassword,
+      identityVerified: user.identityVerified,
+    };
+
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

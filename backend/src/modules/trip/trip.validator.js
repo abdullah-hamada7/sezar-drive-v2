@@ -9,35 +9,52 @@ class TripValidator {
   /**
    * Validate preconditions for assigning a trip.
    */
-  static async validateAssignmentPreconditions(driverId) {
+  static async validateAssignmentPreconditions(driverId, scheduledTime = null) {
     const driver = await prisma.user.findUnique({ where: { id: driverId } });
     if (!driver) throw new NotFoundError('Driver');
 
-    // Verify driver has active shift
-    const shift = await prisma.shift.findFirst({
-      where: { driverId, status: 'Active' },
+    const assignment = await prisma.vehicleAssignment.findFirst({
+      where: { driverId, active: true },
+      include: {
+        shift: {
+          select: { id: true, status: true },
+        },
+      },
+      orderBy: { assignedAt: 'desc' },
     });
-    if (!shift) {
-      throw new ConflictError('NO_ACTIVE_SHIFT', `Driver ${driver.name} does not have an active shift.`);
+
+    if (!assignment || !assignment.shift || !['Active', 'PendingVerification'].includes(assignment.shift.status)) {
+      throw new ConflictError('NO_SHIFT_AVAILABLE', `Driver ${driver.name} does not have an active or pending shift assignment.`);
     }
 
-    // Verify no active trip
-    const activeTrip = await prisma.trip.findFirst({
-      where: { driverId, status: { in: ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'] } },
+    const now = new Date();
+    const scheduledDate = scheduledTime ? new Date(scheduledTime) : null;
+    const isFutureTrip = scheduledDate && scheduledDate > now;
+
+    const blockingTrip = await prisma.trip.findFirst({
+      where: {
+        driverId,
+        OR: [
+          { status: { in: ['ACCEPTED', 'IN_PROGRESS'] } },
+          !isFutureTrip
+            ? { status: 'ASSIGNED' }
+            : {
+              status: 'ASSIGNED',
+              OR: [
+                { scheduledTime: null },
+                { scheduledTime: { lte: now } },
+              ],
+            },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
     });
-    if (activeTrip) {
+
+    if (blockingTrip) {
       throw new ConflictError('ACTIVE_TRIP_EXISTS', `Driver ${driver.name} already has an active trip.`);
     }
 
-    // Get driver's vehicle
-    const assignment = await prisma.vehicleAssignment.findFirst({
-      where: { driverId, shiftId: shift.id, active: true },
-    });
-    if (!assignment) {
-      throw new ConflictError('NO_VEHICLE_ASSIGNED', 'Driver has no assigned vehicle');
-    }
-
-    return { driver, shift, assignment };
+    return { driver, shift: assignment.shift, assignment };
   }
 
   /**

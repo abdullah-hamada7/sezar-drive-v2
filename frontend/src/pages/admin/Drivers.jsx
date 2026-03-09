@@ -11,6 +11,7 @@ export default function DriversPage() {
   const [drivers, setDrivers] = useState([]);
   const [pagination, setPagination] = useState({});
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('active');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -49,14 +50,14 @@ export default function DriversPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page, limit: 15 });
+      const params = new URLSearchParams({ page, limit: 15, status: statusFilter });
       if (search) params.set('search', search);
       const res = await api.getDrivers(params.toString());
       setDrivers(res.data.drivers || []);
       setPagination(res.data || {});
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  }, [page, search]);
+  }, [page, search, statusFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -151,6 +152,8 @@ export default function DriversPage() {
     try {
       if (type === 'delete') {
         await api.deleteDriver(data.id);
+      } else if (type === 'permanentDelete') {
+        await api.deleteDriverPermanently(data.id);
       } else if (type === 'approve') {
         await api.reviewIdentity(data.id, { action: 'approve' });
       } else if (type === 'reactivate') {
@@ -188,6 +191,22 @@ export default function DriversPage() {
             style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
           />
         </div>
+      </div>
+
+      <div className="card p-sm mb-md flex gap-sm" style={{ overflowX: 'auto' }}>
+        {['active', 'inactive', 'all'].map(filter => (
+          <button
+            key={filter}
+            className={`btn btn-sm ${statusFilter === filter ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => { setStatusFilter(filter); setPage(1); }}
+          >
+            {filter === 'active'
+              ? t('drivers.filters.active')
+              : filter === 'inactive'
+                ? t('drivers.filters.archived')
+                : t('drivers.filters.all')}
+          </button>
+        ))}
       </div>
 
       {!loading && (
@@ -260,12 +279,21 @@ export default function DriversPage() {
                           <Trash2 size={16} />
                         </button>
                       ) : (
-                        <button
-                          className="btn btn-sm btn-secondary"
-                          onClick={() => setConfirmData({ isOpen: true, type: 'reactivate', data: { id: d.id, name: d.name } })}
-                        >
-                          {t('drivers.actions.reactivate')}
-                        </button>
+                        <>
+                          <button
+                            className="btn btn-sm btn-secondary"
+                            onClick={() => setConfirmData({ isOpen: true, type: 'reactivate', data: { id: d.id, name: d.name } })}
+                          >
+                            {t('drivers.actions.reactivate')}
+                          </button>
+                          <button
+                            className="btn-icon text-danger"
+                            onClick={() => setConfirmData({ isOpen: true, type: 'permanentDelete', data: { id: d.id, name: d.name } })}
+                            title={t('drivers.actions.delete_permanently')}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -442,14 +470,16 @@ export default function DriversPage() {
         title={
           confirmData.type === 'delete' ? t('common.delete')
             : confirmData.type === 'reactivate' ? t('common.actions.reactivate')
+              : confirmData.type === 'permanentDelete' ? t('drivers.actions.delete_permanently')
               : t('common.shift_verification_status.verified')
         }
         message={
           confirmData.type === 'delete' ? t('drivers.messages.delete_confirm')
             : confirmData.type === 'reactivate' ? t('drivers.messages.reactivate_confirm', { name: confirmData.data?.name })
+              : confirmData.type === 'permanentDelete' ? t('drivers.messages.permanent_delete_confirm', { name: confirmData.data?.name })
               : t('drivers.messages.approve_confirm', { name: confirmData.data?.name })
         }
-        variant={confirmData.type === 'delete' ? 'danger' : 'success'}
+        variant={confirmData.type === 'delete' || confirmData.type === 'permanentDelete' ? 'danger' : 'success'}
       />
     </div>
   );

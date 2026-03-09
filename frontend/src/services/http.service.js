@@ -51,6 +51,13 @@ class HttpService {
       throw err;
     }
 
+    const notifySessionExpired = () => {
+      this.clearTokens();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+      }
+    };
+
     // Token refresh on 401
     if (response.status === 401 && this.refreshToken && !options._retried) {
       const refreshed = await this.tryRefresh();
@@ -64,7 +71,11 @@ class HttpService {
           err.code = 'NETWORK_ERROR';
           throw err;
         }
+      } else {
+        notifySessionExpired();
       }
+    } else if (response.status === 401 && !options.skipAuth) {
+      notifySessionExpired();
     }
 
     if (!response.ok) {

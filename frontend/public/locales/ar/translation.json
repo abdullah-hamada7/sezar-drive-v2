@@ -75,6 +75,7 @@
     "my_trips": "رحلاتي",
     "no_trips": "لا توجد رحلات معينة بعد",
     "start_trip": "بدء الرحلة",
+    "accept_trip": "قبول الرحلة",
     "complete_trip": "إنهاء الرحلة",
     "cancel_trip": "إلغاء الرحلة",
     "status": "حالة الرحلة",
@@ -324,6 +325,9 @@
     "INVALID_RESET_TOKEN": "رابط إعادة التعيين غير صالح أو منتهي الصلاحية.",
     "INVALID_RESCUE_CODE": "رمز الإنقاذ غير صالح أو منتهي الصلاحية.",
     "RESCUE_REQUEST_PENDING": "يوجد طلب إنقاذ قيد الانتظار لهذا الحساب بالفعل.",
+    "NO_SHIFT_AVAILABLE": "لا يوجد تعيين مناوبة نشط أو قيد الانتظار لهذا السائق.",
+    "DRIVER_HAS_ACTIVITY": "لا يمكن حذف هذا السائق نهائياً لوجود سجلات نشاط مرتبطة.",
+    "DRIVER_MUST_BE_ARCHIVED": "يجب أرشفة السائق أولاً قبل الحذف النهائي.",
     "VEHICLE_PLATE_EXISTS": "توجد مركبة برقم اللوحة هذا بالفعل.",
     "VEHICLE_QR_EXISTS": "توجد مركبة برمز QR هذا بالفعل.",
     "VEHICLE_ALREADY_EXISTS": "توجد مركبة برقم اللوحة أو رمز QR هذا بالفعل.",
@@ -449,6 +453,15 @@
     "subtitle": "إدارة سائقي الأسطول",
     "add_btn": "إضافة سائق",
     "search_placeholder": "ابحث بالاسم، البريد، أو الهاتف...",
+    "filters": {
+      "active": "نشط",
+      "archived": "مؤرشف",
+      "all": "الكل"
+    },
+    "actions": {
+      "reactivate": "إعادة التفعيل",
+      "delete_permanently": "حذف نهائي"
+    },
     "table": {
       "name": "الاسم",
       "email": "البريد",
@@ -501,6 +514,8 @@
     "messages": {
       "approve_confirm": "الموافقة على هوية {{name}}؟",
       "delete_confirm": "هل أنت متأكد من رغبتك في إلغاء تفعيل هذا السائق؟",
+      "reactivate_confirm": "هل أنت متأكد من إعادة تفعيل {{name}}؟",
+      "permanent_delete_confirm": "حذف السائق المؤرشف {{name}} نهائياً؟ لا يمكن التراجع عن هذا.",
       "op_failed": "فشلت العملية",
       "delete_failed": "فشل الحذف",
       "validation_failed": "فشل التحقق. يرجى مراجعة الحقول أدناه.",
@@ -538,6 +553,7 @@
       "passenger_num": "الراكب #{{count}}",
       "name_ph": "الاسم",
       "phone_ph": "الهاتف (اختياري)",
+      "companion_numbers_ph": "أرقام المرافقين (مفصولة بفواصل)",
       "pickup_ph": "استلام محدد (اختياري)",
       "bags_ph": "عدد الحقائب",
       "reason_placeholder": "سبب الإلغاء",

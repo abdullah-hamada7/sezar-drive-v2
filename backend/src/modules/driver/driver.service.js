@@ -67,13 +67,12 @@ async function createDriver(data, adminId, ipAddress) {
 /**
  * Get all drivers with pagination.
  */
-async function getDrivers({ page = 1, limit = 20, search = '' }) {
+async function getDrivers({ page = 1, limit = 20, search = '', status = 'active' }) {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
   const where = {
     role: 'driver',
-    isActive: true,
     ...(search && {
       OR: [
         { name: { contains: search, mode: 'insensitive' } },
@@ -82,6 +81,9 @@ async function getDrivers({ page = 1, limit = 20, search = '' }) {
       ],
     }),
   };
+
+  if (status === 'active') where.isActive = true;
+  if (status === 'inactive') where.isActive = false;
 
   const [drivers, total] = await Promise.all([
     prisma.user.findMany({
@@ -240,4 +242,82 @@ async function reactivateDriver(id, adminId, ipAddress) {
   return await fileService.signDriverUrls(updated);
 }
 
-module.exports = { createDriver, getDrivers, getDriverById, updateDriver, deactivateDriver, reactivateDriver };
+/**
+ * Permanently delete an archived driver without activity history.
+ */
+async function deleteDriverPermanently(id, adminId, ipAddress) {
+  const driver = await prisma.user.findUnique({ where: { id } });
+  if (!driver || driver.role !== 'driver') throw new NotFoundError('Driver');
+
+  if (driver.isActive) {
+    throw new ConflictError('DRIVER_MUST_BE_ARCHIVED', 'Driver must be archived before permanent deletion');
+  }
+
+  const [
+    tripCount,
+    shiftCount,
+    inspectionCount,
+    expenseCount,
+    damageCount,
+    locationCount,
+    assignmentCount,
+    auditCount,
+  ] = await Promise.all([
+    prisma.trip.count({ where: { driverId: id } }),
+    prisma.shift.count({ where: { driverId: id } }),
+    prisma.inspection.count({ where: { driverId: id } }),
+    prisma.expense.count({ where: { driverId: id } }),
+    prisma.damageReport.count({ where: { driverId: id } }),
+    prisma.locationLog.count({ where: { driverId: id } }),
+    prisma.vehicleAssignment.count({ where: { driverId: id } }),
+    prisma.auditLog.count({ where: { actorId: id } }),
+  ]);
+
+  const hasActivity = [
+    tripCount,
+    shiftCount,
+    inspectionCount,
+    expenseCount,
+    damageCount,
+    locationCount,
+    assignmentCount,
+    auditCount,
+  ].some(count => count > 0);
+
+  if (hasActivity) {
+    throw new ConflictError(
+      'DRIVER_HAS_ACTIVITY',
+      'Driver cannot be permanently deleted because related activity records exist'
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.refreshToken.deleteMany({ where: { userId: id } }),
+    prisma.userDevice.deleteMany({ where: { userId: id } }),
+    prisma.rescueRequest.deleteMany({ where: { userId: id } }),
+    prisma.identityVerification.deleteMany({ where: { driverId: id } }),
+    prisma.user.delete({ where: { id } }),
+  ]);
+
+  await AuditService.log({
+    actorId: adminId,
+    actionType: 'driver.deleted_permanently',
+    entityType: 'driver',
+    entityId: id,
+    previousState: { isActive: false },
+    newState: { deleted: true },
+    ipAddress,
+  });
+
+  return { message: 'Driver permanently deleted' };
+}
+
+module.exports = {
+  createDriver,
+  getDrivers,
+  getDriverById,
+  updateDriver,
+  deactivateDriver,
+  reactivateDriver,
+  deleteDriverPermanently,
+};

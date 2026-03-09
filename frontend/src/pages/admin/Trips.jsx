@@ -31,7 +31,7 @@ export default function TripsPage() {
     dropoffLocation: '',
     price: '',
     scheduledTime: '',
-    passengers: []
+    passengers: [{ name: '', phone: '', companionNumbers: '' }]
   });
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [, setError] = useState('');
@@ -127,7 +127,14 @@ export default function TripsPage() {
       }
       await api.assignTrip({ ...form, price: parsedPrice, scheduledTime });
       setShowCreateModal(false);
-      setForm({ driverId: '', pickupLocation: '', dropoffLocation: '', price: '', scheduledTime: '', passengers: [] });
+      setForm({
+        driverId: '',
+        pickupLocation: '',
+        dropoffLocation: '',
+        price: '',
+        scheduledTime: '',
+        passengers: [{ name: '', phone: '', companionNumbers: '' }]
+      });
       setSelectedDriverName('');
       setRefresh(r => r + 1);
     } catch (err) {
@@ -308,101 +315,58 @@ export default function TripsPage() {
                 </div>
               </div>
 
-              {/* Dynamic Passengers Section */}
+              {/* Single Passenger Section */}
               <div className="form-section mb-md">
                 <div className="flex justify-between items-center mb-md">
                   <h3 className="text-sm font-semibold uppercase tracking-wider opacity-70">{t('trips.modal.passengers_label')}</h3>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-secondary"
-                    onClick={() => setForm({
-                      ...form,
-                      passengers: [...form.passengers, { name: '', phone: '', pickup: '', bags: 0 }]
-                    })}
-                  >
-                    {t('trips.modal.add_passenger')}
-                  </button>
                 </div>
 
                 <div className="grid grid-1 gap-sm">
-                  {form.passengers.length === 0 ? (
-                    <p className="text-sm text-center text-muted py-md border-dashed border-2 rounded-lg">{t('trips.modal.no_passengers')}</p>
-                  ) : form.passengers.map((p, idx) => (
-                    <div key={idx} className="card p-md" style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
-                      <div className="flex justify-between items-center mb-sm">
-                        <span className="text-xs font-bold uppercase tracking-tight text-primary">{t('trips.modal.passenger_num', { count: idx + 1 })}</span>
-                        <button
-                          type="button"
-                          className="btn-icon text-danger"
-                          onClick={() => {
+                  <div className="card p-md" style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
+                    <div className="grid grid-2 gap-sm">
+                      <div className="form-group">
+                        <input
+                          className="form-input text-sm"
+                          placeholder={t('trips.modal.name_ph')}
+                          value={form.passengers[0]?.name || ''}
+                          onChange={e => {
                             const newPassengers = [...form.passengers];
-                            newPassengers.splice(idx, 1);
+                            newPassengers[0] = { ...newPassengers[0], name: e.target.value };
                             setForm({ ...form, passengers: newPassengers });
                           }}
-                        >
-                          <XCircle size={16} />
-                        </button>
+                          required
+                          minLength={2}
+                          maxLength={100}
+                        />
                       </div>
-                      <div className="grid grid-2 gap-sm">
-                        <div className="form-group">
-                          <input
-                            className="form-input text-sm"
-                            placeholder={t('trips.modal.name_ph')}
-                            value={p.name}
-                            onChange={e => {
-                              const newPassengers = [...form.passengers];
-                              newPassengers[idx].name = e.target.value;
-                              setForm({ ...form, passengers: newPassengers });
-                            }}
-                            required
-                            minLength={2}
-                            maxLength={100}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <input
-                            type="tel"
-                            className="form-input text-sm"
-                            placeholder={t('trips.modal.phone_ph')}
-                            value={p.phone}
-                            onChange={e => {
-                              const newPassengers = [...form.passengers];
-                              newPassengers[idx].phone = e.target.value;
-                              setForm({ ...form, passengers: newPassengers });
-                            }}
-                            pattern="^\+?(\d[\d\-\s\(\)]*){6,20}$"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <input
-                            className="form-input text-sm"
-                            placeholder={t('trips.modal.pickup_ph')}
-                            value={p.pickup}
-                            onChange={e => {
-                              const newPassengers = [...form.passengers];
-                              newPassengers[idx].pickup = e.target.value;
-                              setForm({ ...form, passengers: newPassengers });
-                            }}
-                            maxLength={200}
-                          />
-                        </div>
-                        <div className="form-group">
-                          <input
-                            type="number"
-                            className="form-input text-sm"
-                            placeholder={t('trips.modal.bags_ph')}
-                            min="0"
-                            value={p.bags || ''}
-                            onChange={e => {
-                              const newPassengers = [...form.passengers];
-                              newPassengers[idx].bags = parseInt(e.target.value) || 0;
-                              setForm({ ...form, passengers: newPassengers });
-                            }}
-                          />
-                        </div>
+                      <div className="form-group">
+                        <input
+                          type="tel"
+                          className="form-input text-sm"
+                          placeholder={t('trips.modal.phone_ph')}
+                          value={form.passengers[0]?.phone || ''}
+                          onChange={e => {
+                            const newPassengers = [...form.passengers];
+                            newPassengers[0] = { ...newPassengers[0], phone: e.target.value };
+                            setForm({ ...form, passengers: newPassengers });
+                          }}
+                          pattern="^\+?(\d[\d\-\s\(\)]*){6,20}$"
+                        />
+                      </div>
+                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <input
+                          className="form-input text-sm"
+                          placeholder={t('trips.modal.companion_numbers_ph')}
+                          value={form.passengers[0]?.companionNumbers || ''}
+                          onChange={e => {
+                            const newPassengers = [...form.passengers];
+                            newPassengers[0] = { ...newPassengers[0], companionNumbers: e.target.value };
+                            setForm({ ...form, passengers: newPassengers });
+                          }}
+                        />
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
 
@@ -491,14 +455,11 @@ export default function TripsPage() {
                               <span className="text-muted">{t('drivers.table.phone')}:</span> <span className="font-medium">{p.phone}</span>
                             </div>
                           )}
-                          {p.pickup && (
+                          {p.companionNumbers && p.companionNumbers.length > 0 && (
                             <div className="text-xs">
-                              <span className="text-muted">{t('trips.details.pickup')}:</span> <span className="font-medium">{p.pickup}</span>
+                              <span className="text-muted">{t('trips.modal.companion_numbers_ph')}:</span> <span className="font-medium">{Array.isArray(p.companionNumbers) ? p.companionNumbers.join(', ') : p.companionNumbers}</span>
                             </div>
                           )}
-                          <div className="text-xs">
-                            <span className="text-muted">{t('trips.modal.bags_ph')}:</span> <span className="font-medium">{p.bags || 0}</span>
-                          </div>
                         </div>
                       </div>
                     ))}

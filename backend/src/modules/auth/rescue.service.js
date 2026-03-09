@@ -10,9 +10,17 @@ const { ValidationError, NotFoundError, ConflictError } = require('../../errors'
 async function requestRescue(email) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || user.role !== 'driver') {
-    // Generic message for security, don't reveal if user exists unless it's a driver
-    return { message: 'If this account is eligible, a request has been sent to the admins.' };
+    throw new ValidationError('Email does not exist for a driver account');
   }
+
+  await prisma.rescueRequest.updateMany({
+    where: {
+      userId: user.id,
+      status: 'active',
+      expiresAt: { lte: new Date() },
+    },
+    data: { status: 'expired' },
+  });
 
   // Check if there's already a pending request
   const existing = await prisma.rescueRequest.findFirst({
@@ -79,6 +87,15 @@ async function generateRescueCode(adminId, requestId) {
 async function verifyRescueCode(email, code) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new ValidationError('Invalid email or code', 'INVALID_RESCUE_CODE');
+
+  await prisma.rescueRequest.updateMany({
+    where: {
+      userId: user.id,
+      status: 'active',
+      expiresAt: { lte: new Date() },
+    },
+    data: { status: 'expired' },
+  });
 
   const request = await prisma.rescueRequest.findFirst({
     where: {

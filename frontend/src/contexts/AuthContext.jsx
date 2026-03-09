@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { http } from '../services/http.service';
@@ -66,6 +66,12 @@ export function AuthProvider({ children }) {
     setUser(null);
     navigate('/login');
   }, [navigate]);
+
+  useEffect(() => {
+    const handleSessionExpired = () => logout();
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, [logout]);
 
   const updateUser = (updates) => {
     const updated = { ...user, ...updates };

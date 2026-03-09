@@ -26,7 +26,31 @@ async function assignTrip(data, adminId, ipAddress) {
     throw new ValidationError('Pickup and dropoff locations are required');
   }
 
-  const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId);
+  const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId, scheduledTime);
+
+  const incomingPassengers = Array.isArray(data.passengers)
+    ? data.passengers
+    : (data.passenger ? [data.passenger] : []);
+
+  if (incomingPassengers.length > 1) {
+    throw new ValidationError('Only one passenger is allowed per trip');
+  }
+
+  const normalizedPassengers = incomingPassengers
+    .map(passenger => {
+      const companionNumbers = Array.isArray(passenger?.companionNumbers)
+        ? passenger.companionNumbers
+        : (typeof passenger?.companionNumbers === 'string'
+          ? passenger.companionNumbers.split(',').map(v => v.trim()).filter(Boolean)
+          : []);
+
+      return {
+        name: passenger?.name || '',
+        phone: passenger?.phone || '',
+        companionNumbers,
+      };
+    })
+    .filter(passenger => passenger.name || passenger.phone || passenger.companionNumbers.length > 0);
 
   const trip = await prisma.trip.create({
     data: {
@@ -37,7 +61,7 @@ async function assignTrip(data, adminId, ipAddress) {
       dropoffLocation,
       scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
       price,
-      passengers: data.passengers || [],
+      passengers: normalizedPassengers,
       status: 'ASSIGNED',
     },
   });

@@ -75,6 +75,7 @@
     "my_trips": "My Trips",
     "no_trips": "No trips assigned yet",
     "start_trip": "Start Trip",
+    "accept_trip": "Accept Trip",
     "complete_trip": "Complete Trip",
     "cancel_trip": "Cancel Trip",
     "status": "Trip Status",
@@ -328,6 +329,9 @@
     "INVALID_RESET_TOKEN": "Invalid or expired reset link.",
     "INVALID_RESCUE_CODE": "Invalid or expired rescue code.",
     "RESCUE_REQUEST_PENDING": "A rescue request is already pending for this account.",
+    "NO_SHIFT_AVAILABLE": "Driver does not have an active or pending shift assignment.",
+    "DRIVER_HAS_ACTIVITY": "This archived driver cannot be permanently deleted because linked activity exists.",
+    "DRIVER_MUST_BE_ARCHIVED": "You must archive this driver before permanent deletion.",
     "VEHICLE_PLATE_EXISTS": "A vehicle with this plate number already exists.",
     "VEHICLE_QR_EXISTS": "A vehicle with this QR code already exists.",
     "VEHICLE_ALREADY_EXISTS": "A vehicle with this plate number or QR code already exists.",
@@ -454,6 +458,15 @@
     "subtitle": "Manage fleet drivers",
     "add_btn": "Add Driver",
     "search_placeholder": "Search by name, email, or phone...",
+    "filters": {
+      "active": "Active",
+      "archived": "Archived",
+      "all": "All"
+    },
+    "actions": {
+      "reactivate": "Reactivate",
+      "delete_permanently": "Delete Permanently"
+    },
     "table": {
       "name": "Name",
       "email": "Email",
@@ -505,6 +518,8 @@
     "messages": {
       "approve_confirm": "Approve identity for {{name}}?",
       "delete_confirm": "Are you sure you want to deactivate this driver?",
+      "reactivate_confirm": "Are you sure you want to reactivate {{name}}?",
+      "permanent_delete_confirm": "Permanently delete archived driver {{name}}? This cannot be undone.",
       "op_failed": "Operation failed",
       "delete_failed": "Delete failed",
       "validation_failed": "Validation failed. Please check the fields below.",
@@ -542,6 +557,7 @@
       "passenger_num": "Passenger #{{count}}",
       "name_ph": "Name",
       "phone_ph": "Phone (optional)",
+      "companion_numbers_ph": "Companion numbers (comma-separated)",
       "pickup_ph": "Specific Pickup (optional)",
       "bags_ph": "Number of bags",
       "reason_placeholder": "Reason for cancellation",

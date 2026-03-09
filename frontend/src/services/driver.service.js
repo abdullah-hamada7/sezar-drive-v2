@@ -24,5 +24,8 @@ export const driverService = {
   },
   reactivateDriver(id) {
     return http.patch(`/drivers/${id}/reactivate`);
+  },
+  deleteDriverPermanently(id) {
+    return http.delete(`/drivers/${id}/permanent`);
   }
 };

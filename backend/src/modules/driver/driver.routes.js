@@ -2,7 +2,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const driverService = require('./driver.service');
-const { authenticate, enforcePasswordChanged, authorize, authorizeSuperAdmin } = require('../../middleware/auth');
+const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
 const { createUploader } = require('../../middleware/upload');
 const fileService = require('../../services/FileService');
@@ -42,7 +42,7 @@ router.put(
 // ─── POST /api/v1/drivers ─────────────────────────
 router.post(
   '/',
-  authenticate, enforcePasswordChanged, authorizeSuperAdmin,
+  authenticate, enforcePasswordChanged, authorize('admin'),
   upload.fields([
     { name: 'avatar', maxCount: 1 },
     { name: 'idCardFront', maxCount: 1 },
@@ -86,6 +86,7 @@ router.get(
     query('page').optional().isInt({ min: 1 }).toInt(),
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('search').optional().trim().escape(),
+    query('status').optional().isIn(['active', 'inactive', 'all']),
   ],
   async (req, res, next) => {
     try {
@@ -113,7 +114,7 @@ router.get(
 // ─── PUT /api/v1/drivers/:id ──────────────────────
 router.put(
   '/:id',
-  authenticate, enforcePasswordChanged, authorizeSuperAdmin,
+  authenticate, enforcePasswordChanged, authorize('admin'),
   upload.fields([
     { name: 'avatar', maxCount: 1 },
     { name: 'idCardFront', maxCount: 1 },
@@ -146,7 +147,7 @@ router.put(
 // ─── DELETE /api/v1/drivers/:id ───────────────────
 router.delete(
   '/:id',
-  authenticate, enforcePasswordChanged, authorizeSuperAdmin,
+  authenticate, enforcePasswordChanged, authorize('admin'),
   [param('id').isUUID()],
   async (req, res, next) => {
     try {
@@ -160,12 +161,26 @@ router.delete(
 // ─── PATCH /api/v1/drivers/:id/reactivate ──────────
 router.patch(
   '/:id/reactivate',
-  authenticate, enforcePasswordChanged, authorizeSuperAdmin,
+  authenticate, enforcePasswordChanged, authorize('admin'),
   [param('id').isUUID()],
   async (req, res, next) => {
     try {
       handleValidation(req);
       const result = await driverService.reactivateDriver(req.params.id, req.user.id, req.clientIp);
+      res.json(result);
+    } catch (err) { next(err); }
+  }
+);
+
+// ─── DELETE /api/v1/drivers/:id/permanent ─────────
+router.delete(
+  '/:id/permanent',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  [param('id').isUUID()],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const result = await driverService.deleteDriverPermanently(req.params.id, req.user.id, req.clientIp);
       res.json(result);
     } catch (err) { next(err); }
   }

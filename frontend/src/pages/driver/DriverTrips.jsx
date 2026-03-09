@@ -55,6 +55,19 @@ export default function DriverTrips() {
     }
   }
 
+  async function handleAccept(id) {
+    setActionLoading(id);
+    try {
+      await api.acceptTrip(id);
+      load();
+    } catch (err) {
+      const code = err.errorCode || err.code;
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   async function handleComplete(id) {
     setActionLoading(id);
     try {
@@ -125,15 +138,32 @@ export default function DriverTrips() {
                           {trip.passengers[0].phone || t('trip.no_phone')}
                         </a>
                       </div>
-                      <div className="flex items-center gap-sm text-muted">
-                        <span className="text-sm font-medium">{t('trip.bags')}: {trip.passengers[0].bags || 0}</span>
-                      </div>
+                      {trip.passengers[0].companionNumbers && trip.passengers[0].companionNumbers.length > 0 && (
+                        <div className="flex items-center gap-sm text-muted">
+                          <span className="text-sm font-medium">
+                            {t('trips.modal.companion_numbers_ph')}: {Array.isArray(trip.passengers[0].companionNumbers)
+                              ? trip.passengers[0].companionNumbers.join(', ')
+                              : trip.passengers[0].companionNumbers}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
               {trip.status === 'ASSIGNED' && (
+                trip.scheduledTime && new Date(trip.scheduledTime) > new Date() ? (
+                  <button className="btn btn-primary" onClick={() => handleAccept(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
+                    <CheckCircle size={16} /> {t('trip.accept_trip')}
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
+                    <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
+                  </button>
+                )
+              )}
+              {trip.status === 'ACCEPTED' && (
                 <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
                   <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
                 </button>
