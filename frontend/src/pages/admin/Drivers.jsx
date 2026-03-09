@@ -247,14 +247,14 @@ export default function DriversPage() {
                   <td>{d.phone}</td>
                   <td>{d.licenseNumber || '—'}</td>
                   <td>
-                    <span className={`badge ${d.isActive ? 'badge-success' : 'badge-danger'}`}>
+                    <span className={`badge badge-status ${d.isActive ? 'badge-success' : 'badge-danger'}`}>
                       {d.isActive ? t('drivers.table.active') : t('drivers.table.inactive')}
                     </span>
                   </td>
                   <td>
                     {d.identityVerified
-                      ? <span className="badge badge-success"><UserCheck size={12} /> {t('common.shift_verification_status.verified')}</span>
-                      : <span className="badge badge-warning"><UserX size={12} /> {t('common.shift_verification_status.pending')}</span>
+                      ? <span className="badge badge-status badge-success"><UserCheck size={12} /> {t('common.shift_verification_status.verified')}</span>
+                      : <span className="badge badge-status badge-warning"><UserX size={12} /> {t('common.shift_verification_status.pending')}</span>
                     }
                   </td>
                   <td>

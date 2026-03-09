@@ -115,7 +115,7 @@ export default function ExpensesPage() {
                   <td>{e.category?.name || '—'}</td>
                   <td>{parseFloat(e.amount).toFixed(2)} EGP</td>
                   <td className="text-sm">{e.description || '—'}</td>
-                  <td><span className={`badge ${STATUS_BADGES[e.status]}`}>{t(`common.status.${e.status.toLowerCase()}`)}</span></td>
+                  <td><span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`common.status.${e.status.toLowerCase()}`)}</span></td>
                   <td className="text-sm text-muted">{formatDate(e.createdAt)}</td>
                   <td>
                     <div className="flex gap-sm">

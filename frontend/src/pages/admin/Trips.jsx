@@ -237,7 +237,9 @@ export default function TripsPage() {
                   </td>
                   <td><span className="flex items-center gap-sm"><DollarSign size={14} /> {t_obj.price} {t('common.currency')}</span></td>
                   <td>
-                    <span className={`badge ${STATUS_BADGES[t_obj.status] || 'badge-neutral'}`}>{t(`common.trip_status.${t_obj.status.toLowerCase()}`)}</span>
+                    <span className={`badge badge-status ${STATUS_BADGES[t_obj.status] || 'badge-neutral'}`}>
+                      {t(`common.trip_status.${t_obj.status.toLowerCase()}`)}
+                    </span>
                   </td>
                   <td className="text-muted text-sm">{formatDate(t_obj.createdAt)}</td>
                   <td>
@@ -411,7 +413,7 @@ export default function TripsPage() {
                   <div className="flex flex-col gap-md">
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.details.status')}</span>
-                      <span className={`badge ${STATUS_BADGES[selectedTrip.status]}`}>{t(`common.trip_status.${selectedTrip.status.toLowerCase()}`)}</span>
+                      <span className={`badge badge-status ${STATUS_BADGES[selectedTrip.status]}`}>{t(`common.trip_status.${selectedTrip.status.toLowerCase()}`)}</span>
                     </div>
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.table.driver')}</span>

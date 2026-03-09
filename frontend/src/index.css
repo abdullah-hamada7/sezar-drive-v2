@@ -329,6 +329,9 @@ img {
   font-weight: 600;
   letter-spacing: 0.025em;
   background: rgba(255, 255, 255, 0.05);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 [data-theme="light"] .badge {
@@ -1092,6 +1095,32 @@ tr:hover td:last-child {
   background: var(--color-danger);
   opacity: 0.9;
 }
+
+.status-led-success { background: var(--color-success); }
+.status-led-warning { background: var(--color-warning); }
+.status-led-danger { background: var(--color-danger); }
+.status-led-info { background: var(--color-primary); }
+
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.badge-status::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  display: inline-block;
+  background: var(--color-text-muted);
+}
+
+.badge-status.badge-success::before { background: var(--color-success); }
+.badge-status.badge-warning::before { background: var(--color-warning); }
+.badge-status.badge-danger::before { background: var(--color-danger); }
+.badge-status.badge-info::before { background: var(--color-primary); }
+.badge-status.badge-neutral::before { background: var(--color-text-muted); }
 
 @keyframes status-led-pulse {
   0% {

@@ -95,7 +95,7 @@ export default function DriverExpenses() {
             <div key={e.id} className="card" style={{ padding: 'var(--space-md)' }}>
               <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-xs)' }}>
                 <span className="text-sm" style={{ fontWeight: 600 }}>{e.category?.name || t('nav.expenses')}</span>
-                <span className={`badge ${STATUS_BADGES[e.status]}`}>{t(`expenses.status.${e.status}`)}</span>
+                <span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`expenses.status.${e.status}`)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted">{e.description || '—'}</span>

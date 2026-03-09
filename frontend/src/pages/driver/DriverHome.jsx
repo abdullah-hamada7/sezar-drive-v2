@@ -79,7 +79,7 @@ export default function DriverHome() {
             <div className="text-xl font-bold text-gradient leading-tight">{user?.name}</div>
             <div className="text-sm text-muted opacity-80">{user?.email}</div>
             <div className="mt-xs">
-              <span className={`badge ${user?.identityVerified ? 'badge-success' : 'badge-warning'} text-[10px] px-sm py-0`}>
+              <span className={`badge badge-status ${user?.identityVerified ? 'badge-success' : 'badge-warning'} text-[10px] px-sm py-0`}>
                 {user?.identityVerified ? t('common.status.verified') : t('common.status.pending')}
               </span>
             </div>

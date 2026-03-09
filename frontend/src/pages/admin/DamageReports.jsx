@@ -92,7 +92,7 @@ export default function DamageReportsPage() {
                   <td style={{ fontWeight: 500 }}>{r.vehicle?.plateNumber || '—'}</td>
                   <td>{r.driver?.name || '—'}</td>
                   <td className="text-sm">{r.description?.substring(0, 60)}...</td>
-                  <td><span className={`badge ${STATUS_BADGES[r.status]}`}>{t(`admin_damage.status.${r.status.toLowerCase()}`)}</span></td>
+                  <td><span className={`badge badge-status ${STATUS_BADGES[r.status]}`}>{t(`admin_damage.status.${r.status.toLowerCase()}`)}</span></td>
                   <td className="text-sm text-muted">{formatDate(r.createdAt)}</td>
                   <td>
                     <div className="flex gap-sm">

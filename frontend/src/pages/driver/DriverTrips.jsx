@@ -117,7 +117,7 @@ export default function DriverTrips() {
           {trips.map(trip => (
             <div key={trip.id} className="card">
               <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-md)' }}>
-                <span className={`badge ${STATUS_BADGES[trip.status]}`}>{t(`common.trip_status.${trip.status.toLowerCase()}`, trip.status)}</span>
+                <span className={`badge badge-status ${STATUS_BADGES[trip.status]}`}>{t(`common.trip_status.${trip.status.toLowerCase()}`, trip.status)}</span>
                 <span className="text-sm text-muted">{trip.price} {t('trip.price_unit')}</span>
               </div>
 

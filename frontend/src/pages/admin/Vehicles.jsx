@@ -180,7 +180,7 @@ export default function VehiclesPage() {
                   <td>{t('vehicles.table.seats', { count: v.capacity })}</td>
                   <td><span className="flex items-center gap-sm"><QrCode size={14} /> {v.qrCode}</span></td>
                   <td>
-                    <span className={`badge ${STATUS_BADGES[v.status] || 'badge-neutral'}`}>
+                    <span className={`badge badge-status ${STATUS_BADGES[v.status] || 'badge-neutral'}`}>
                       {t(`common.status.${v.status.toLowerCase()}`)}
                     </span>
                   </td>

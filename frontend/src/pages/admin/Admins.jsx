@@ -169,16 +169,16 @@ export default function AdminsPage() {
                   <td className="text-muted">{a.email}</td>
                   <td>
                     {a.adminRole === 'SUPER_ADMIN' ? (
-                      <span className="badge badge-warning flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldAlert size={12} /> {t('admins_page.roles.super_admin')}</span>
+                      <span className="badge badge-status badge-warning flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldAlert size={12} /> {t('admins_page.roles.super_admin')}</span>
                     ) : (
-                      <span className="badge badge-info flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldCheck size={12} /> {t('admins_page.roles.system_admin')}</span>
+                      <span className="badge badge-status badge-info flex items-center gap-xs" style={{ width: 'fit-content' }}><ShieldCheck size={12} /> {t('admins_page.roles.system_admin')}</span>
                     )}
                   </td>
                   <td>
                     {a.isActive ? (
-                      <span className="badge badge-success">{t('common.status.active')}</span>
+                      <span className="badge badge-status badge-success">{t('common.status.active')}</span>
                     ) : (
-                      <span className="badge badge-danger">{t('common.status.inactive')}</span>
+                      <span className="badge badge-status badge-danger">{t('common.status.inactive')}</span>
                     )}
                   </td>
                   <td className="text-muted">{new Date(a.createdAt).toLocaleDateString()}</td>

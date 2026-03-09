@@ -135,7 +135,7 @@ export default function VerificationQueue() {
                   <p className="text-muted text-sm">{item.driver?.email} | {item.driver?.phone}</p>
                   <p className="text-xs text-muted">{t('verification.card.submitted', { date: new Date(item.createdAt).toLocaleString() })}</p>
                 </div>
-                <span className={`badge ${item.status === 'approved' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
+                <span className={`badge badge-status ${item.status === 'approved' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
                   {t(`common.status.${(item.status || 'pending').toLowerCase()}`)}
                 </span>
               </div>

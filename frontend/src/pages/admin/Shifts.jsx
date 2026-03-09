@@ -145,7 +145,11 @@ export default function ShiftsPage() {
                   <tr key={s.id}>
                     <td style={{ fontWeight: 500 }}>{s.driver?.name || '—'}</td>
                     <td>{s.vehicle?.plateNumber || '—'}</td>
-                    <td><span className={`badge ${STATUS_BADGES[s.status] || 'badge-neutral'}`}>{t(`common.status.${s.status.toLowerCase()}`)}</span></td>
+                    <td>
+                      <span className={`badge badge-status ${STATUS_BADGES[s.status] || 'badge-neutral'}`}>
+                        {t(`common.status.${s.status.toLowerCase()}`)}
+                      </span>
+                    </td>
                     <td className="text-sm">{formatDate(s.startedAt)}</td>
                     <td className="text-sm">{formatDate(s.closedAt)}</td>
                     <td className="text-sm text-muted">{s.closeReason || '—'}</td>
@@ -194,7 +198,7 @@ export default function ShiftsPage() {
                       <div className="text-sm text-muted">{selectedShift.vehicle?.plateNumber || '—'}</div>
                     </div>
                     <div className="flex items-center gap-sm">
-                      <span className={`badge ${STATUS_BADGES[selectedShift.status] || 'badge-neutral'}`}>{t(`common.status.${selectedShift.status.toLowerCase()}`)}</span>
+                      <span className={`badge badge-status ${STATUS_BADGES[selectedShift.status] || 'badge-neutral'}`}>{t(`common.status.${selectedShift.status.toLowerCase()}`)}</span>
                       <span className="badge badge-neutral">{selectedShiftInspections.length} {t('shifts.actions.inspections')}</span>
                     </div>
                   </div>
@@ -245,7 +249,7 @@ export default function ShiftsPage() {
                                 {timing === 'before' ? t('inspection.before_shift') || 'Before shift' : timing === 'after' ? t('inspection.after_shift') || 'After shift' : t('inspection.during_shift') || 'During shift'}
                               </span>
                             )}
-                            <span className={`badge ${INSP_STATUS_BADGES[insp.status]}`}>
+                            <span className={`badge badge-status ${INSP_STATUS_BADGES[insp.status]}`}>
                               {t(`common.status.${insp.status.toLowerCase()}`)}
                             </span>
                           </div>
