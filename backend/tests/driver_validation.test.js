@@ -65,7 +65,7 @@ describe('Driver Validation', () => {
         .send({
           name: 'Test Driver',
           email: 'test@example.com',
-          phone: '1234567890',
+          phone: '01012345678',
           licenseNumber: 'DL@#$%', // Invalid
           password: 'password123'
         });
@@ -78,7 +78,7 @@ describe('Driver Validation', () => {
         .send({
           name: 'Valid Driver',
           email: 'valid@example.com',
-          phone: '1234567890',
+          phone: '01012345678',
           licenseNumber: 'DL12345',
           password: 'password123'
         });

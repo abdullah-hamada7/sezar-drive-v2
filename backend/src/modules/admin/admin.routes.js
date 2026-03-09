@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const adminService = require('./admin.service');
 const { authenticate, enforcePasswordChanged, authorizeSuperAdmin } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
+const { EMAIL_REGEX, EGYPT_PHONE_REGEX } = require('../../utils/validation');
 
 const router = express.Router();
 
@@ -18,8 +19,8 @@ router.post(
     authenticate, enforcePasswordChanged, authorizeSuperAdmin,
     [
         body('name').notEmpty().withMessage('Name is required').trim().escape(),
-        body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
-        body('phone').notEmpty().withMessage('Phone is required').matches(/^\+?[0-9]{10,15}$/).withMessage('Phone must be 10-15 digits (optional leading +)'),
+        body('email').isEmail().matches(EMAIL_REGEX).withMessage('Valid email is required').normalizeEmail(),
+        body('phone').notEmpty().withMessage('Phone is required').matches(EGYPT_PHONE_REGEX).withMessage('Phone must be a valid Egyptian mobile number (01XXXXXXXXX or +201XXXXXXXXX)'),
         body('temporaryPassword')
             .isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters long')
             .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/).withMessage('Temporary password must include uppercase and number'),

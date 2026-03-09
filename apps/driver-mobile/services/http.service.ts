@@ -1,5 +1,48 @@
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
+const ACCESS_TOKEN_KEY = 'accessToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
+
+async function getSecureStore() {
+    try {
+        return await import('expo-secure-store');
+    } catch {
+        return null;
+    }
+}
+
+async function getStoredToken(key: string) {
+    const secureStore = await getSecureStore();
+    if (secureStore) {
+        return secureStore.getItemAsync(key);
+    }
+
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    return AsyncStorage.getItem(key);
+}
+
+async function setStoredToken(key: string, value: string) {
+    const secureStore = await getSecureStore();
+    if (secureStore) {
+        await secureStore.setItemAsync(key, value);
+        return;
+    }
+
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    await AsyncStorage.setItem(key, value);
+}
+
+async function removeStoredToken(key: string) {
+    const secureStore = await getSecureStore();
+    if (secureStore) {
+        await secureStore.deleteItemAsync(key);
+        return;
+    }
+
+    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+    await AsyncStorage.removeItem(key);
+}
+
 class HttpService {
     private accessToken: string | null = null;
     private refreshToken: string | null = null;
@@ -11,9 +54,8 @@ class HttpService {
 
     private async initTokens() {
         try {
-            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-            this.accessToken = await AsyncStorage.getItem('accessToken');
-            this.refreshToken = await AsyncStorage.getItem('refreshToken');
+            this.accessToken = await getStoredToken(ACCESS_TOKEN_KEY);
+            this.refreshToken = await getStoredToken(REFRESH_TOKEN_KEY);
         } catch (e) {
             console.error('Failed to load tokens', e);
         }
@@ -22,11 +64,10 @@ class HttpService {
     async setTokens(access: string, refresh?: string) {
         this.accessToken = access;
         try {
-            const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-            await AsyncStorage.setItem('accessToken', access);
+            await setStoredToken(ACCESS_TOKEN_KEY, access);
             if (refresh) {
                 this.refreshToken = refresh;
-                await AsyncStorage.setItem('refreshToken', refresh);
+                await setStoredToken(REFRESH_TOKEN_KEY, refresh);
             }
         } catch (e) {
             console.error('Failed to save tokens', e);
@@ -38,8 +79,8 @@ class HttpService {
         this.refreshToken = null;
         try {
             const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-            await AsyncStorage.removeItem('accessToken');
-            await AsyncStorage.removeItem('refreshToken');
+            await removeStoredToken(ACCESS_TOKEN_KEY);
+            await removeStoredToken(REFRESH_TOKEN_KEY);
             await AsyncStorage.removeItem('user');
         } catch (e) {
             console.error('Failed to clear tokens', e);

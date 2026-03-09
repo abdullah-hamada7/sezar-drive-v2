@@ -1,8 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { http } from '../services/http.service';
 import { AuthContext } from './authContext';
+
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -10,6 +12,7 @@ export function AuthProvider({ children }) {
     return stored ? JSON.parse(stored) : null;
   });
   const [loading, setLoading] = useState(false);
+  const idleTimerRef = useRef(null);
   const navigate = useNavigate();
 
   const getDeviceFingerprint = () => {
@@ -43,8 +46,8 @@ export function AuthProvider({ children }) {
         return { requiresVerification: true, userId: res.data.userId, deviceFingerprint };
       }
 
-      const { user: userData, accessToken, refreshToken } = res.data;
-      http.setTokens(accessToken, refreshToken);
+      const { user: userData, accessToken } = res.data;
+      http.setTokens(accessToken);
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
 
@@ -67,11 +70,54 @@ export function AuthProvider({ children }) {
     navigate('/login');
   }, [navigate]);
 
+  const resetIdleTimer = useCallback(() => {
+    if (!user) return;
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+
+    idleTimerRef.current = setTimeout(() => {
+      http.clearTokens();
+      setUser(null);
+      localStorage.removeItem('user');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app:toast', {
+          detail: {
+            message: 'Session ended due to inactivity. Please sign in again.',
+            type: 'warning',
+            code: 'SESSION_EXPIRED',
+          },
+        }));
+      }
+      navigate('/login');
+    }, IDLE_TIMEOUT_MS);
+  }, [navigate, user]);
+
   useEffect(() => {
     const handleSessionExpired = () => logout();
     window.addEventListener('auth:session-expired', handleSessionExpired);
     return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
   }, [logout]);
+
+  useEffect(() => {
+    if (!user) {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+      return;
+    }
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(eventName => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
+    resetIdleTimer();
+
+    return () => {
+      events.forEach(eventName => window.removeEventListener(eventName, resetIdleTimer));
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
+  }, [user, resetIdleTimer]);
 
   const updateUser = (updates) => {
     const updated = { ...user, ...updates };

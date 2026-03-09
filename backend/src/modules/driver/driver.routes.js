@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const driverService = require('./driver.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
+const { EMAIL_REGEX, EGYPT_PHONE_REGEX } = require('../../utils/validation');
 const { createUploader } = require('../../middleware/upload');
 const fileService = require('../../services/FileService');
 const upload = createUploader();
@@ -50,8 +51,8 @@ router.post(
   ]),
   [
     body('name').notEmpty().withMessage('Name is required').trim().escape(),
-    body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
-    body('phone').notEmpty().withMessage('Phone number is required').matches(/^\+?[0-9]{10,15}$/).withMessage('Invalid phone number format').trim().escape(),
+    body('email').isEmail().matches(EMAIL_REGEX).withMessage('Valid email is required').normalizeEmail(),
+    body('phone').notEmpty().withMessage('Phone number is required').matches(EGYPT_PHONE_REGEX).withMessage('Invalid Egyptian mobile phone format').trim().escape(),
     body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
     body('temporaryPassword').optional().isLength({ min: 8 }).withMessage('Temporary password must be at least 8 characters long'),
     body('licenseNumber').notEmpty().withMessage('License number is required').matches(/^[A-Z0-9-]+$/i).withMessage('Invalid license number format').trim().escape(),
@@ -123,7 +124,7 @@ router.put(
   [
     param('id').isUUID(),
     body('name').optional().trim().escape(),
-    body('phone').optional().matches(/^\+?[0-9]{10,15}$/).withMessage('Invalid phone number format').trim().escape(),
+    body('phone').optional().matches(EGYPT_PHONE_REGEX).withMessage('Invalid Egyptian mobile phone format').trim().escape(),
     body('licenseNumber').optional().matches(/^[A-Z0-9-]+$/i).withMessage('Invalid license number format').trim().escape(),
     body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
     body('language_preference').optional().isString().isIn(['en', 'ar']).withMessage('Invalid language preference'),

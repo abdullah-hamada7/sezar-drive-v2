@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { shiftService as api } from '../services/shift.service';
 import { buildTrackingWsUrl } from '../utils/trackingWs';
+import { http } from '../services/http.service';
 
 export function useDriverTracking() {
   const { user } = useAuth();
@@ -14,8 +15,13 @@ export function useDriverTracking() {
     roleRef.current = user?.role || null;
   }, [user?.role]);
 
-  const connectWebSocket = useCallback(function connectWs() {
-    const token = localStorage.getItem('accessToken');
+  const connectWebSocket = useCallback(async function connectWs() {
+    let token = http.getAccessToken();
+    if (!token) {
+      const refreshed = await http.tryRefresh();
+      if (!refreshed) return;
+      token = http.getAccessToken();
+    }
     if (!token) return;
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 

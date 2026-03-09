@@ -4,6 +4,7 @@ const AuditService = require('../../services/audit.service');
 const { TRIP_STATE_MACHINE } = require('../../services/state-machine');
 const TripValidator = require('./trip.validator');
 const TripNotifier = require('./trip.notifier');
+const { EGYPT_PHONE_REGEX } = require('../../utils/validation');
 
 /**
  * Validate trip state transition.
@@ -26,7 +27,7 @@ async function assignTrip(data, adminId, ipAddress) {
     throw new ValidationError('Pickup and dropoff locations are required');
   }
 
-  const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId, scheduledTime);
+  const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId);
 
   const incomingPassengers = Array.isArray(data.passengers)
     ? data.passengers
@@ -38,19 +39,34 @@ async function assignTrip(data, adminId, ipAddress) {
 
   const normalizedPassengers = incomingPassengers
     .map(passenger => {
-      const companionNumbers = Array.isArray(passenger?.companionNumbers)
-        ? passenger.companionNumbers
-        : (typeof passenger?.companionNumbers === 'string'
-          ? passenger.companionNumbers.split(',').map(v => v.trim()).filter(Boolean)
-          : []);
+      const companionCount = Number(
+        passenger?.companionCount ??
+        passenger?.companionsCount ??
+        0
+      );
+
+      if (!passenger?.name || !String(passenger.name).trim()) {
+        throw new ValidationError('Passenger name is required');
+      }
+
+      if (!passenger?.phone || !String(passenger.phone).trim()) {
+        throw new ValidationError('Passenger phone is required');
+      }
+
+      if (!EGYPT_PHONE_REGEX.test(String(passenger.phone).trim())) {
+        throw new ValidationError('Passenger phone must be a valid Egyptian mobile number (01XXXXXXXXX or +201XXXXXXXXX)');
+      }
+
+      if (!Number.isInteger(companionCount) || companionCount < 0) {
+        throw new ValidationError('Companion count must be a non-negative integer');
+      }
 
       return {
-        name: passenger?.name || '',
-        phone: passenger?.phone || '',
-        companionNumbers,
+        name: String(passenger.name).trim(),
+        phone: String(passenger.phone).trim(),
+        companionCount,
       };
-    })
-    .filter(passenger => passenger.name || passenger.phone || passenger.companionNumbers.length > 0);
+    });
 
   const trip = await prisma.trip.create({
     data: {
@@ -85,21 +101,30 @@ async function assignTrip(data, adminId, ipAddress) {
  */
 async function startTrip(tripId, driverId, ipAddress) {
   const { trip, driver, assignment } = await TripValidator.validateStartPreconditions(tripId, driverId);
-  
   validateTripTransition(trip.status, 'IN_PROGRESS');
 
-  // Optimistic locking
   const updated = await prisma.trip.updateMany({
-    where: { id: tripId, version: trip.version },
+    where: {
+      id: tripId,
+      driverId,
+      status: { in: ['ASSIGNED', 'ACCEPTED'] },
+    },
     data: {
       status: 'IN_PROGRESS',
-      actualStartTime: trip.actualStartTime || new Date(),
+      actualStartTime: new Date(),
       version: { increment: 1 },
     },
   });
 
   if (updated.count === 0) {
-    throw new ConflictError('CONCURRENT_MODIFICATION', 'Trip was modified concurrently');
+    const latest = await prisma.trip.findUnique({ where: { id: tripId } });
+    if (!latest) throw new NotFoundError('Trip');
+
+    if (latest.status === 'IN_PROGRESS' || latest.status === 'COMPLETED') {
+      return latest;
+    }
+
+    throw new ConflictError('CONFLICT', 'Trip cannot be started in its current state');
   }
 
   await AuditService.log({
@@ -254,6 +279,55 @@ async function acceptTrip(tripId, driverId, ipAddress) {
 }
 
 /**
+ * Driver rejects an assigned trip with mandatory reason.
+ */
+async function rejectAssignedTrip(tripId, driverId, reason, ipAddress) {
+  const trimmedReason = String(reason || '').trim();
+  if (!trimmedReason) {
+    throw new ValidationError('Rejection reason is required', 'REJECTION_REASON_REQUIRED');
+  }
+
+  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+  if (!trip) throw new NotFoundError('Trip');
+  if (trip.driverId !== driverId) throw new ForbiddenError('FORBIDDEN', 'Not your trip');
+
+  if (trip.status !== 'ASSIGNED') {
+    throw new ConflictError('INVALID_STATE_TRANSITION', 'Only assigned trips can be rejected');
+  }
+
+  const updated = await prisma.trip.updateMany({
+    where: {
+      id: tripId,
+      driverId,
+      status: 'ASSIGNED',
+    },
+    data: {
+      status: 'CANCELLED',
+      cancellationReason: trimmedReason,
+      cancelledBy: driverId,
+      version: { increment: 1 },
+    },
+  });
+
+  if (updated.count === 0) {
+    throw new ConflictError('CONCURRENT_MODIFICATION', 'Trip was modified concurrently');
+  }
+
+  await AuditService.log({
+    actorId: driverId,
+    actionType: 'trip.rejected',
+    entityType: 'trip',
+    entityId: tripId,
+    previousState: { status: 'ASSIGNED' },
+    newState: { status: 'CANCELLED', reason: trimmedReason },
+    ipAddress,
+  });
+
+  TripNotifier.onTripCancelled(trip, driverId, false, trimmedReason);
+  return prisma.trip.findUnique({ where: { id: tripId } });
+}
+
+/**
  * Admin override for trip state mutation.
  */
 async function overrideTrip(tripId, nextStatus, reason, adminId, ipAddress) {
@@ -351,6 +425,6 @@ async function getTripById(id, requestingUser = null) {
 }
 
 module.exports = {
-  assignTrip, acceptTrip, startTrip, completeTrip, cancelTrip, overrideTrip,
+  assignTrip, acceptTrip, rejectAssignedTrip, startTrip, completeTrip, cancelTrip, overrideTrip,
   getActiveTrip, getTrips, getTripById,
 };

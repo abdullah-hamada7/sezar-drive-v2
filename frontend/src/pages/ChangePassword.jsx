@@ -35,10 +35,10 @@ export default function ChangePasswordPage() {
     setLoading(true);
     try {
       const res = await api.changePassword({ currentPassword, newPassword });
-      const { user: updatedUser, accessToken, refreshToken } = res.data;
+      const { user: updatedUser, accessToken } = res.data;
 
       if (accessToken) {
-        http.setTokens(accessToken, refreshToken);
+        http.setTokens(accessToken);
         updateUser(updatedUser);
       } else {
         updateUser({ ...user, mustChangePassword: false });

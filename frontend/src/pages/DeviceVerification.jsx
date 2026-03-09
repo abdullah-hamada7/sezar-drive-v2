@@ -98,9 +98,9 @@ export default function DeviceVerificationPage() {
       formData.append('photo', blob, 'selfie.jpg');
 
       const res = await api.verifyDevice(formData);
-      const { user: userData, accessToken, refreshToken } = res.data;
+      const { user: userData, accessToken } = res.data;
 
-      http.setTokens(accessToken, refreshToken);
+      http.setTokens(accessToken);
       updateUser(userData);
 
       setSuccess(true);

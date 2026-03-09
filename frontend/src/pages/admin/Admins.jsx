@@ -4,6 +4,7 @@ import { adminService } from '../../services/admin.service';
 import { ToastContext } from '../../contexts/toastContext';
 import { Trash2, XCircle, Search, ShieldAlert, ShieldCheck, Plus, RefreshCw } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
+import { EMAIL_REGEX, EGYPT_PHONE_REGEX } from '../../utils/validation';
 
 export default function AdminsPage() {
   const { t } = useTranslation();
@@ -53,7 +54,12 @@ export default function AdminsPage() {
         setIsSubmitting(false);
         return;
       }
-      if (!/^\+?[0-9]{10,15}$/.test(form.phone)) {
+      if (!EMAIL_REGEX.test(form.email)) {
+        addToast(t('drivers.modal.email_invalid'), 'error');
+        setIsSubmitting(false);
+        return;
+      }
+      if (!EGYPT_PHONE_REGEX.test(form.phone)) {
         addToast(t('admins_page.messages.phone_invalid'), 'error');
         setIsSubmitting(false);
         return;
@@ -228,7 +234,7 @@ export default function AdminsPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">{t('admins_page.modal.phone')}</label>
-                  <input type="tel" className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required placeholder={t('admins_page.modal.phone_placeholder')} pattern="^\+?[0-9]{10,15}$" />
+                  <input type="tel" className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required placeholder={t('admins_page.modal.phone_placeholder')} pattern="^(?:\+201[0125]\d{8}|01[0125]\d{8})$" />
                 </div>
               </div>
 

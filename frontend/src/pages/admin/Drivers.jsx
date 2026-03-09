@@ -4,6 +4,7 @@ import { driverService as api } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
 import { Users, Plus, Search, Edit, Trash2, X, UserCheck, UserX } from 'lucide-react';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { EMAIL_REGEX, EGYPT_PHONE_REGEX } from '../../utils/validation';
 
 export default function DriversPage() {
   const { t } = useTranslation();
@@ -27,11 +28,11 @@ export default function DriversPage() {
     let err = '';
     if (name === 'phone') {
       if (!value) err = t('drivers.modal.phone_required');
-      else if (!/^\+?[0-9]{10,15}$/.test(value)) err = t('drivers.modal.phone_invalid');
+      else if (!EGYPT_PHONE_REGEX.test(value)) err = t('drivers.modal.phone_invalid');
     }
     if (name === 'email') {
       if (!value) err = t('drivers.modal.email_required');
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) err = t('drivers.modal.email_invalid');
+      else if (!EMAIL_REGEX.test(value)) err = t('drivers.modal.email_invalid');
     }
     if (name === 'licenseNumber') {
       if (!value) err = t('drivers.modal.license_required');
@@ -401,14 +402,14 @@ export default function DriversPage() {
                     name="phone"
                     value={form.phone}
                     onChange={e => {
-                      const val = e.target.value.replace(/[^\d+]/g, ''); // Restrict to digits and +
+                      const val = e.target.value.replace(/[^\d+]/g, '');
                       setForm({ ...form, phone: val });
                       validateField('phone', val);
                     }}
                     required
                     placeholder={t('drivers.modal.phone_placeholder')}
                     type="tel"
-                    pattern="^\+?(\d[\d\-\s\(\)]*){6,20}$"
+                    pattern="^(?:\+201[0125]\d{8}|01[0125]\d{8})$"
                   />
                   {fieldErrors.phone && <span className="text-xs text-danger">{fieldErrors.phone}</span>}
                 </div>

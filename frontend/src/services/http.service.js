@@ -3,23 +3,20 @@ const API_BASE =
 
 class HttpService {
   constructor() {
-    this.accessToken = localStorage.getItem('accessToken');
-    this.refreshToken = localStorage.getItem('refreshToken');
+    this.accessToken = null;
   }
 
-  setTokens(access, refresh) {
+  setTokens(access) {
     this.accessToken = access;
-    this.refreshToken = refresh;
-    localStorage.setItem('accessToken', access);
-    if (refresh) localStorage.setItem('refreshToken', refresh);
   }
 
   clearTokens() {
     this.accessToken = null;
-    this.refreshToken = null;
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+  }
+
+  getAccessToken() {
+    return this.accessToken;
   }
 
   async request(endpoint, options = {}) {
@@ -43,7 +40,7 @@ class HttpService {
 
     let response;
     try {
-      response = await fetch(url, { ...options, headers });
+      response = await fetch(url, { ...options, headers, credentials: 'include' });
     } catch (err) {
       notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
       err.isNetworkError = true;
@@ -59,12 +56,12 @@ class HttpService {
     };
 
     // Token refresh on 401
-    if (response.status === 401 && this.refreshToken && !options._retried) {
+    if (response.status === 401 && !options._retried && !options.skipAuth) {
       const refreshed = await this.tryRefresh();
       if (refreshed) {
         headers['Authorization'] = `Bearer ${this.accessToken}`;
         try {
-          response = await fetch(url, { ...options, headers, _retried: true });
+          response = await fetch(url, { ...options, headers, credentials: 'include', _retried: true });
         } catch (err) {
           notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
           err.isNetworkError = true;
@@ -128,12 +125,11 @@ class HttpService {
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: this.refreshToken }),
+        credentials: 'include',
       });
       if (!res.ok) return false;
       const data = await res.json();
-      this.setTokens(data.accessToken, data.refreshToken);
+      this.setTokens(data.accessToken);
       return true;
     } catch {
       return false;

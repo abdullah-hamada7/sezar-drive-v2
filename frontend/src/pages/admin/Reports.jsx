@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reportService as api } from '../../services/report.service';
+import { http } from '../../services/http.service';
 import { FileBarChart, Download, Calendar } from 'lucide-react';
 import { useContext } from 'react';
 import { ToastContext } from '../../contexts/toastContext';
@@ -42,8 +43,16 @@ export default function ReportsPage() {
       params.set('lang', lang);
 
       const endpoint = type === 'pdf' ? `/reports/revenue/pdf?${params}` : `/reports/revenue/excel?${params}`;
+      let token = http.getAccessToken();
+      if (!token) {
+        const refreshed = await http.tryRefresh();
+        if (!refreshed) throw new Error(t('auth.session_expired'));
+        token = http.getAccessToken();
+      }
+
       const response = await fetch(`/api/v1${endpoint}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        credentials: 'include',
       });
 
       if (!response.ok) {

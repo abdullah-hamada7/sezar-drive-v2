@@ -12,6 +12,7 @@ import {
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
+import { http } from '../../services/http.service';
 
 export default function AdminLayout() {
   const { language, toggleLanguage, t } = useLanguage();
@@ -79,8 +80,13 @@ export default function AdminLayout() {
     }
     fetchCounts();
 
-    function connectWS() {
-      const token = localStorage.getItem('accessToken');
+    async function connectWS() {
+      let token = http.getAccessToken();
+      if (!token) {
+        const refreshed = await http.tryRefresh();
+        if (!refreshed) return;
+        token = http.getAccessToken();
+      }
       if (!token) return;
 
       const ws = new WebSocket(buildTrackingWsUrl(token));

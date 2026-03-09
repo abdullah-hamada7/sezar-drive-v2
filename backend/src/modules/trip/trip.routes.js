@@ -141,6 +141,32 @@ router.patch(
   }
 );
 
+router.patch(
+  '/driver/:id/reject',
+  authenticate, enforcePasswordChanged, authorize('driver'), requireIdempotencyKey,
+  [param('id').isUUID(), body('reason').notEmpty().isString().trim().escape()],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const trip = await tripService.rejectAssignedTrip(req.params.id, req.user.id, req.body.reason, req.clientIp);
+      res.json(trip);
+    } catch (err) { next(err); }
+  }
+);
+
+router.patch(
+  '/:id/reject',
+  authenticate, enforcePasswordChanged, authorize('driver'), requireIdempotencyKey,
+  [param('id').isUUID(), body('reason').notEmpty().isString().trim().escape()],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const trip = await tripService.rejectAssignedTrip(req.params.id, req.user.id, req.body.reason, req.clientIp);
+      res.json(trip);
+    } catch (err) { next(err); }
+  }
+);
+
 // ─── PUT /api/v1/trips/:id/start ──────────────────
 router.put(
   '/:id/start',

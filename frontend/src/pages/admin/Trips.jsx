@@ -5,6 +5,7 @@ import { driverService } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
 import { Route, Search, Eye, XCircle, MapPin, Clock, DollarSign } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
+import { EGYPT_PHONE_REGEX } from '../../utils/validation';
 
 const STATUS_BADGES = {
   ASSIGNED: 'badge-info',
@@ -31,7 +32,7 @@ export default function TripsPage() {
     dropoffLocation: '',
     price: '',
     scheduledTime: '',
-    passengers: [{ name: '', phone: '', companionNumbers: '' }]
+    passengers: [{ name: '', phone: '', companionCount: 0 }]
   });
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [, setError] = useState('');
@@ -117,6 +118,15 @@ export default function TripsPage() {
       addToast(t('trips.modal.price_label', { unit: t('common.currency') }), 'error');
       return;
     }
+    const passenger = form.passengers?.[0];
+    if (!passenger?.name?.trim() || !passenger?.phone?.trim()) {
+      addToast(t('common.errors.check_fields'), 'error');
+      return;
+    }
+    if (!EGYPT_PHONE_REGEX.test(passenger.phone.trim())) {
+      addToast(t('drivers.modal.phone_invalid'), 'error');
+      return;
+    }
     try {
       let scheduledTime = form.scheduledTime;
       if (scheduledTime) {
@@ -133,7 +143,7 @@ export default function TripsPage() {
         dropoffLocation: '',
         price: '',
         scheduledTime: '',
-        passengers: [{ name: '', phone: '', companionNumbers: '' }]
+        passengers: [{ name: '', phone: '', companionCount: 0 }]
       });
       setSelectedDriverName('');
       setRefresh(r => r + 1);
@@ -350,19 +360,24 @@ export default function TripsPage() {
                             newPassengers[0] = { ...newPassengers[0], phone: e.target.value };
                             setForm({ ...form, passengers: newPassengers });
                           }}
-                          pattern="^\+?(\d[\d\-\s\(\)]*){6,20}$"
+                          pattern="^(?:\+201[0125]\d{8}|01[0125]\d{8})$"
+                          required
                         />
                       </div>
                       <div className="form-group" style={{ gridColumn: 'span 2' }}>
                         <input
+                          type="number"
                           className="form-input text-sm"
-                          placeholder={t('trips.modal.companion_numbers_ph')}
-                          value={form.passengers[0]?.companionNumbers || ''}
+                          placeholder={t('trips.modal.companion_count_ph')}
+                          value={form.passengers[0]?.companionCount ?? 0}
+                          min="0"
+                          step="1"
                           onChange={e => {
                             const newPassengers = [...form.passengers];
-                            newPassengers[0] = { ...newPassengers[0], companionNumbers: e.target.value };
+                            newPassengers[0] = { ...newPassengers[0], companionCount: parseInt(e.target.value || '0', 10) };
                             setForm({ ...form, passengers: newPassengers });
                           }}
+                          required
                         />
                       </div>
                     </div>
@@ -455,11 +470,9 @@ export default function TripsPage() {
                               <span className="text-muted">{t('drivers.table.phone')}:</span> <span className="font-medium">{p.phone}</span>
                             </div>
                           )}
-                          {p.companionNumbers && p.companionNumbers.length > 0 && (
-                            <div className="text-xs">
-                              <span className="text-muted">{t('trips.modal.companion_numbers_ph')}:</span> <span className="font-medium">{Array.isArray(p.companionNumbers) ? p.companionNumbers.join(', ') : p.companionNumbers}</span>
-                            </div>
-                          )}
+                          <div className="text-xs">
+                            <span className="text-muted">{t('trips.modal.companion_count_ph')}:</span> <span className="font-medium">{p.companionCount ?? 0}</span>
+                          </div>
                         </div>
                       </div>
                     ))}

@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ToastContext } from '../../contexts/toastContext';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
+import { http } from '../../services/http.service';
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -34,8 +35,13 @@ export default function TrackingPage() {
 
   const reconnectTimerRef = useRef(null);
 
-  const connectWebSocket = useCallback(() => {
-    const token = localStorage.getItem('accessToken');
+  const connectWebSocket = useCallback(async () => {
+    let token = http.getAccessToken();
+    if (!token) {
+      const refreshed = await http.tryRefresh();
+      if (!refreshed) return;
+      token = http.getAccessToken();
+    }
     if (!token) return;
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 

@@ -2,6 +2,7 @@ const prisma = require('../../config/database');
 const { ConflictError, NotFoundError, ValidationError, ForbiddenError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
+const { sanitizeDeep } = require('../../utils/sanitize');
 
 /**
  * Create a full or checklist inspection for a shift.
@@ -81,7 +82,7 @@ async function completeInspection(inspectionId, driverId, checklistData, ipAddre
     data: {
       status: 'completed',
       completedAt: new Date(),
-      checklistData: checklistData || null,
+      checklistData: checklistData ? sanitizeDeep(checklistData) : null,
     },
   });
 

@@ -4,6 +4,7 @@ import { tripService as api } from '../../services/trip.service';
 import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
+import PromptModal from '../../components/common/PromptModal';
 
 const STATUS_BADGES = { ASSIGNED: 'badge-info', IN_PROGRESS: 'badge-warning', COMPLETED: 'badge-success', CANCELLED: 'badge-danger' };
 
@@ -12,6 +13,7 @@ export default function DriverTrips() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
+  const [rejectPrompt, setRejectPrompt] = useState({ isOpen: false, tripId: null });
   const { addToast } = useContext(ToastContext);
   const { activeShift } = useShift();
 
@@ -81,6 +83,17 @@ export default function DriverTrips() {
     }
   }
 
+  async function onConfirmReject(reason) {
+    try {
+      await api.rejectTrip(rejectPrompt.tripId, { reason });
+      addToast(t('trip.reject_success'), 'success');
+      load();
+    } catch (err) {
+      const code = err.errorCode || err.code;
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    }
+  }
+
   if (loading) return <div className="loading-page"><div className="spinner"></div></div>;
 
   return (
@@ -138,30 +151,36 @@ export default function DriverTrips() {
                           {trip.passengers[0].phone || t('trip.no_phone')}
                         </a>
                       </div>
-                      {trip.passengers[0].companionNumbers && trip.passengers[0].companionNumbers.length > 0 && (
-                        <div className="flex items-center gap-sm text-muted">
-                          <span className="text-sm font-medium">
-                            {t('trips.modal.companion_numbers_ph')}: {Array.isArray(trip.passengers[0].companionNumbers)
-                              ? trip.passengers[0].companionNumbers.join(', ')
-                              : trip.passengers[0].companionNumbers}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-sm text-muted">
+                        <span className="text-sm font-medium">
+                          {t('trips.modal.companion_count_ph')}: {trip.passengers[0].companionCount ?? 0}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}
               </div>
 
               {trip.status === 'ASSIGNED' && (
-                trip.scheduledTime && new Date(trip.scheduledTime) > new Date() ? (
-                  <button className="btn btn-primary" onClick={() => handleAccept(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
-                    <CheckCircle size={16} /> {t('trip.accept_trip')}
+                <div className="flex gap-sm" style={{ width: '100%' }}>
+                  {trip.scheduledTime && new Date(trip.scheduledTime) > new Date() ? (
+                    <button className="btn btn-primary" onClick={() => handleAccept(trip.id)} disabled={actionLoading === trip.id} style={{ flex: 1 }}>
+                      <CheckCircle size={16} /> {t('trip.accept_trip')}
+                    </button>
+                  ) : (
+                    <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ flex: 1 }}>
+                      <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setRejectPrompt({ isOpen: true, tripId: trip.id })}
+                    disabled={actionLoading === trip.id}
+                    style={{ flex: 1 }}
+                  >
+                    {t('trip.reject_trip')}
                   </button>
-                ) : (
-                  <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
-                    <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
-                  </button>
-                )
+                </div>
               )}
               {trip.status === 'ACCEPTED' && (
                 <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
@@ -177,6 +196,16 @@ export default function DriverTrips() {
           ))}
         </div>
       )}
+
+      <PromptModal
+        isOpen={rejectPrompt.isOpen}
+        onClose={() => setRejectPrompt({ isOpen: false, tripId: null })}
+        onConfirm={onConfirmReject}
+        title={t('trip.reject_trip')}
+        message={t('trip.reject_prompt')}
+        placeholder={t('trip.reject_reason_placeholder')}
+        confirmText={t('common.reject')}
+      />
     </div>
   );
 }

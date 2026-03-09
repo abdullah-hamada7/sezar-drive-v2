@@ -21,6 +21,13 @@ export const tripService = {
       headers: { 'Idempotency-Key': generateIdempotencyKey() }
     });
   },
+  rejectTrip(id, data) {
+    return http.request(`/trips/${id}/reject`, {
+      method: 'PATCH',
+      body: data,
+      headers: { 'Idempotency-Key': generateIdempotencyKey() }
+    });
+  },
   startTrip(id) {
     return http.request(`/trips/${id}/start`, {
       method: 'PUT',
