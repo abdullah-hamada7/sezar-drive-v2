@@ -2,10 +2,28 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  max-width: 600px; /* Slightly wider for modern phones and tablet-lite feel */
+  max-width: 640px;
   margin-inline: auto;
   background: var(--color-bg);
   position: relative;
+  min-height: 100dvh;
+}
+
+@media (min-width: 768px) {
+  .driver-layout {
+    max-width: 860px;
+  }
+
+  .driver-main {
+    padding: var(--space-lg);
+    padding-bottom: calc(90px + env(safe-area-inset-bottom, 1rem));
+  }
+}
+
+@media (min-width: 1200px) {
+  .driver-layout {
+    max-width: 980px;
+  }
 }
 
 /* ── Header ── */
@@ -13,7 +31,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-lg);
+  padding: max(var(--space-sm), env(safe-area-inset-left, 0px)) max(var(--space-md), env(safe-area-inset-right, 0px));
   height: var(--header-height);
   background: var(--color-bg-secondary);
   backdrop-filter: blur(20px);
@@ -64,8 +82,8 @@
   background: var(--color-bg-secondary);
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--color-border);
-  padding: var(--space-xs) 0;
-  padding-bottom: env(safe-area-inset-bottom, 1rem); /* iPhone notch support */
+  padding: 0.35rem max(0.5rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
   z-index: 50;
 }
 
@@ -126,6 +144,16 @@
   position: relative;
 }
 
+.driver-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  text-decoration: none;
+}
+
 .driver-nav-item span {
   font-size: 0.625rem;
   margin-top: 4px;
@@ -142,5 +170,11 @@
   }
   .driver-main {
     padding-bottom: calc(65px + env(safe-area-inset-bottom, 0.5rem));
+  }
+}
+
+@media (min-width: 481px) {
+  .driver-nav-item span {
+    display: block;
   }
 }
