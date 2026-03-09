@@ -98,6 +98,41 @@ export function AuthProvider({ children }) {
   }, [logout]);
 
   useEffect(() => {
+    let isCancelled = false;
+
+    async function bootstrapSession() {
+      if (!user || http.getAccessToken()) return;
+
+      const refreshed = await http.tryRefresh();
+      if (!refreshed) {
+        if (!isCancelled) {
+          setUser(null);
+          localStorage.removeItem('user');
+          navigate('/login');
+        }
+        return;
+      }
+
+      try {
+        const me = await authService.getMe();
+        if (!isCancelled && me?.data?.user) {
+          setUser(me.data.user);
+          localStorage.setItem('user', JSON.stringify(me.data.user));
+        }
+      } catch {
+        if (!isCancelled) {
+          setUser(null);
+          localStorage.removeItem('user');
+          navigate('/login');
+        }
+      }
+    }
+
+    bootstrapSession();
+    return () => { isCancelled = true; };
+  }, [user, navigate]);
+
+  useEffect(() => {
     if (!user) {
       if (idleTimerRef.current) {
         clearTimeout(idleTimerRef.current);

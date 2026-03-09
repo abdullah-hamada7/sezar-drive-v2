@@ -324,6 +324,8 @@
     "NETWORK_ERROR": "Network error. Please check your connection and try again.",
     "UNAUTHORIZED": "Your session expired. Please sign in again.",
     "SESSION_EXPIRED": "Your session expired. Please sign in again.",
+    "SESSION_MAX_AGE_EXCEEDED": "For your security, this session reached the maximum allowed age. Please sign in again.",
+    "TOKEN_THEFT_DETECTED": "Suspicious session activity detected. All sessions were signed out. Please sign in again.",
     "FORBIDDEN": "You don’t have permission to do this action.",
     "EMAIL_ALREADY_EXISTS": "A user with this email already exists.",
     "PHONE_ALREADY_EXISTS": "A user with this phone number already exists.",

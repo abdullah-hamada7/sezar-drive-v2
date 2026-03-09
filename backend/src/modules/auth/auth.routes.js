@@ -153,7 +153,9 @@ router.post(
 router.post('/logout', authenticate, async (req, res, next) => {
   try {
     await authService.logout(req.user.id, req.clientIp);
+    // Clear current and previous cookie paths for safe migration.
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/v1/auth' });
+    res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
     res.json({ message: 'Logged out' });
   } catch (err) {
     next(err);

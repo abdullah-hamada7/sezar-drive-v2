@@ -61,18 +61,6 @@ class TripValidator {
       throw new ConflictError('NO_SHIFT_AVAILABLE', `Driver ${driver.name} has no shift history yet. Assign a vehicle first.`);
     }
 
-    const blockingTrip = await prisma.trip.findFirst({
-      where: {
-        driverId,
-        status: { in: ['ACCEPTED', 'IN_PROGRESS'] },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (blockingTrip) {
-      throw new ConflictError('ACTIVE_TRIP_EXISTS', `Driver ${driver.name} already has an active trip.`);
-    }
-
     return { driver, shift: assignment.shift, assignment };
   }
 

@@ -183,9 +183,19 @@ export default function DriverTrips() {
                 </div>
               )}
               {trip.status === 'ACCEPTED' && (
-                <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
-                  <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
-                </button>
+                <div className="flex gap-sm" style={{ width: '100%' }}>
+                  <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ flex: 1 }}>
+                    <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setRejectPrompt({ isOpen: true, tripId: trip.id })}
+                    disabled={actionLoading === trip.id}
+                    style={{ flex: 1 }}
+                  >
+                    {t('trip.reject_trip')}
+                  </button>
+                </div>
               )}
               {trip.status === 'IN_PROGRESS' && (
                 <button className="btn btn-success" onClick={() => handleComplete(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>

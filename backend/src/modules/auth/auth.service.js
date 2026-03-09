@@ -9,6 +9,10 @@ const { UnauthorizedError, ForbiddenError, ValidationError, ConflictError, NotFo
 const AuditService = require('../../services/audit.service');
 const { notifyAdmins, notifyDriver } = require('../tracking/tracking.ws');
 
+const REFRESH_TOKEN_LIFETIME_DAYS = 7;
+const REFRESH_ROTATION_GRACE_SECONDS = 20;
+const ABSOLUTE_SESSION_MAX_DAYS = 30;
+
 /**
  * Login with email and password. Returns JWT access + refresh tokens.
  * Now supports device fingerprinting for security.
@@ -174,22 +178,74 @@ async function changePassword(userId, currentPassword, newPassword, ipAddress) {
 async function refreshAccessToken(refreshTokenValue) {
   const tokenHash = hashToken(refreshTokenValue);
   const storedToken = await prisma.refreshToken.findFirst({
-    where: { tokenHash, revoked: false },
+    where: { tokenHash },
     include: { user: true },
   });
 
-  if (!storedToken || storedToken.expiresAt < new Date()) {
+  if (!storedToken) {
     throw new UnauthorizedError('Invalid or expired refresh token', 'INVALID_TOKEN');
+  }
+
+  const now = new Date();
+
+  if (storedToken.expiresAt < now) {
+    throw new UnauthorizedError('Invalid or expired refresh token', 'INVALID_TOKEN');
+  }
+
+  const sessionStartedAtMs = extractSessionStartedAt(refreshTokenValue) || storedToken.createdAt.getTime();
+  const absoluteSessionDeadline = sessionStartedAtMs + (ABSOLUTE_SESSION_MAX_DAYS * 24 * 60 * 60 * 1000);
+  if (Date.now() > absoluteSessionDeadline) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: storedToken.userId, revoked: false },
+      data: { revoked: true },
+    });
+
+    throw new UnauthorizedError('Session maximum age reached. Please login again.', 'SESSION_MAX_AGE_EXCEEDED');
+  }
+
+  if (storedToken.revoked) {
+    const graceWindowMs = REFRESH_ROTATION_GRACE_SECONDS * 1000;
+    const isWithinGrace = (storedToken.expiresAt.getTime() - now.getTime()) <= graceWindowMs;
+
+    if (!isWithinGrace) {
+      await prisma.refreshToken.updateMany({
+        where: { userId: storedToken.userId, revoked: false },
+        data: { revoked: true },
+      });
+
+      await AuditService.log({
+        actorId: storedToken.userId,
+        actionType: 'auth.refresh_replay_detected',
+        entityType: 'auth',
+        entityId: storedToken.userId,
+        newState: { tokenId: storedToken.id, revokedTokenReused: true },
+      });
+
+      throw new UnauthorizedError('Refresh token replay detected. All sessions were revoked.', 'TOKEN_THEFT_DETECTED');
+    }
+
+    // Allow one grace use only.
+    await prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { expiresAt: now },
+    });
+
+    const accessToken = generateAccessToken(storedToken.user);
+    const newRefreshToken = await generateRefreshToken(storedToken.userId, sessionStartedAtMs);
+    return { token: accessToken, accessToken, refreshToken: newRefreshToken };
   }
 
   // Revoke old token and create new one (rotate)
   await prisma.refreshToken.update({
     where: { id: storedToken.id },
-    data: { revoked: true },
+    data: {
+      revoked: true,
+      expiresAt: new Date(now.getTime() + (REFRESH_ROTATION_GRACE_SECONDS * 1000)),
+    },
   });
 
   const accessToken = generateAccessToken(storedToken.user);
-  const newRefreshToken = await generateRefreshToken(storedToken.userId);
+  const newRefreshToken = await generateRefreshToken(storedToken.userId, sessionStartedAtMs);
 
   return { token: accessToken, accessToken, refreshToken: newRefreshToken };
 }
@@ -393,17 +449,27 @@ function generateAccessToken(user) {
   );
 }
 
-async function generateRefreshToken(userId) {
+async function generateRefreshToken(userId, sessionStartedAtMs = Date.now()) {
   const token = crypto.randomBytes(40).toString('hex');
-  const tokenHash = hashToken(token);
+  const tokenWithSession = `${token}.${sessionStartedAtMs}`;
+  const tokenHash = hashToken(tokenWithSession);
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7);
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_LIFETIME_DAYS);
 
   await prisma.refreshToken.create({
     data: { userId, tokenHash, expiresAt },
   });
 
-  return token;
+  return tokenWithSession;
+}
+
+function extractSessionStartedAt(refreshToken) {
+  if (!refreshToken || typeof refreshToken !== 'string') return null;
+  const parts = refreshToken.split('.');
+  if (parts.length !== 2) return null;
+  const sessionTs = Number(parts[1]);
+  if (!Number.isFinite(sessionTs) || sessionTs <= 0) return null;
+  return sessionTs;
 }
 
 function hashToken(token) {

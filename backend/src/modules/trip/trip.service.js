@@ -279,7 +279,7 @@ async function acceptTrip(tripId, driverId, ipAddress) {
 }
 
 /**
- * Driver rejects an assigned trip with mandatory reason.
+ * Driver rejects an assigned/accepted trip with mandatory reason.
  */
 async function rejectAssignedTrip(tripId, driverId, reason, ipAddress) {
   const trimmedReason = String(reason || '').trim();
@@ -291,15 +291,15 @@ async function rejectAssignedTrip(tripId, driverId, reason, ipAddress) {
   if (!trip) throw new NotFoundError('Trip');
   if (trip.driverId !== driverId) throw new ForbiddenError('FORBIDDEN', 'Not your trip');
 
-  if (trip.status !== 'ASSIGNED') {
-    throw new ConflictError('INVALID_STATE_TRANSITION', 'Only assigned trips can be rejected');
+  if (!['ASSIGNED', 'ACCEPTED'].includes(trip.status)) {
+    throw new ConflictError('INVALID_STATE_TRANSITION', 'Only assigned or accepted trips can be rejected');
   }
 
   const updated = await prisma.trip.updateMany({
     where: {
       id: tripId,
       driverId,
-      status: 'ASSIGNED',
+      status: { in: ['ASSIGNED', 'ACCEPTED'] },
     },
     data: {
       status: 'CANCELLED',
@@ -318,7 +318,7 @@ async function rejectAssignedTrip(tripId, driverId, reason, ipAddress) {
     actionType: 'trip.rejected',
     entityType: 'trip',
     entityId: tripId,
-    previousState: { status: 'ASSIGNED' },
+    previousState: { status: trip.status },
     newState: { status: 'CANCELLED', reason: trimmedReason },
     ipAddress,
   });
