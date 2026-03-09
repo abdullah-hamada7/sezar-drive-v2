@@ -132,6 +132,12 @@ export default function TrackingPage() {
     return new Date(d).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
   }
 
+  function isDriverLive(lastUpdate) {
+    if (!lastUpdate) return false;
+    const ageMs = Date.now() - new Date(lastUpdate).getTime();
+    return ageMs <= 2 * 60 * 1000;
+  }
+
   const envCenter = import.meta.env.VITE_DEFAULT_MAP_CENTER;
   const parsedCenter = envCenter
     ? envCenter.split(',').map((value) => Number.parseFloat(value.trim()))
@@ -150,6 +156,7 @@ export default function TrackingPage() {
           <p className="page-subtitle">{t('tracking.subtitle')}</p>
         </div>
         <div className="flex items-center gap-sm">
+          <span className={`status-led ${wsStatus === 'connected' ? 'status-led-online' : 'status-led-offline'}`} />
           <Radio size={16} className={wsStatus === 'connected' ? '' : 'text-muted'} style={{ color: wsStatus === 'connected' ? 'var(--color-success)' : undefined }} />
           <span className={`badge ${wsStatus === 'connected' ? 'badge-success' : 'badge-danger'}`}>
             {wsStatus === 'connected' ? t('tracking.status.live') : t('tracking.status.disconnected')}
@@ -210,6 +217,7 @@ export default function TrackingPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {drivers.map(d => (
                   <div key={d.id} className="flex items-center gap-sm" style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-tertiary)' }}>
+                    <span className={`status-led ${isDriverLive(d.lastUpdate) ? 'status-led-online' : 'status-led-offline'}`} />
                     <MapPin size={16} style={{ color: 'var(--color-success)' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="text-sm" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

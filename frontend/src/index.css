@@ -1073,3 +1073,34 @@ tr:hover td:last-child {
     transform: translateX(100%);
   }
 }
+
+.status-led {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-led-online {
+  background: var(--color-success);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: status-led-pulse 1.8s infinite;
+}
+
+.status-led-offline {
+  background: var(--color-danger);
+  opacity: 0.9;
+}
+
+@keyframes status-led-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
