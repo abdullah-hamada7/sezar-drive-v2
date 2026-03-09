@@ -6,6 +6,23 @@ const TripValidator = require('./trip.validator');
 const TripNotifier = require('./trip.notifier');
 const { EGYPT_PHONE_REGEX } = require('../../utils/validation');
 
+async function expireOverdueAssignedTrips(driverId = null) {
+  const cutoff = new Date(Date.now() - (24 * 60 * 60 * 1000));
+
+  await prisma.trip.updateMany({
+    where: {
+      status: 'ASSIGNED',
+      scheduledTime: { not: null, lte: cutoff },
+      ...(driverId ? { driverId } : {}),
+    },
+    data: {
+      status: 'CANCELLED',
+      cancellationReason: 'Trip expired (older than 24 hours from scheduled time)',
+      version: { increment: 1 },
+    },
+  });
+}
+
 /**
  * Validate trip state transition.
  */
@@ -19,6 +36,8 @@ function validateTripTransition(from, to) {
  * Admin assigns a trip to a driver.
  */
 async function assignTrip(data, adminId, ipAddress) {
+  await expireOverdueAssignedTrips(data.driverId);
+
   const { driverId, scheduledTime, price } = data;
   const pickupLocation = data.pickupLocation || data.pickup;
   const dropoffLocation = data.dropoffLocation || data.dropoff;
@@ -100,6 +119,8 @@ async function assignTrip(data, adminId, ipAddress) {
  * Driver starts trip. Enforces all preconditions.
  */
 async function startTrip(tripId, driverId, ipAddress) {
+  await expireOverdueAssignedTrips(driverId);
+
   const { trip, driver, assignment } = await TripValidator.validateStartPreconditions(tripId, driverId);
   validateTripTransition(trip.status, 'IN_PROGRESS');
 
@@ -236,6 +257,8 @@ async function cancelTrip(tripId, userId, role, reason, ipAddress) {
  * Get driver's active trip.
  */
 async function getActiveTrip(driverId) {
+  await expireOverdueAssignedTrips(driverId);
+
   return prisma.trip.findFirst({
     where: { driverId, status: { in: ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'] } },
     include: { vehicle: true },
@@ -246,6 +269,8 @@ async function getActiveTrip(driverId) {
  * Driver accepts assigned trip.
  */
 async function acceptTrip(tripId, driverId, ipAddress) {
+  await expireOverdueAssignedTrips(driverId);
+
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
   if (!trip) throw new NotFoundError('Trip');
   if (trip.driverId !== driverId) throw new ForbiddenError('FORBIDDEN', 'Not your trip');
@@ -282,6 +307,8 @@ async function acceptTrip(tripId, driverId, ipAddress) {
  * Driver rejects an assigned/accepted trip with mandatory reason.
  */
 async function rejectAssignedTrip(tripId, driverId, reason, ipAddress) {
+  await expireOverdueAssignedTrips(driverId);
+
   const trimmedReason = String(reason || '').trim();
   if (!trimmedReason) {
     throw new ValidationError('Rejection reason is required', 'REJECTION_REASON_REQUIRED');
@@ -369,6 +396,8 @@ async function overrideTrip(tripId, nextStatus, reason, adminId, ipAddress) {
  * Get trips with filters.
  */
 async function getTrips({ page = 1, limit = 20, driverId, status, date }) {
+  await expireOverdueAssignedTrips(driverId || null);
+
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;

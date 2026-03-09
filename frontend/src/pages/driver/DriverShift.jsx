@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
 import { shiftService } from '../../services/shift.service';
 import { vehicleService } from '../../services/vehicle.service';
@@ -21,6 +22,7 @@ export default function DriverShift() {
   const [actionLoading, setActionLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(null); // 'face' | 'qr'
   const [showConfirm, setShowConfirm] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadUser();
@@ -107,6 +109,7 @@ export default function DriverShift() {
       });
       if (!hasCompletedInspection) {
         addToast(t('shift.inspection_required') || t('errors.INSPECTION_REQUIRED'), 'warning');
+        navigate('/driver/inspection');
         return;
       }
       await shiftService.activateShift(shift.id);
@@ -115,6 +118,9 @@ export default function DriverShift() {
     } catch (err) {
       const code = err?.code;
       addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+      if (code === 'INSPECTION_REQUIRED' || code === 'INSPECTION_PHOTOS_REQUIRED') {
+        navigate('/driver/inspection');
+      }
     } finally { setActionLoading(false); }
   }
 
@@ -133,11 +139,12 @@ export default function DriverShift() {
       });
       if (startedAt && !hasEndInspection) {
         addToast(t('errors.INSPECTION_REQUIRED') || t('shift.inspection_required') || 'End-of-shift inspection required', 'warning');
+        navigate('/driver/inspection');
         return;
       }
       const tripsRes = await tripService.getTrips('limit=50');
       const trips = tripsRes.data?.trips || [];
-      const hasActiveTrip = trips.some(t => t.status === 'ASSIGNED' || t.status === 'IN_PROGRESS');
+      const hasActiveTrip = trips.some(t => t.status === 'ASSIGNED' || t.status === 'ACCEPTED' || t.status === 'IN_PROGRESS');
       if (hasActiveTrip) {
         addToast(t('errors.SHIFT_HAS_ACTIVE_TRIP') || 'You cannot end your shift while you have an assigned or active trip.', 'warning');
         return;
@@ -148,6 +155,9 @@ export default function DriverShift() {
     } catch (err) {
       const code = err?.code;
       addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+      if (code === 'INSPECTION_REQUIRED' || code === 'INSPECTION_PHOTOS_REQUIRED') {
+        navigate('/driver/inspection');
+      }
     } finally { setActionLoading(false); }
   }
 
@@ -288,7 +298,7 @@ export default function DriverShift() {
               </div>
               <div className="text-sm text-muted">{t('trip.status')}: {t('common.trip_status.in_progress')}</div>
             </div>
-            <span className="badge badge-success" style={{ marginLeft: 'auto' }}>
+            <span className="badge badge-status badge-success" style={{ marginLeft: 'auto' }}>
               {t('common.trip_status.in_progress')}
             </span>
           </div>

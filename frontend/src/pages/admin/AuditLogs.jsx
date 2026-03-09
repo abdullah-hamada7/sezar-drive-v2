@@ -154,7 +154,7 @@ export default function AuditPage() {
                     <div className="text-sm text-muted">{l.actor?.email}</div>
                   </td>
                   <td className="text-sm">
-                    <span className={`badge ${l.actor?.role === 'admin' ? 'badge-info' : 'badge-neutral'}`}>
+                    <span className={`badge badge-status ${l.actor?.role === 'admin' ? 'badge-info' : 'badge-neutral'}`}>
                       {t(`common.role.${l.actor?.role || 'system'}`, l.actor?.role || 'system')}
                     </span>
                   </td>

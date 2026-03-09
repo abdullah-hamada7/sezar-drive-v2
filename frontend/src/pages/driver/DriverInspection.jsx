@@ -195,7 +195,7 @@ export default function DriverInspection() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-sm">
             <span className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('inspection.title')}</span>
-            <span className={`badge ${inspectionType === 'pre' ? 'badge-info' : 'badge-warning'}`}>
+            <span className={`badge badge-status ${inspectionType === 'pre' ? 'badge-info' : 'badge-warning'}`}>
               {inspectionType === 'pre' ? t('inspection.before_shift') : t('inspection.after_shift')}
             </span>
           </div>
@@ -218,7 +218,7 @@ export default function DriverInspection() {
             </div>
           </div>
           <div className="flex items-center gap-sm">
-            <span className={`badge ${inspectionType === 'pre' ? 'badge-info' : 'badge-warning'}`}>
+            <span className={`badge badge-status ${inspectionType === 'pre' ? 'badge-info' : 'badge-warning'}`}>
               {inspectionType === 'pre' ? t('inspection.before_shift') : t('inspection.after_shift')}
             </span>
             <span className="badge badge-neutral">{stepLabels[step] || step}</span>
@@ -347,7 +347,7 @@ export default function DriverInspection() {
             {CHECKLIST_KEYS.map(key => (
               <div key={key} className="flex items-center justify-between" style={{ padding: '0.375rem 0' }}>
                 <span className="text-sm">{t(`inspection.checklist.${key}`)}</span>
-                <span className={`badge ${checks[key] ? 'badge-success' : 'badge-danger'}`}>
+                <span className={`badge badge-status ${checks[key] ? 'badge-success' : 'badge-danger'}`}>
                   {checks[key] ? t('inspection.pass') : t('inspection.fail')}
                 </span>
               </div>
@@ -366,7 +366,7 @@ export default function DriverInspection() {
               {DIRECTIONS.map(dir => (
                 <div key={dir} className="text-sm">
                   <span>{t(`inspection.directions.${dir}`)}:</span>{' '}
-                  <span className={photos[dir] ? 'badge badge-success' : 'badge badge-warning'}>
+                  <span className={photos[dir] ? 'badge badge-status badge-success' : 'badge badge-status badge-warning'}>
                     {photos[dir] ? t('inspection.uploaded') : t('inspection.missing')}
                   </span>
                 </div>
