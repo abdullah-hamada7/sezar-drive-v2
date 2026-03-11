@@ -71,10 +71,27 @@ export default defineConfig({
             }
           },
            {
-             urlPattern: ({ url }) => {
-              return url.pathname.startsWith('/api/');
+             urlPattern: ({ url, request }) => {
+              return url.pathname.startsWith('/api/') && request.method === 'GET';
              },
-             // Security: do not cache API responses (they may be authenticated / sensitive)
+             // SWR: serve stale data instantly, revalidate in background
+             handler: 'StaleWhileRevalidate',
+             options: {
+               cacheName: 'api-swr-cache',
+               expiration: {
+                 maxEntries: 100,
+                 maxAgeSeconds: 60 * 5, // 5 minutes
+               },
+               cacheableResponse: {
+                 statuses: [0, 200],
+               },
+             },
+           },
+           {
+             urlPattern: ({ url, request }) => {
+              return url.pathname.startsWith('/api/') && request.method !== 'GET';
+             },
+             // Safety: never cache mutations (POST/PUT/DELETE)
              handler: 'NetworkOnly',
            }
          ],

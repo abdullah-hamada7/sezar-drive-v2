@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Car, Route, ClipboardCheck,
   Receipt, AlertTriangle, MapPin, FileBarChart, Shield,
   Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
-  Sun, Moon
+  Sun, Moon, ShipWheel
 } from 'lucide-react';
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
@@ -15,7 +15,6 @@ import { buildTrackingWsUrl } from '../../utils/trackingWs';
 import { playNotificationSound } from '../../utils/notificationSound';
 import { evaluateRealtimeEvent, resetRealtimeStream } from '../../utils/realtimeGuard';
 import { http } from '../../services/http.service';
-import SteeringWheelIcon from '../../components/icons/SteeringWheelIcon';
 
 export default function AdminLayout() {
   const { language, toggleLanguage, t } = useLanguage();
@@ -198,7 +197,7 @@ export default function AdminLayout() {
       <header className="mobile-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <SteeringWheelIcon size={20} />
+            <ShipWheel size={20} />
           </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
@@ -212,7 +211,7 @@ export default function AdminLayout() {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">
-              <SteeringWheelIcon size={20} />
+              <ShipWheel size={20} />
             </div>
             <span className="brand-text">{t('common.brand')}</span>
           </div>

@@ -4,8 +4,7 @@ import { ToastContext } from '../contexts/toastContext';
 import { useTranslation } from 'react-i18next';
 import { authService as api } from '../services/auth.service';
 import LanguageSwitcher from '../components/LanguageSwitcher';
-import { Lock, Key, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import SteeringWheelIcon from '../components/icons/SteeringWheelIcon';
+import { Lock, Key, AlertCircle, CheckCircle, Eye, EyeOff, ShipWheel } from 'lucide-react';
 import './Login.css';
 
 export default function ResetPasswordPage() {
@@ -110,7 +109,7 @@ export default function ResetPasswordPage() {
       <div className="login-card glass-card">
         <div className="login-header">
           <div className="login-logo glow-effect">
-            <SteeringWheelIcon size={32} />
+            <ShipWheel size={32} />
           </div>
           <h1 className="login-title text-gradient">{t('common.brand')}</h1>
           <p className="login-subtitle">

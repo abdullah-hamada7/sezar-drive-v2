@@ -5,6 +5,7 @@ import { buildTrackingWsUrl } from '../utils/trackingWs';
 import { playNotificationSound } from '../utils/notificationSound';
 import { evaluateRealtimeEvent, resetRealtimeStream } from '../utils/realtimeGuard';
 import { http } from '../services/http.service';
+import { showNativeNotification } from './usePushPermission';
 
 const DRIVER_EVENT_MESSAGES = {
   trip_assigned: 'A new trip was assigned to you',
@@ -19,12 +20,16 @@ const DRIVER_EVENT_MESSAGES = {
   identity_update: 'Your identity verification status was updated',
 };
 
+// Max buffered locations when WS is offline (~10 min at 10 s intervals)
+const LOCATION_BUFFER_MAX = 60;
+
 export function useDriverTracking() {
   const { user } = useAuth();
   const wsRef = useRef(null);
   const watchIdRef = useRef(null);
   const lastUpdateRef = useRef(0);
   const roleRef = useRef(user?.role || null);
+  const locationBufferRef = useRef([]);
 
   useEffect(() => {
     roleRef.current = user?.role || null;
@@ -44,6 +49,12 @@ export function useDriverTracking() {
 
     ws.onopen = () => {
       console.log('Driver tracking connected');
+      // Flush any locations buffered while offline
+      const buffer = locationBufferRef.current;
+      if (buffer.length > 0 && ws.readyState === WebSocket.OPEN) {
+        buffer.forEach((msg) => { try { ws.send(JSON.stringify(msg)); } catch { /* ignore */ } });
+        locationBufferRef.current = [];
+      }
     };
 
     ws.onmessage = (event) => {
@@ -66,6 +77,8 @@ export function useDriverTracking() {
             window.dispatchEvent(new CustomEvent('app:toast', {
               detail: { message: DRIVER_EVENT_MESSAGES[data.type], type: 'info', code: data.type.toUpperCase() }
             }));
+            // Native OS notification so drivers see it even with screen off
+            showNativeNotification('Sezar Drive', DRIVER_EVENT_MESSAGES[data.type]);
           }
           // Dispatch a specific event for this message type
           window.dispatchEvent(new CustomEvent(`ws:${data.type}`, { detail: data }));
@@ -122,13 +135,15 @@ export function useDriverTracking() {
           recordedAt: new Date().toISOString(),
         };
 
+        const locationMsg = { type: 'location_update', shiftId, tripId, payload };
+
         if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({
-            type: 'location_update',
-            shiftId,
-            tripId,
-            payload
-          }));
+          wsRef.current.send(JSON.stringify(locationMsg));
+        } else {
+          // Buffer location while offline; cap at LOCATION_BUFFER_MAX
+          const buf = locationBufferRef.current;
+          buf.push(locationMsg);
+          if (buf.length > LOCATION_BUFFER_MAX) buf.shift();
         }
       },
       (error) => {

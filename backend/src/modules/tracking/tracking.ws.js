@@ -13,7 +13,27 @@ const driverClients = new Map(); // userId -> ws
 function initWebSocketServer(server) {
   wss = new WebSocket.Server({ server, path: '/ws/tracking' });
 
+  // ── Heartbeat: ping every 30 s, terminate unresponsive clients ──
+  const HEARTBEAT_INTERVAL_MS = 30_000;
+
+  const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if (ws.isAlive === false) {
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, HEARTBEAT_INTERVAL_MS);
+
+  wss.on('close', () => {
+    clearInterval(heartbeatInterval);
+  });
+
   wss.on('connection', (ws, req) => {
+    ws.isAlive = true;
+    ws.on('pong', () => { ws.isAlive = true; });
+
     // Authenticate via query param or protocol header
     const url = new URL(req.url, `http://${req.headers.host}`);
     const token = url.searchParams.get('token');

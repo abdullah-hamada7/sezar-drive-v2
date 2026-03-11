@@ -5,11 +5,12 @@ import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { useContext } from 'react';
 import { ThemeContext } from '../../contexts/theme';
 import {
+  ShipWheel,
   ClipboardCheck, Route, Receipt, AlertTriangle,
   Camera, LogOut, Home, Languages, Sun, Moon
 } from 'lucide-react';
-import SteeringWheelIcon from '../../components/icons/SteeringWheelIcon';
 import { useLanguage } from '../../hooks/useLanguage';
+import { usePushPermission } from '../../hooks/usePushPermission';
 import './DriverLayout.css';
 
 export default function DriverLayout() {
@@ -17,6 +18,7 @@ export default function DriverLayout() {
   const { logout } = useAuth();
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { isSyncing, pendingCount } = useOfflineSync();
+  usePushPermission();
   useDriverTracking();
   const syncChipLabel = isSyncing
     ? t('common.offline.syncing_short')
@@ -36,7 +38,7 @@ export default function DriverLayout() {
       <header className="driver-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <SteeringWheelIcon size={20} />
+            <ShipWheel size={20} />
           </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
