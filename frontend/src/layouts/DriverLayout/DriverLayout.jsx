@@ -5,7 +5,7 @@ import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { useContext } from 'react';
 import { ThemeContext } from '../../contexts/theme';
 import {
-  SteeringWheel, ClipboardCheck, Route, Receipt, AlertTriangle,
+  ShipWheel, ClipboardCheck, Route, Receipt, AlertTriangle,
   Camera, LogOut, Home, Languages, Sun, Moon
 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -35,7 +35,7 @@ export default function DriverLayout() {
       <header className="driver-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <SteeringWheel size={20} />
+            <ShipWheel size={20} />
           </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>

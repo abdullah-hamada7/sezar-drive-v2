@@ -5,7 +5,7 @@ import { ToastContext } from '../contexts/toastContext';
 import { useAuth } from '../hooks/useAuth';
 import { authService as api } from '../services/auth.service';
 import { http } from '../services/http.service';
-import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle, ShipWheel } from 'lucide-react';
 import './Login.css';
 
 export default function ChangePasswordPage() {
@@ -71,7 +71,7 @@ export default function ChangePasswordPage() {
       <div className="login-card" style={{ maxWidth: '460px' }}>
         <div className="login-header">
           <div className="login-logo text-gradient shadow-glow">
-            <Lock size={28} />
+            <ShipWheel size={28} />
           </div>
           <h1 className="login-title text-gradient">{t('auth.change_password')}</h1>
           <p className="login-subtitle">
