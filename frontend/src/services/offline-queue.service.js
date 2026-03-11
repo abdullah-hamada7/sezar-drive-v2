@@ -1,6 +1,163 @@
 import { getDb, OFFLINE_QUEUE_STORE, requestToPromise } from './indexeddb.service';
 
 const MAX_RETRY_COUNT = 10;
+let syncInFlightPromise = null;
+
+async function replayOfflineExpenseBundle(httpService, entry) {
+  const payload = entry.body?.payload || {};
+  const formData = new FormData();
+
+  if (payload.shiftId) formData.append('shiftId', payload.shiftId);
+  if (payload.categoryId) formData.append('categoryId', payload.categoryId);
+  if (payload.amount !== undefined && payload.amount !== null) {
+    formData.append('amount', String(payload.amount));
+  }
+  if (payload.description) formData.append('description', payload.description);
+  if (payload.receipt) formData.append('receipt', payload.receipt);
+
+  return httpService.request('/expenses', {
+    method: 'POST',
+    body: formData,
+    toast: false,
+    skipOfflineQueue: true,
+  });
+}
+
+async function replayOfflineDamageBundle(httpService, entry) {
+  const payload = entry.body?.payload || {};
+  const createResponse = await httpService.request('/damage-reports', {
+    method: 'POST',
+    body: {
+      description: payload.description,
+      shiftId: payload.shiftId,
+      vehicleId: payload.vehicleId,
+      tripId: payload.tripId || undefined,
+    },
+    toast: false,
+    skipOfflineQueue: true,
+  });
+
+  const reportId = createResponse?.data?.id;
+  const photos = Array.isArray(payload.photos) ? payload.photos : [];
+
+  if (!reportId || photos.length === 0) {
+    return createResponse;
+  }
+
+  for (const photo of photos) {
+    const formData = new FormData();
+    formData.append('photo', photo);
+    await httpService.request(`/damage-reports/${reportId}/photos`, {
+      method: 'POST',
+      body: formData,
+      toast: false,
+      skipOfflineQueue: true,
+    });
+  }
+
+  return createResponse;
+}
+
+async function replayOfflineInspectionBundle(httpService, entry) {
+  const payload = entry.body?.payload || {};
+
+  const createResponse = await httpService.request('/inspections', {
+    method: 'POST',
+    body: {
+      shiftId: payload.shiftId,
+      vehicleId: payload.vehicleId,
+      type: payload.type,
+      notes: payload.notes || '',
+    },
+    headers: payload.createIdempotencyKey
+      ? { 'Idempotency-Key': payload.createIdempotencyKey }
+      : undefined,
+    toast: false,
+    skipOfflineQueue: true,
+  });
+
+  const inspectionId = createResponse?.data?.id;
+  if (!inspectionId) {
+    return createResponse;
+  }
+
+  const directionalPhotos = payload.directionalPhotos || {};
+  const issuePhotos = payload.issuePhotos || {};
+  const badItemPhotos = {};
+
+  for (const [direction, photo] of Object.entries(directionalPhotos)) {
+    if (!photo) continue;
+    const formData = new FormData();
+    formData.append('photo', photo);
+    formData.append('direction', direction);
+    await httpService.request(`/inspections/${inspectionId}/photos/${direction}`, {
+      method: 'POST',
+      body: formData,
+      toast: false,
+      skipOfflineQueue: true,
+    });
+  }
+
+  for (const [checkKey, issue] of Object.entries(issuePhotos)) {
+    if (!issue?.file || !issue?.direction) {
+      badItemPhotos[checkKey] = null;
+      continue;
+    }
+
+    const formData = new FormData();
+    formData.append('photo', issue.file);
+    formData.append('direction', issue.direction);
+    const uploadResponse = await httpService.request(`/inspections/${inspectionId}/photos/${issue.direction}`, {
+      method: 'POST',
+      body: formData,
+      toast: false,
+      skipOfflineQueue: true,
+    });
+    badItemPhotos[checkKey] = uploadResponse?.data?.photoUrl || null;
+  }
+
+  await httpService.request(`/inspections/${inspectionId}/complete`, {
+    method: 'PUT',
+    body: {
+      checklistData: {
+        checks: payload.checks || {},
+        notes: payload.notes || '',
+        badItemPhotos,
+      },
+    },
+    headers: payload.completeIdempotencyKey
+      ? { 'Idempotency-Key': payload.completeIdempotencyKey }
+      : undefined,
+    toast: false,
+    skipOfflineQueue: true,
+  });
+
+  return createResponse;
+}
+
+async function replayEntry(httpService, entry) {
+  const offlineType = entry.body?.__offlineType;
+
+  if (offlineType === 'expense_bundle') {
+    return replayOfflineExpenseBundle(httpService, entry);
+  }
+
+  if (offlineType === 'damage_bundle') {
+    return replayOfflineDamageBundle(httpService, entry);
+  }
+
+  if (offlineType === 'inspection_bundle') {
+    return replayOfflineInspectionBundle(httpService, entry);
+  }
+
+  return httpService.request(entry.endpoint, {
+    method: entry.method,
+    body: entry.body,
+    headers: entry.headers,
+    toast: false,
+    skipOfflineQueue: true,
+  });
+}
 
 function emitQueueUpdated() {
   if (typeof window === 'undefined') return;
@@ -56,54 +213,60 @@ export const offlineQueue = {
   },
 
   async sync(httpService) {
-    const queue = await this.getAll();
-    let synced = 0;
-    let failed = 0;
+    if (syncInFlightPromise) {
+      return syncInFlightPromise;
+    }
 
-    for (const entry of queue) {
-      try {
-        const replay = await httpService.request(entry.endpoint, {
-          method: entry.method,
-          body: entry.body,
-          headers: entry.headers,
-          toast: false,
-          skipOfflineQueue: true,
-        });
+    syncInFlightPromise = (async () => {
+      const queue = await this.getAll();
+      let synced = 0;
+      let failed = 0;
 
-        if (replay?.queued) {
-          failed += 1;
-          break;
-        }
+      for (const entry of queue) {
+        try {
+          const replay = await replayEntry(httpService, entry);
 
-        await withStore('readwrite', async (store) => {
-          await requestToPromise(store.delete(entry.id));
-        });
-        emitQueueUpdated();
-        synced += 1;
-      } catch (error) {
-        failed += 1;
-        const nextRetryCount = Number(entry.retryCount || 0) + 1;
+          if (replay?.queued) {
+            failed += 1;
+            break;
+          }
 
-        if (error?.isNetworkError) {
           await withStore('readwrite', async (store) => {
+            await requestToPromise(store.delete(entry.id));
+          });
+          emitQueueUpdated();
+          synced += 1;
+        } catch (error) {
+          failed += 1;
+          const nextRetryCount = Number(entry.retryCount || 0) + 1;
+
+          if (error?.isNetworkError) {
+            await withStore('readwrite', async (store) => {
+              await requestToPromise(store.put({ ...entry, retryCount: nextRetryCount }));
+            });
+            emitQueueUpdated();
+            break;
+          }
+
+          await withStore('readwrite', async (store) => {
+            if (nextRetryCount >= MAX_RETRY_COUNT) {
+              await requestToPromise(store.delete(entry.id));
+              return;
+            }
             await requestToPromise(store.put({ ...entry, retryCount: nextRetryCount }));
           });
           emitQueueUpdated();
-          break;
         }
-
-        await withStore('readwrite', async (store) => {
-          if (nextRetryCount >= MAX_RETRY_COUNT) {
-            await requestToPromise(store.delete(entry.id));
-            return;
-          }
-          await requestToPromise(store.put({ ...entry, retryCount: nextRetryCount }));
-        });
-        emitQueueUpdated();
       }
-    }
 
-    const pending = await this.count();
-    return { synced, failed, pending };
+      const pending = await this.count();
+      return { synced, failed, pending };
+    })();
+
+    try {
+      return await syncInFlightPromise;
+    } finally {
+      syncInFlightPromise = null;
+    }
   },
 };

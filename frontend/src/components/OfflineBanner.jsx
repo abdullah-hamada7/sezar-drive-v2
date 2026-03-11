@@ -1,6 +1,8 @@
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { useTranslation } from 'react-i18next';
 
 export default function OfflineBanner() {
+  const { t } = useTranslation();
   const { isOnline, isSyncing, pendingCount } = useOfflineSync();
 
   if (isOnline && !isSyncing && pendingCount === 0) {
@@ -11,8 +13,8 @@ export default function OfflineBanner() {
   const shouldShowTopBanner = isOfflineState || isSyncing;
   const backgroundColor = isOfflineState ? '#b45309' : '#166534';
   const message = isOfflineState
-    ? `You're offline. Changes will sync when reconnected. (${pendingCount} pending)`
-    : 'Back online. Syncing...';
+    ? `${t('common.offline.offline_mode')} (${t('common.offline.pending_short', { count: pendingCount })})`
+    : t('common.offline.back_online_syncing');
 
   return (
     <>
@@ -37,7 +39,7 @@ export default function OfflineBanner() {
 
       {pendingCount > 0 && isOnline && !isSyncing && (
         <div
-          title={`${pendingCount} offline pending`}
+          title={t('common.offline.pending_title', { count: pendingCount })}
           style={{
             position: 'fixed',
             right: '1rem',

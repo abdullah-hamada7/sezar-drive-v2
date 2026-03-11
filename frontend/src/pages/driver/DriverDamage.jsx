@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tripService } from '../../services/trip.service';
 import { damageService } from '../../services/damage.service';
+import { offlineQueue } from '../../services/offline-queue.service';
 import { AlertTriangle, Camera, CheckCircle, X } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
@@ -28,8 +29,19 @@ export default function DriverDamage() {
     };
 
     window.addEventListener('ws:damage_update', handleUpdate);
+    window.addEventListener('ws:damage_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
+    window.addEventListener('online', handleUpdate);
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      handleUpdate();
+    }, 20000);
     return () => {
       window.removeEventListener('ws:damage_update', handleUpdate);
+      window.removeEventListener('ws:damage_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
+      window.removeEventListener('online', handleUpdate);
+      window.clearInterval(poll);
     };
   }, []);
 
@@ -56,6 +68,28 @@ export default function DriverDamage() {
 
     setLoading(true);
     try {
+      const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+
+      if (!isOnline) {
+        await offlineQueue.enqueue({
+          endpoint: '/damage-reports',
+          method: 'POST',
+          body: {
+            __offlineType: 'damage_bundle',
+            payload: {
+              description,
+              shiftId: activeShift.id,
+              vehicleId,
+              tripId: activeTrip?.id || null,
+              photos: photos.map((photo) => photo.file),
+            },
+          },
+        });
+
+        setStep('success');
+        return;
+      }
+
       const res = await damageService.createDamageReport({
         description,
         shiftId: activeShift.id,

@@ -6,6 +6,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ToastContext } from '../../contexts/toastContext';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
+import { evaluateRealtimeEvent, resetRealtimeStream } from '../../utils/realtimeGuard';
 import { http } from '../../services/http.service';
 
 // Fix Leaflet icon issue
@@ -34,6 +35,7 @@ export default function TrackingPage() {
   const wsHadConnectionRef = useRef(false);
 
   const reconnectTimerRef = useRef(null);
+  const fallbackPollTimerRef = useRef(null);
 
   const connectWebSocket = useCallback(async () => {
     let token = http.getAccessToken();
@@ -68,6 +70,11 @@ export default function TrackingPage() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        const guard = evaluateRealtimeEvent('admin-tracking', data?.type, data);
+        if (guard.gapDetected) {
+          loadInitialPositions();
+        }
+
         if (data.type === 'initial_positions') {
           const formatted = data.data.map(d => ({
             id: d.id,
@@ -121,8 +128,37 @@ export default function TrackingPage() {
   useEffect(() => {
     loadInitialPositions();
     connectWebSocket();
+
+    const handleOnline = () => {
+      resetRealtimeStream('admin-tracking');
+      loadInitialPositions();
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        connectWebSocket();
+      }
+    };
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      loadInitialPositions();
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        connectWebSocket();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    fallbackPollTimerRef.current = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) return;
+      loadInitialPositions();
+    }, 15000);
+
     return () => {
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (fallbackPollTimerRef.current) clearInterval(fallbackPollTimerRef.current);
       wsRef.current?.close();
     };
   }, [connectWebSocket, loadInitialPositions]);

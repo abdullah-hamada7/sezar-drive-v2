@@ -68,6 +68,38 @@
   letter-spacing: -0.02em;
 }
 
+.driver-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.driver-sync-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.75rem;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.driver-sync-chip-pending {
+  color: #111827;
+  background: #f59e0b;
+  border-color: rgba(17, 24, 39, 0.2);
+}
+
+.driver-sync-chip-syncing {
+  color: #ffffff;
+  background: #166534;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 /* ── Bottom Nav ── */
 .driver-bottom-nav {
   position: fixed;
@@ -161,6 +193,12 @@
 }
 
 @media (max-width: 480px) {
+  .driver-sync-chip {
+    max-width: 5.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .driver-nav-item span {
     display: none; /* Icons only on tiny screens to avoid overcrowding */
   }

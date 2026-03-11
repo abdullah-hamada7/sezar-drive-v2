@@ -49,12 +49,21 @@ export default function DriverHome() {
     window.addEventListener('ws:trip_assigned', refreshStatus);
     window.addEventListener('ws:trip_cancelled', refreshStatus);
     window.addEventListener('ws:trip_completed', refreshStatus);
+    window.addEventListener('ws:update', refreshStatus);
+    window.addEventListener('online', refreshStatus);
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      refreshStatus();
+    }, 30000);
 
     return () => {
       window.removeEventListener('ws:identity_update', handleIdentityUpdate);
       window.removeEventListener('ws:trip_assigned', refreshStatus);
       window.removeEventListener('ws:trip_cancelled', refreshStatus);
       window.removeEventListener('ws:trip_completed', refreshStatus);
+      window.removeEventListener('ws:update', refreshStatus);
+      window.removeEventListener('online', refreshStatus);
+      window.clearInterval(poll);
     };
   }, [t, addToast, refreshStatus]);
 

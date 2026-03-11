@@ -29,21 +29,35 @@ export function ShiftProvider({ children }) {
     if (!isAuthenticated || !isDriver || user?.mustChangePassword) return;
 
     refreshShift();
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      refreshShift();
+    }, 20000);
 
     // Listen for shift-related WebSocket events
     const handleShiftUpdate = () => refreshShift();
     const handleShiftClosed = () => setActiveShift(null);
+    const handleOnline = () => refreshShift();
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      refreshShift();
+    };
 
     window.addEventListener('ws:shift_started', handleShiftUpdate);
     window.addEventListener('ws:shift_activated', handleShiftUpdate);
     window.addEventListener('ws:shift_closed', handleShiftClosed);
     window.addEventListener('ws:trip_assigned', handleShiftUpdate); // Refresh to show assignment
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      window.clearInterval(poll);
       window.removeEventListener('ws:shift_started', handleShiftUpdate);
       window.removeEventListener('ws:shift_activated', handleShiftUpdate);
       window.removeEventListener('ws:shift_closed', handleShiftClosed);
       window.removeEventListener('ws:trip_assigned', handleShiftUpdate);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [refreshShift, isAuthenticated, isDriver, user?.mustChangePassword]);
 

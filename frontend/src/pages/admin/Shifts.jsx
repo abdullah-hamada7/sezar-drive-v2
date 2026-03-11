@@ -41,6 +41,9 @@ export default function ShiftsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [promptData, setPromptData] = useState({ isOpen: false, shiftId: null });
+  const [showInspections, setShowInspections] = useState(false);
+  const [selectedShiftInspections, setSelectedShiftInspections] = useState([]);
+  const [selectedShift, setSelectedShift] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,10 +116,6 @@ export default function ShiftsPage() {
       timeStyle: 'short'
     });
   }
-
-  const [showInspections, setShowInspections] = useState(false);
-  const [selectedShiftInspections, setSelectedShiftInspections] = useState([]);
-  const [selectedShift, setSelectedShift] = useState(null);
 
   async function handleViewInspections(shiftId) {
     try {

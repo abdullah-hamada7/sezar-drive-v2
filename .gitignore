@@ -30,7 +30,7 @@ build/
 *.tfplan
 plan
 terraform.tfvars
-.agent/
+.agents/
 *.pem
 test-results/
 frontend/e2e

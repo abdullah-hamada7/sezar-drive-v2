@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { expenseService as api } from '../../services/expense.service';
+import { offlineQueue } from '../../services/offline-queue.service';
 import { Receipt, Plus, X, Upload, CheckCircle } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
@@ -25,8 +26,19 @@ export default function DriverExpenses() {
     };
 
     window.addEventListener('ws:expense_update', handleUpdate);
+    window.addEventListener('ws:expense_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
+    window.addEventListener('online', handleUpdate);
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      handleUpdate();
+    }, 20000);
     return () => {
       window.removeEventListener('ws:expense_update', handleUpdate);
+      window.removeEventListener('ws:expense_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
+      window.removeEventListener('online', handleUpdate);
+      window.clearInterval(poll);
     };
   }, []);
 
@@ -53,6 +65,31 @@ export default function DriverExpenses() {
       return;
     }
     try {
+      const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
+
+      if (!isOnline) {
+        await offlineQueue.enqueue({
+          endpoint: '/expenses',
+          method: 'POST',
+          body: {
+            __offlineType: 'expense_bundle',
+            payload: {
+              shiftId: activeShift.id,
+              categoryId: form.categoryId,
+              amount: form.amount,
+              description: form.description,
+              receipt: form.receipt || null,
+            },
+          },
+        });
+
+        setShowForm(false);
+        setForm({ categoryId: '', amount: '', description: '', receipt: null });
+        addToast(t('expenses.success_create'), 'success');
+        await load();
+        return;
+      }
+
       const formData = new FormData();
       formData.append('shiftId', activeShift.id);
       formData.append('categoryId', form.categoryId);

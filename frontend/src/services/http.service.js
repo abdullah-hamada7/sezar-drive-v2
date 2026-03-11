@@ -1,5 +1,6 @@
 import { offlineQueue } from './offline-queue.service';
 import { readCache } from './read-cache.service';
+import i18n from '../i18n';
 
 const API_BASE =
   import.meta.env.VITE_API_URL || '/api/v1';
@@ -12,6 +13,18 @@ const CACHEABLE_GET_PATTERNS = [
   /^\/expenses(?:$|\?)/,
   /^\/expenses\/categories(?:$|\?)/,
   /^\/inspections(?:$|\?)/,
+  /^\/damage-reports(?:$|\?|\/[^/?]+(?:\?|$))/,
+  /^\/drivers(?:$|\?|\/[^/?]+(?:\?|$))/,
+  /^\/vehicles(?:$|\?|\/[^/?]+(?:\?|$))/,
+  /^\/audit-logs(?:$|\?)/,
+  /^\/stats(?:$|\/|\?)/,
+  /^\/tracking(?:$|\/|\?)/,
+  /^\/reports(?:$|\/|\?)/,
+  /^\/verify\/pending(?:$|\?)/,
+  /^\/auth\/identity\/pending(?:$|\?)/,
+  /^\/auth\/admin\/rescue\/pending(?:$|\?)/,
+  /^\/admins(?:$|\?|\/[^/?]+(?:\?|$))/,
+  /^\/auth\/me(?:$|\?)/,
 ];
 const BLOCKED_OFFLINE_PATTERNS = [
   { method: 'POST', pattern: /^\/verify\/shift-selfie(?:$|\?)/ },
@@ -105,7 +118,7 @@ class HttpService {
 
       if (shouldHandleAsOfflineWrite) {
         if (isFormDataBody || isBlockedOfflineWrite(method, endpointPath)) {
-          const blocked = new Error('This action requires an internet connection');
+          const blocked = new Error(i18n.t('common.offline.action_requires_connection'));
           blocked.isNetworkError = true;
           blocked.code = 'BLOCKED_OFFLINE';
           dispatchToast(blocked.message, 'warning', 'BLOCKED_OFFLINE');
@@ -124,7 +137,7 @@ class HttpService {
           notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
           throw err;
         }
-        dispatchToast('Saved offline - will sync when connected', 'info', 'QUEUED_OFFLINE');
+        dispatchToast(i18n.t('common.offline.saved_will_sync'), 'info', 'QUEUED_OFFLINE');
         return { data: null, queued: true };
       }
 

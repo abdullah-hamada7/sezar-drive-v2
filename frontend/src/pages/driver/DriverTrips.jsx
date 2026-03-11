@@ -27,11 +27,20 @@ export default function DriverTrips() {
     window.addEventListener('ws:trip_assigned', handleUpdate);
     window.addEventListener('ws:trip_cancelled', handleUpdate);
     window.addEventListener('ws:trip_completed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
+    window.addEventListener('online', handleUpdate);
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      handleUpdate();
+    }, 15000);
 
     return () => {
       window.removeEventListener('ws:trip_assigned', handleUpdate);
       window.removeEventListener('ws:trip_cancelled', handleUpdate);
       window.removeEventListener('ws:trip_completed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
+      window.removeEventListener('online', handleUpdate);
+      window.clearInterval(poll);
     };
   }, []);
 

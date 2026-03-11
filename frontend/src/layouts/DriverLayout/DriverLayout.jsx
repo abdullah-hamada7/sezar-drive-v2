@@ -1,10 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverTracking } from '../../hooks/useDriverTracking';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { useContext } from 'react';
 import { ThemeContext } from '../../contexts/theme';
 import {
-  Car, ClipboardCheck, Route, Receipt, AlertTriangle,
+  ShieldCheck, ClipboardCheck, Route, Receipt, AlertTriangle,
   Camera, LogOut, Home, Languages, Sun, Moon
 } from 'lucide-react';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -14,7 +15,11 @@ export default function DriverLayout() {
   const { language, toggleLanguage, t } = useLanguage();
   const { logout } = useAuth();
   const { theme, toggleTheme } = useContext(ThemeContext);
+  const { isSyncing, pendingCount } = useOfflineSync();
   useDriverTracking();
+  const syncChipLabel = isSyncing
+    ? t('common.offline.syncing_short')
+    : t('common.offline.pending_short', { count: pendingCount });
 
   const navItems = [
     { to: '/driver', icon: Home, label: t('nav_driver.home'), end: true },
@@ -30,11 +35,19 @@ export default function DriverLayout() {
       <header className="driver-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <Car size={20} />
+            <ShieldCheck size={20} />
           </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
         <div className="driver-header-right">
+          {pendingCount > 0 && (
+            <span
+              className={`driver-sync-chip ${isSyncing ? 'driver-sync-chip-syncing' : 'driver-sync-chip-pending'}`}
+              title={syncChipLabel}
+            >
+              {syncChipLabel}
+            </span>
+          )}
           <button 
             className="btn-icon" 
             onClick={toggleTheme}

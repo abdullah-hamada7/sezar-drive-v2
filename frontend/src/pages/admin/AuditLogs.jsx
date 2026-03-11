@@ -40,8 +40,28 @@ export default function AuditPage() {
 
   useEffect(() => {
     const handleUpdate = () => load();
+
+    const handleOnline = () => load();
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      load();
+    };
+
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      load();
+    }, 20000);
+
     window.addEventListener('ws:notification', handleUpdate);
-    return () => window.removeEventListener('ws:notification', handleUpdate);
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(poll);
+      window.removeEventListener('ws:notification', handleUpdate);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [load]);
 
   function handleFilterChange(e) {

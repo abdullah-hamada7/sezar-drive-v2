@@ -1,6 +1,7 @@
 import { useState, useRef, useContext, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { inspectionService as api } from '../../services/inspection.service';
+import { offlineQueue } from '../../services/offline-queue.service';
 import { Camera, CheckCircle, Upload, ChevronRight, AlertCircle } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
@@ -18,6 +19,10 @@ const CHECKLIST_PHOTO_CODES = {
   wipers: 'wiper'
 };
 const STEPS = ['checklist', 'photos', 'review'];
+const generateIdempotencyKey = () =>
+  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2);
 
 export default function DriverInspection() {
   const { t } = useTranslation();
@@ -30,9 +35,9 @@ export default function DriverInspection() {
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState({});
   const [issuePhotos, setIssuePhotos] = useState({});
-  const [inspectionId, setInspectionId] = useState(null);
   const [existingInspections, setExistingInspections] = useState([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
+  const [queuedOfflineSubmit, setQueuedOfflineSubmit] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const fileRef = useRef(null);
@@ -101,36 +106,12 @@ export default function DriverInspection() {
   });
   const isInspectionLocked = inspectionType === 'pre' ? hasPreInspection : hasPostInspection;
 
-  async function ensureInspectionCreated() {
-    if (inspectionId) return inspectionId;
-    if (!shift) {
-      addToast(t('inspection.no_shift_title'), 'error');
-      return null;
-    }
-    if (isInspectionLocked) {
-      addToast(inspectionType === 'pre' ? t('inspection.pre_already_done') : t('inspection.post_already_done'), 'warning');
-      return null;
-    }
-
-    const vehicleId = shift.vehicleId
-      || shift.vehicle?.id
-      || shift.assignments?.[0]?.vehicleId
-      || shift.assignments?.[0]?.vehicle?.id;
-
-    if (!vehicleId) {
-      addToast(t('errors.NO_VEHICLE_ASSIGNED'), 'error');
-      return null;
-    }
-
-    const res = await api.createInspection({
-      shiftId: shift.id,
-      vehicleId,
-      type: inspectionType,
-      notes
-    });
-
-    setInspectionId(res.data.id);
-    return res.data.id;
+  function getVehicleId() {
+    return shift?.vehicleId
+      || shift?.vehicle?.id
+      || shift?.assignments?.[0]?.vehicleId
+      || shift?.assignments?.[0]?.vehicle?.id
+      || null;
   }
 
   async function submitChecklist() {
@@ -148,8 +129,6 @@ export default function DriverInspection() {
 
     setLoading(true);
     try {
-      const createdInspectionId = await ensureInspectionCreated();
-      if (!createdInspectionId) return;
       setStep('photos');
     } catch (err) {
       const code = err.errorCode || err.code;
@@ -173,33 +152,23 @@ export default function DriverInspection() {
     const file = e.target.files?.[0];
     if (!file || !photoTarget || isInspectionLocked) return;
 
-    const direction = photoTarget.type === 'direction'
-      ? photoTarget.key
-      : CHECKLIST_PHOTO_CODES[photoTarget.key];
-
-    try {
-      const createdInspectionId = await ensureInspectionCreated();
-      if (!createdInspectionId) return;
-
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('direction', direction);
-
-      const res = await api.uploadInspectionPhoto(createdInspectionId, direction, formData);
-      if (photoTarget.type === 'direction') {
-        setPhotos(prev => ({ ...prev, [photoTarget.key]: URL.createObjectURL(file) }));
-      } else {
-        setIssuePhotos(prev => ({
-          ...prev,
-          [photoTarget.key]: {
-            preview: URL.createObjectURL(file),
-            photoUrl: res?.data?.photoUrl || ''
-          }
-        }));
-      }
-    } catch (err) {
-      const code = err.errorCode || err.code;
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    if (photoTarget.type === 'direction') {
+      setPhotos(prev => ({
+        ...prev,
+        [photoTarget.key]: {
+          file,
+          preview: URL.createObjectURL(file),
+        }
+      }));
+    } else {
+      setIssuePhotos(prev => ({
+        ...prev,
+        [photoTarget.key]: {
+          file,
+          direction: CHECKLIST_PHOTO_CODES[photoTarget.key],
+          preview: URL.createObjectURL(file),
+        }
+      }));
     }
 
     setPhotoTarget(null);
@@ -211,17 +180,102 @@ export default function DriverInspection() {
       addToast(t('inspection.photos_missing_error'), 'error');
       return;
     }
+
+    const vehicleId = getVehicleId();
+    if (!vehicleId) {
+      addToast(t('errors.NO_VEHICLE_ASSIGNED'), 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      await api.completeInspection(inspectionId, {
-        checklistData: {
-          checks,
+      setQueuedOfflineSubmit(false);
+      const directionalPhotos = Object.fromEntries(
+        DIRECTIONS
+          .filter((direction) => photos[direction]?.file)
+          .map((direction) => [direction, photos[direction].file])
+      );
+
+      const issuePhotoPayload = Object.fromEntries(
+        Object.entries(issuePhotos).map(([key, value]) => [key, {
+          file: value?.file || null,
+          direction: value?.direction || CHECKLIST_PHOTO_CODES[key],
+        }])
+      );
+      const createIdempotencyKey = generateIdempotencyKey();
+      const completeIdempotencyKey = generateIdempotencyKey();
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await offlineQueue.enqueue({
+          endpoint: '/inspections',
+          method: 'POST',
+          body: {
+            __offlineType: 'inspection_bundle',
+            payload: {
+              shiftId: shift.id,
+              vehicleId,
+              type: inspectionType,
+              notes,
+              checks,
+              directionalPhotos,
+              issuePhotos: issuePhotoPayload,
+              createIdempotencyKey,
+              completeIdempotencyKey,
+            },
+          },
+        });
+        addToast(t('common.offline.saved_will_sync'), 'info');
+        setQueuedOfflineSubmit(true);
+      } else {
+        const created = await api.createInspection({
+          shiftId: shift.id,
+          vehicleId,
+          type: inspectionType,
           notes,
-          badItemPhotos: Object.fromEntries(
-            Object.entries(issuePhotos).map(([key, value]) => [key, value.photoUrl || null])
-          )
+        }, {
+          headers: { 'Idempotency-Key': createIdempotencyKey },
+          skipOfflineQueue: true,
+        });
+        const createdInspectionId = created?.data?.id;
+
+        if (!createdInspectionId) {
+          throw new Error(t('common.error'));
         }
-      });
+
+        const badItemPhotos = {};
+
+        for (const [direction, file] of Object.entries(directionalPhotos)) {
+          const formData = new FormData();
+          formData.append('photo', file);
+          formData.append('direction', direction);
+          await api.uploadInspectionPhoto(createdInspectionId, direction, formData);
+        }
+
+        for (const [checkKey, issue] of Object.entries(issuePhotoPayload)) {
+          if (!issue?.file || !issue?.direction) {
+            badItemPhotos[checkKey] = null;
+            continue;
+          }
+
+          const formData = new FormData();
+          formData.append('photo', issue.file);
+          formData.append('direction', issue.direction);
+          const uploadRes = await api.uploadInspectionPhoto(createdInspectionId, issue.direction, formData);
+          badItemPhotos[checkKey] = uploadRes?.data?.photoUrl || null;
+        }
+
+        await api.completeInspection(createdInspectionId, {
+          checklistData: {
+            checks,
+            notes,
+            badItemPhotos,
+          }
+        }, {
+          headers: { 'Idempotency-Key': completeIdempotencyKey },
+          skipOfflineQueue: true,
+        });
+      }
+
       setStep('done');
     } catch (err) {
       const code = err.errorCode || err.code;
@@ -247,7 +301,12 @@ export default function DriverInspection() {
       <div className="card" style={{ textAlign: 'center', padding: 'var(--space-2xl)' }}>
         <CheckCircle size={56} style={{ color: 'var(--color-success)', margin: '0 auto var(--space-md)' }} />
         <h2 style={{ marginBottom: 'var(--space-sm)' }}>{t('inspection.done_title')}</h2>
-        <p className="text-muted">{t('inspection.done_desc')}</p>
+        <p className="text-muted">{queuedOfflineSubmit ? t('common.offline.inspection_queued') : t('inspection.done_desc')}</p>
+        {queuedOfflineSubmit && (
+          <div className="alert alert-info" style={{ marginTop: 'var(--space-md)' }}>
+            <AlertCircle size={16} /> {t('common.offline.sync_auto_when_online')}
+          </div>
+        )}
       </div>
     );
   }
@@ -418,17 +477,17 @@ export default function DriverInspection() {
                 className="card"
                 onClick={() => !isInspectionLocked && triggerPhotoCapture(dir)}
                 disabled={isInspectionLocked}
-                style={{ textAlign: 'center', padding: 'var(--space-md)', cursor: isInspectionLocked ? 'not-allowed' : 'pointer', borderColor: photos[dir] ? 'var(--color-success)' : 'var(--color-border)' }}
+                style={{ textAlign: 'center', padding: 'var(--space-md)', cursor: isInspectionLocked ? 'not-allowed' : 'pointer', borderColor: photos[dir]?.preview ? 'var(--color-success)' : 'var(--color-border)' }}
               >
-                {photos[dir] ? (
-                  <img src={photos[dir]} alt={t(`inspection.directions.${dir}`)} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-sm)' }} />
+                {photos[dir]?.preview ? (
+                  <img src={photos[dir].preview} alt={t(`inspection.directions.${dir}`)} style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-sm)' }} />
                 ) : (
                   <div style={{ height: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-tertiary)', marginBottom: 'var(--space-sm)' }}>
                     <Camera size={32} style={{ color: 'var(--color-text-muted)' }} />
                   </div>
                 )}
                 <div className="text-sm" style={{ fontWeight: 600 }}>{t(`inspection.directions.${dir}`)}</div>
-                <div className="text-xs text-muted">{photos[dir] ? t('inspection.captured') : t('inspection.tap_capture')}</div>
+                <div className="text-xs text-muted">{photos[dir]?.preview ? t('inspection.captured') : t('inspection.tap_capture')}</div>
               </button>
             ))}
           </div>
@@ -470,8 +529,8 @@ export default function DriverInspection() {
               {DIRECTIONS.map(dir => (
                 <div key={dir} className="text-sm">
                   <span>{t(`inspection.directions.${dir}`)}:</span>{' '}
-                  <span className={photos[dir] ? 'badge badge-status badge-success' : 'badge badge-status badge-warning'}>
-                    {photos[dir] ? t('inspection.uploaded') : t('inspection.missing')}
+                  <span className={photos[dir]?.preview ? 'badge badge-status badge-success' : 'badge badge-status badge-warning'}>
+                    {photos[dir]?.preview ? t('inspection.uploaded') : t('inspection.missing')}
                   </span>
                 </div>
               ))}

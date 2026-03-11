@@ -3,6 +3,7 @@ import { useAuth } from './useAuth';
 import { shiftService as api } from '../services/shift.service';
 import { buildTrackingWsUrl } from '../utils/trackingWs';
 import { playNotificationSound } from '../utils/notificationSound';
+import { evaluateRealtimeEvent, resetRealtimeStream } from '../utils/realtimeGuard';
 import { http } from '../services/http.service';
 
 const DRIVER_EVENT_MESSAGES = {
@@ -48,6 +49,17 @@ export function useDriverTracking() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        const guard = evaluateRealtimeEvent('driver', data?.type, data);
+
+        if (guard.gapDetected && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ws:resync-required', {
+            detail: { stream: 'driver', eventType: data?.type, sequence: guard.sequence, expected: guard.expected },
+          }));
+          window.dispatchEvent(new CustomEvent('ws:update', {
+            detail: { type: 'resync_required', stream: 'driver' },
+          }));
+        }
+
         if (data.type) {
           if (DRIVER_EVENT_MESSAGES[data.type]) {
             playNotificationSound();
@@ -70,6 +82,14 @@ export function useDriverTracking() {
       wsRef.current = null;
       if (roleRef.current === 'driver') {
         setTimeout(connectWs, 5000);
+      }
+    };
+
+    ws.onerror = () => {
+      try {
+        ws.close();
+      } catch {
+        // Ignore close errors; reconnect handled in onclose.
       }
     };
 
@@ -137,6 +157,23 @@ export function useDriverTracking() {
 
     connectWebSocket();
 
+    const handleOnline = () => {
+      resetRealtimeStream('driver');
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        connectWebSocket();
+      }
+    };
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        connectWebSocket();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     const startTracking = async () => {
       try {
         const res = await api.getActiveShift();
@@ -159,6 +196,8 @@ export function useDriverTracking() {
     checkInterval = setInterval(startTracking, 30000);
 
     return () => {
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(checkInterval);
       stopTracking();
       if (wsRef.current) {

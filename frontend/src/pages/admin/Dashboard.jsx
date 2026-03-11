@@ -78,11 +78,31 @@ export default function DashboardPage() {
       loadRecentActivity();
       loadRescueRequests();
     };
+
+    const handleOnline = () => {
+      handleUpdate();
+    };
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      handleUpdate();
+    };
+
+    const poll = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      handleUpdate();
+    }, 20000);
+
     window.addEventListener('ws:notification', handleUpdate);
     window.addEventListener('ws:rescue_request', handleUpdate);
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
+      window.clearInterval(poll);
       window.removeEventListener('ws:notification', handleUpdate);
       window.removeEventListener('ws:rescue_request', handleUpdate);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [loadDashboardStats, loadRecentActivity, loadRescueRequests]);
 

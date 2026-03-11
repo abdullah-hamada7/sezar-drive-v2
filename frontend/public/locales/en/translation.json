@@ -286,6 +286,20 @@
       "light_mode": "Light Mode",
       "dark_mode": "Dark Mode"
     },
+    "offline": {
+      "saved_will_sync": "Saved offline - will sync when connected",
+      "action_requires_connection": "This action requires an internet connection",
+      "offline_mode": "You're offline. Changes will sync when reconnected.",
+      "back_online_syncing": "Back online. Syncing...",
+      "pending_title": "{{count}} offline pending",
+      "pending_short": "{{count}} pending",
+      "syncing_short": "Syncing...",
+      "sync_success": "Synced {{count}} transaction(s)",
+      "sync_partial": "Some offline transactions could not be synced yet.",
+      "sync_failed": "Unable to sync offline transactions right now.",
+      "inspection_queued": "Inspection saved offline and queued for sync.",
+      "sync_auto_when_online": "Sync will happen automatically when your internet connection is back."
+    },
     "errors": {
       "validation_failed": "Validation failed. Please check the fields below.",
       "check_fields": "Please fix the errors in the form before submitting."

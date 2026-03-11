@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { http } from '../services/http.service';
 import { offlineQueue } from '../services/offline-queue.service';
 
@@ -8,6 +9,7 @@ function emitToast(message, type = 'info', code = null) {
 }
 
 export function useOfflineSync() {
+  const { t } = useTranslation();
   const [isOnline, setIsOnline] = useState(() => {
     if (typeof navigator === 'undefined') return true;
     return navigator.onLine;
@@ -34,16 +36,21 @@ export function useOfflineSync() {
       await refreshPendingCount();
 
       if (result.synced > 0) {
-        emitToast(`Synced ${result.synced} transaction${result.synced === 1 ? '' : 's'}`, 'success', 'OFFLINE_SYNCED');
+        emitToast(t('common.offline.sync_success', { count: result.synced }), 'success', 'OFFLINE_SYNCED');
+        if (result.pending === 0 && typeof window !== 'undefined') {
+          window.setTimeout(() => {
+            window.location.reload();
+          }, 500);
+        }
       } else if (result.failed > 0) {
-        emitToast('Some offline transactions could not be synced yet.', 'warning', 'OFFLINE_PARTIAL_SYNC');
+        emitToast(t('common.offline.sync_partial'), 'warning', 'OFFLINE_PARTIAL_SYNC');
       }
     } catch {
-      emitToast('Unable to sync offline transactions right now.', 'warning', 'OFFLINE_SYNC_FAILED');
+      emitToast(t('common.offline.sync_failed'), 'warning', 'OFFLINE_SYNC_FAILED');
     } finally {
       setIsSyncing(false);
     }
-  }, [refreshPendingCount]);
+  }, [refreshPendingCount, t]);
 
   useEffect(() => {
     refreshPendingCount();
@@ -51,7 +58,7 @@ export function useOfflineSync() {
     const handleOffline = () => {
       setIsOnline(false);
       if (!offlineToastShownRef.current) {
-        emitToast('You are offline. Changes will sync when reconnected.', 'warning', 'OFFLINE_MODE');
+        emitToast(t('common.offline.offline_mode'), 'warning', 'OFFLINE_MODE');
         offlineToastShownRef.current = true;
       }
     };
@@ -75,7 +82,7 @@ export function useOfflineSync() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline-queue:updated', refreshPendingCount);
     };
-  }, [refreshPendingCount, syncNow]);
+  }, [refreshPendingCount, syncNow, t]);
 
   return { isOnline, isSyncing, pendingCount };
 }

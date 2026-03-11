@@ -7,12 +7,13 @@ import {
   LayoutDashboard, Users, Car, Route, ClipboardCheck,
   Receipt, AlertTriangle, MapPin, FileBarChart, Shield,
   Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
-  Sun, Moon
+  Sun, Moon, ShieldCheck
 } from 'lucide-react';
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
 import { playNotificationSound } from '../../utils/notificationSound';
+import { evaluateRealtimeEvent, resetRealtimeStream } from '../../utils/realtimeGuard';
 import { http } from '../../services/http.service';
 
 export default function AdminLayout() {
@@ -29,6 +30,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const wsRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
 
   const displayedCounts = useMemo(() => {
     return {
@@ -95,9 +97,25 @@ export default function AdminLayout() {
       const ws = new WebSocket(buildTrackingWsUrl(token));
       wsRef.current = ws;
 
+      ws.onopen = () => {
+        fetchCounts();
+      };
+
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          const eventType = data?.type === 'notification' ? data?.payload?.type || 'notification' : data?.type;
+          const guard = evaluateRealtimeEvent('admin', eventType, data);
+
+          if (guard.gapDetected && typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('ws:resync-required', {
+              detail: { stream: 'admin', eventType, sequence: guard.sequence, expected: guard.expected },
+            }));
+            window.dispatchEvent(new CustomEvent('ws:update', {
+              detail: { type: 'resync_required', stream: 'admin' },
+            }));
+          }
+
           if (data.type === 'notification') {
             const payload = data.payload;
             addNotification(payload);
@@ -113,11 +131,40 @@ export default function AdminLayout() {
         } catch (err) { console.error('WS Error:', err); }
       };
 
-      ws.onclose = () => setTimeout(connectWS, 5000);
+      ws.onclose = () => {
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+        }
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+        reconnectTimerRef.current = setTimeout(connectWS, 5000);
+      };
     }
 
+    const handleOnline = () => {
+      resetRealtimeStream('admin');
+      fetchCounts();
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        connectWS();
+      }
+    };
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      fetchCounts();
+      if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+        connectWS();
+      }
+    };
+
     connectWS();
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
       if (wsRef.current) wsRef.current.close();
     };
   }, [addNotification]);
@@ -150,7 +197,7 @@ export default function AdminLayout() {
       <header className="mobile-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <Car size={20} />
+            <ShieldCheck size={20} />
           </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
@@ -164,7 +211,7 @@ export default function AdminLayout() {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">
-              <Car size={20} />
+              <ShieldCheck size={20} />
             </div>
             <span className="brand-text">{t('common.brand')}</span>
           </div>

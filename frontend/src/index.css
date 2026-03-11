@@ -4,7 +4,6 @@
    ========================================= */
 
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap");
-
 :root {
   /* ── Industrial Precision Tokens ── */
   --color-primary: #3b82f6;
@@ -17,37 +16,38 @@
   --color-accent: #ff5a1f;
   /* Vibrant Orange */
 
-  /* Neutrals (Refined for High Contrast) */
-  --color-bg: #030712;
-  /* Slate 950 */
-  --color-bg-secondary: rgba(17, 24, 39, 0.7);
-  /* Slate 900 w/ translucency */
-  --color-bg-tertiary: #1f2937;
-  /* Slate 800 */
-  --color-bg-hover: #374151;
-  /* Slate 700 */
-  --color-surface: rgba(17, 24, 39, 0.85);
+  /* Neutrals — Refined Depth & Contrast */
+  --color-bg: #060918;
+  /* Deep navy-black: richer than pure slate */
+  --color-bg-secondary: rgba(14, 19, 38, 0.85);
+  /* Layered navy surface w/ translucency */
+  --color-bg-tertiary: #151b2e;
+  /* Elevated card surface — visible step up */
+  --color-bg-hover: #1e2744;
+  /* Hover — clearly distinct */
+  --color-surface: rgba(14, 19, 38, 0.92);
 
-  --color-text: #f9fafb;
-  /* Slate 50 */
-  --color-text-secondary: #9ca3af;
-  /* Slate 400 */
-  --color-text-muted: #6b7280;
+  --color-text: #f1f5f9;
+  /* Slate 100 — slightly softer than pure white */
+  --color-text-secondary: #94a3b8;
+  /* Slate 400 — sharper contrast on dark */
+  --color-text-muted: #64748b;
   /* Slate 500 */
 
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-light: rgba(255, 255, 255, 0.04);
+  --color-border: rgba(148, 163, 184, 0.12);
+  /* Slate-tinted, more visible */
+  --color-border-light: rgba(148, 163, 184, 0.06);
   --color-border-focus: var(--color-primary);
 
   /* Typography */
   --font-family-body: "Inter", "Cairo", system-ui, -apple-system, sans-serif;
   --font-family-display: "Outfit", "Cairo", sans-serif;
 
-  /* Shadows & Depth */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.25);
+  /* Shadows & Depth — Richer layering */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -1px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.55), 0 4px 8px -2px rgba(0, 0, 0, 0.3);
+  --shadow-glow: 0 0 28px rgba(59, 130, 246, 0.3), 0 0 8px rgba(59, 130, 246, 0.15);
 
   /* Layout Features */
   --radius-sm: 6px;
@@ -99,11 +99,11 @@
 
 /* ── Modern Utilities ── */
 .glass-card {
-  background: rgba(21, 25, 33, 0.7);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  background: rgba(12, 16, 32, 0.75);
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 [data-theme="light"] .glass-card {
