@@ -2,7 +2,21 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { shiftService as api } from '../services/shift.service';
 import { buildTrackingWsUrl } from '../utils/trackingWs';
+import { playNotificationSound } from '../utils/notificationSound';
 import { http } from '../services/http.service';
+
+const DRIVER_EVENT_MESSAGES = {
+  trip_assigned: 'A new trip was assigned to you',
+  trip_accepted: 'Trip accepted successfully',
+  trip_completed: 'Trip completed successfully',
+  trip_cancelled: 'A trip was cancelled',
+  shift_started: 'Your shift request was created',
+  shift_activated: 'Your shift was activated',
+  shift_closed: 'Your shift was closed',
+  damage_reviewed: 'Your damage report was reviewed',
+  expense_reviewed: 'Your expense was reviewed',
+  identity_update: 'Your identity verification status was updated',
+};
 
 export function useDriverTracking() {
   const { user } = useAuth();
@@ -35,6 +49,12 @@ export function useDriverTracking() {
       try {
         const data = JSON.parse(event.data);
         if (data.type) {
+          if (DRIVER_EVENT_MESSAGES[data.type]) {
+            playNotificationSound();
+            window.dispatchEvent(new CustomEvent('app:toast', {
+              detail: { message: DRIVER_EVENT_MESSAGES[data.type], type: 'info', code: data.type.toUpperCase() }
+            }));
+          }
           // Dispatch a specific event for this message type
           window.dispatchEvent(new CustomEvent(`ws:${data.type}`, { detail: data }));
           // Dispatch a generic update event

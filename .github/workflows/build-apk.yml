@@ -5,6 +5,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL != '' && vars.EXPO_PUBLIC_API_URL || 'https://abdullahamada.me/api/v1' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

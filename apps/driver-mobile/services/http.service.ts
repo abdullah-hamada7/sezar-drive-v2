@@ -1,4 +1,4 @@
-export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'https://abdullahamada.me/api/v1';
 
 const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';

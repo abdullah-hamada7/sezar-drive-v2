@@ -12,6 +12,7 @@ import {
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
+import { playNotificationSound } from '../../utils/notificationSound';
 import { http } from '../../services/http.service';
 
 export default function AdminLayout() {
@@ -39,6 +40,7 @@ export default function AdminLayout() {
 
   const addNotification = useCallback((notif) => {
     setNotifications(prev => [notif, ...prev].slice(0, 5));
+    playNotificationSound();
 
     // Update local pending counts based on notification type
     // Only increment if not currently on that page

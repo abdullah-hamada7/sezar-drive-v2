@@ -9,6 +9,7 @@ const { ValidationError } = require('../../errors');
 
 const router = express.Router();
 const inspectionUpload = createUploader();
+const PHOTO_DIRECTIONS = ['front', 'back', 'left', 'right', 'tire', 'light', 'brake', 'mirror', 'fluid', 'seat', 'horn', 'wiper'];
 
 function handleValidation(req) {
   const errors = validationResult(req);
@@ -41,7 +42,7 @@ router.post(
   inspectionUpload.single('photo'),
   [
     param('id').isUUID(),
-    body('direction').isIn(['front', 'back', 'left', 'right']),
+    body('direction').isIn(PHOTO_DIRECTIONS),
   ],
   async (req, res, next) => {
     try {
@@ -65,7 +66,7 @@ router.post(
   inspectionUpload.single('photo'),
   [
     param('id').isUUID(),
-    param('direction').isIn(['front', 'back', 'left', 'right']),
+    param('direction').isIn(PHOTO_DIRECTIONS),
   ],
   async (req, res, next) => {
     try {

@@ -60,7 +60,7 @@ export default function DriverShift() {
     setActionLoading(true);
     try {
       const formData = new FormData();
-      formData.append('selfie', file);
+      formData.append('photo', file);
 
       const result = await shiftService.verifyShift(shift.id, formData);
 
