@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertOctagon, RefreshCw, Home } from 'lucide-react';
+import i18n from '../../i18n';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -16,15 +17,16 @@ class ErrorBoundary extends React.Component {
   }
 
   render() {
+    const t = i18n.t.bind(i18n);
     if (this.state.hasError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen p-lg text-center bg-gray-900 text-white">
           <div className="bg-red-500/10 p-xl rounded-full mb-lg">
             <AlertOctagon size={64} className="text-red-500" />
           </div>
-          <h1 className="text-2xl font-bold mb-md">Something went wrong</h1>
+          <h1 className="text-2xl font-bold mb-md">{t('error_boundary.title')}</h1>
           <p className="text-muted mb-xl max-w-md">
-            The application encountered an unexpected error. We've been notified and are looking into it.
+            {t('error_boundary.description')}
           </p>
           
           <div className="flex gap-md">
@@ -33,14 +35,14 @@ class ErrorBoundary extends React.Component {
               className="btn btn-primary flex items-center gap-sm"
             >
               <RefreshCw size={18} />
-              Reload Page
+              {t('error_boundary.reload')}
             </button>
             <a 
               href="/"
               className="btn btn-outline flex items-center gap-sm"
             >
               <Home size={18} />
-              Go to Home
+              {t('error_boundary.home')}
             </a>
           </div>
 

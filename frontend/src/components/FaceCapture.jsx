@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import Webcam from 'react-webcam';
 import { Camera, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -9,6 +10,7 @@ const videoConstraints = {
 };
 
 export default function FaceCapture({ onCapture, onCancel }) {
+  const { t } = useTranslation();
   const webcamRef = useRef(null);
   const [imgSrc, setImgSrc] = useState(null);
   const [error, setError] = useState(null);
@@ -23,7 +25,7 @@ export default function FaceCapture({ onCapture, onCancel }) {
     setError(null);
   };
 
-  const confirm = () => {
+  const confirm = useCallback(() => {
     // Convert base64 to blob/file
     fetch(imgSrc)
       .then(res => res.blob())
@@ -32,10 +34,10 @@ export default function FaceCapture({ onCapture, onCancel }) {
         onCapture(file);
       })
       .catch(err => {
-        setError("Failed to process image.");
+        setError(t('face_capture.process_failed'));
         console.error(err);
       });
-  };
+  }, [imgSrc, onCapture, t]);
 
   return (
     <div className="face-capture-container" style={{ textAlign: 'center' }}>
@@ -47,7 +49,7 @@ export default function FaceCapture({ onCapture, onCancel }) {
               ref={webcamRef}
               screenshotFormat="image/jpeg"
               videoConstraints={videoConstraints}
-              onUserMediaError={() => setError("Camera access denied or not available.")}
+              onUserMediaError={() => setError(t('face_capture.camera_denied'))}
               style={{ width: '100%', display: 'block' }}
             />
             {/* Outline overlay */}
@@ -74,22 +76,22 @@ export default function FaceCapture({ onCapture, onCancel }) {
           <div className="flex gap-md justify-center">
             <button className="btn btn-primary" onClick={capture} disabled={!!error}>
               <Camera size={18} />
-              Capture Selfie
+              {t('face_capture.capture_selfie')}
             </button>
-            <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
+            <button className="btn btn-ghost" onClick={onCancel}>{t('common.cancel')}</button>
           </div>
         </>
       ) : (
         <>
-          <img src={imgSrc} alt="captured" style={{ width: '100%', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-md)' }} />
+          <img src={imgSrc} alt={t('face_capture.captured_alt')} style={{ width: '100%', borderRadius: 'var(--radius-lg)', marginBottom: 'var(--space-md)' }} />
           <div className="flex gap-md justify-center">
             <button className="btn btn-primary" onClick={confirm}>
               <CheckCircle size={18} />
-              Confirm Identity
+              {t('face_capture.confirm_identity')}
             </button>
             <button className="btn btn-secondary" onClick={retake}>
               <RefreshCw size={18} />
-              Retake
+              {t('face_capture.retake')}
             </button>
           </div>
         </>

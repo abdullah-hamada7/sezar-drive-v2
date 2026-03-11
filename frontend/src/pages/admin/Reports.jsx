@@ -33,7 +33,7 @@ export default function ReportsPage() {
     try {
       const lang = i18n.language || 'en';
       if (!startDate || !endDate) {
-        addToast(t('reports.messages.select_dates') || 'Please select start and end dates', 'error');
+        addToast(t('reports.messages.select_dates'), 'error');
         return;
       }
 

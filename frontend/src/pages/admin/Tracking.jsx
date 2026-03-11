@@ -55,7 +55,7 @@ export default function TrackingPage() {
     ws.onclose = () => {
       setWsStatus('disconnected');
       if (wsHadConnectionRef.current) {
-        addToast('Live tracking disconnected. Reconnecting...', 'warning');
+        addToast(t('tracking.messages.reconnecting'), 'warning');
       }
       if (reconnectTimerRef.current) {
         clearTimeout(reconnectTimerRef.current);
@@ -98,7 +98,7 @@ export default function TrackingPage() {
         }
       } catch (err) { console.error(err); }
     };
-  }, [addToast]);
+  }, [addToast, t]);
 
   const loadInitialPositions = useCallback(async () => {
     try {
@@ -113,10 +113,10 @@ export default function TrackingPage() {
       }));
       setDrivers(formatted.filter(d => d.lat !== null));
     } catch (err) {
-      addToast(err.message || 'Failed to load active drivers.', 'error');
+      addToast(err.message || t('tracking.messages.load_failed'), 'error');
     }
     finally { setLoading(false); }
-  }, [addToast]);
+  }, [addToast, t]);
 
   useEffect(() => {
     loadInitialPositions();

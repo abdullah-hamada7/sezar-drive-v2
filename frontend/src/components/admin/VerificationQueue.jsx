@@ -34,23 +34,28 @@ export default function VerificationQueue() {
     setProcessing(shiftId);
     try {
       await api.reviewShiftVerification(shiftId, decision, reason);
-      addToast(`Shift ${decision === 'APPROVE' ? 'Approved' : 'Rejected'}`, 'success');
+      addToast(
+        decision === 'APPROVE'
+          ? t('verification.messages.success_approve')
+          : t('verification.messages.success_reject'),
+        'success'
+      );
       setItems(prev => prev.filter(i => i.id !== shiftId));
     } catch (err) {
-      addToast(err.message || 'Review failed', 'error');
+      addToast(err.message || t('verification.messages.review_failed'), 'error');
     } finally {
       setProcessing(null);
     }
   }
 
-  if (loading) return <div>Loading queue...</div>;
+  if (loading) return <div>{t('verification.messages.loading_queue')}</div>;
 
   if (items.length === 0) {
     return (
       <div className="card text-center py-xl border-dashed">
         <div className="text-muted flex flex-col items-center gap-sm">
           <ClipboardCheck size={32} style={{ opacity: 0.5 }} />
-          <span>No pending verifications</span>
+          <span>{t('verification.card.empty')}</span>
         </div>
       </div>
     );
@@ -60,7 +65,7 @@ export default function VerificationQueue() {
     <div>
       <div className="flex items-center justify-between mb-md">
         <div className="flex items-center gap-sm">
-          <h3 className="text-lg font-bold">Verifications</h3>
+          <h3 className="text-lg font-bold">{t('verification.title')}</h3>
           <span className="badge badge-warning" style={{ borderRadius: '1rem', padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}>
             {items.length}
           </span>
@@ -73,10 +78,10 @@ export default function VerificationQueue() {
             onChange={e => setFilterStatus(e.target.value)}
             style={{ width: 'auto', minWidth: '120px' }}
           >
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-            <option value="all">All</option>
+            <option value="pending">{t('verification.filter.pending')}</option>
+            <option value="approved">{t('verification.filter.approved')}</option>
+            <option value="rejected">{t('verification.filter.rejected')}</option>
+            <option value="all">{t('verification.filter.all')}</option>
           </select>
           <div className="flex gap-xs">
             <input
@@ -105,7 +110,7 @@ export default function VerificationQueue() {
                 </div>
                 <div>
                   <div className="font-bold text-sm">{item.driver?.name}</div>
-                  <div className="text-xs text-muted">ID: ...{item.driver?.id?.slice(-4)}</div>
+                  <div className="text-xs text-muted">{t('verification.card.id_short')}: ...{item.driver?.id?.slice(-4)}</div>
                 </div>
               </div>
               <span className="text-xs text-muted bg-white/10 px-2 py-1 rounded">
@@ -117,25 +122,25 @@ export default function VerificationQueue() {
             {/* Images Comparison */}
             <div className="p-md grid grid-2 gap-md flex-1">
               <div className="flex flex-col gap-xs">
-                <span className="text-xs text-muted font-bold uppercase tracking-wider">Profile Photo</span>
+                <span className="text-xs text-muted font-bold uppercase tracking-wider">{t('verification.card.profile_photo')}</span>
                 <div className="aspect-square overflow-hidden rounded-md border border-boundary group relative">
                   <img
                     src={item.driver?.avatarUrl || 'https://via.placeholder.com/150'}
-                    alt="Profile"
+                    alt={t('verification.card.profile_photo')}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-xs">
-                <span className="text-xs text-muted font-bold uppercase tracking-wider text-primary">Shift Selfie</span>
+                <span className="text-xs text-muted font-bold uppercase tracking-wider text-primary">{t('verification.card.shift_selfie')}</span>
                 <div className="aspect-square overflow-hidden rounded-md border-2 border-primary cursor-zoom-in relative group" onClick={() => window.open(item.startSelfieUrl, '_blank')}>
                   <img
                     src={item.startSelfieUrl || 'https://via.placeholder.com/150'}
-                    alt="Selfie"
+                    alt={t('verification.card.shift_selfie')}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
-                    ZOOM
+                    {t('verification.card.zoom')}
                   </div>
                 </div>
               </div>
@@ -145,17 +150,17 @@ export default function VerificationQueue() {
             <div className="p-md pt-0 grid grid-2 gap-md">
               {item.driver?.idCardFront && (
                 <div className="flex flex-col gap-xs">
-                  <span className="text-xs text-muted font-bold uppercase tracking-wider">ID Front</span>
+                  <span className="text-xs text-muted font-bold uppercase tracking-wider">{t('verification.card.id_front')}</span>
                   <div className="aspect-video overflow-hidden rounded-md border border-boundary group relative cursor-zoom-in" onClick={() => window.open(item.driver.idCardFront, '_blank')}>
-                    <img src={item.driver.idCardFront} alt="ID Front" className="w-full h-full object-cover" />
+                    <img src={item.driver.idCardFront} alt={t('verification.card.id_front')} className="w-full h-full object-cover" />
                   </div>
                 </div>
               )}
               {item.driver?.idCardBack && (
                 <div className="flex flex-col gap-xs">
-                  <span className="text-xs text-muted font-bold uppercase tracking-wider">ID Back</span>
+                  <span className="text-xs text-muted font-bold uppercase tracking-wider">{t('verification.card.id_back')}</span>
                   <div className="aspect-video overflow-hidden rounded-md border border-boundary group relative cursor-zoom-in" onClick={() => window.open(item.driver.idCardBack, '_blank')}>
-                    <img src={item.driver.idCardBack} alt="ID Back" className="w-full h-full object-cover" />
+                    <img src={item.driver.idCardBack} alt={t('verification.card.id_back')} className="w-full h-full object-cover" />
                   </div>
                 </div>
               )}
@@ -167,10 +172,10 @@ export default function VerificationQueue() {
                 className="btn btn-success flex-1"
                 onClick={() => handleReview(item.id, 'APPROVE')}
                 disabled={processing === item.id}
-                title="Approve Verification"
+                title={t('verification.card.approve')}
               >
                 {processing === item.id ? <Loader size={18} className="spinning" /> : <Check size={18} />}
-                Approve
+                {t('verification.card.approve')}
               </button>
               <button
                 className="btn btn-danger flex-1"

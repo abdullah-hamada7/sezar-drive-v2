@@ -156,6 +156,11 @@ export default function DriverTrips() {
                           {t('trips.modal.companion_count_ph')}: {trip.passengers[0].companionCount ?? 0}
                         </span>
                       </div>
+                      <div className="flex items-center gap-sm text-muted">
+                        <span className="text-sm font-medium">
+                          {t('trips.modal.bags_ph')}: {trip.passengers[0].bagCount ?? 0}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )}

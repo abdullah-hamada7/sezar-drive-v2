@@ -7,6 +7,16 @@ import { useShift } from '../../contexts/ShiftContext';
 
 const DIRECTIONS = ['front', 'back', 'left', 'right'];
 const CHECKLIST_KEYS = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
+const CHECKLIST_PHOTO_CODES = {
+  tires: 'tire',
+  lights: 'light',
+  brakes: 'brake',
+  mirrors: 'mirror',
+  fluids: 'fluid',
+  seatbelts: 'seat',
+  horn: 'horn',
+  wipers: 'wiper'
+};
 const STEPS = ['checklist', 'photos', 'review'];
 
 export default function DriverInspection() {
@@ -15,17 +25,18 @@ export default function DriverInspection() {
   const { activeShift: shift } = useShift();
   const [step, setStep] = useState('checklist'); // checklist | photos | review | done
   const [checks, setChecks] = useState(() =>
-    CHECKLIST_KEYS.reduce((acc, key) => ({ ...acc, [key]: false }), {})
+    CHECKLIST_KEYS.reduce((acc, key) => ({ ...acc, [key]: null }), {})
   );
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState({});
+  const [issuePhotos, setIssuePhotos] = useState({});
   const [inspectionId, setInspectionId] = useState(null);
   const [existingInspections, setExistingInspections] = useState([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const fileRef = useRef(null);
-  const [currentDirection, setCurrentDirection] = useState(null);
+  const [photoTarget, setPhotoTarget] = useState(null);
 
   useEffect(() => {
     async function loadExisting() {
@@ -43,8 +54,8 @@ export default function DriverInspection() {
     loadExisting();
   }, [shift?.id]);
 
-  function toggleCheck(key) {
-    setChecks(prev => ({ ...prev, [key]: !prev[key] }));
+  function setCheckStatus(key, status) {
+    setChecks(prev => ({ ...prev, [key]: status }));
   }
 
   function getTimingForInspection(insp) {
@@ -90,33 +101,55 @@ export default function DriverInspection() {
   });
   const isInspectionLocked = inspectionType === 'pre' ? hasPreInspection : hasPostInspection;
 
-  async function submitChecklist() {
+  async function ensureInspectionCreated() {
+    if (inspectionId) return inspectionId;
     if (!shift) {
       addToast(t('inspection.no_shift_title'), 'error');
-      return;
+      return null;
     }
     if (isInspectionLocked) {
       addToast(inspectionType === 'pre' ? t('inspection.pre_already_done') : t('inspection.post_already_done'), 'warning');
-      return;
+      return null;
     }
+
     const vehicleId = shift.vehicleId
       || shift.vehicle?.id
       || shift.assignments?.[0]?.vehicleId
       || shift.assignments?.[0]?.vehicle?.id;
+
     if (!vehicleId) {
       addToast(t('errors.NO_VEHICLE_ASSIGNED'), 'error');
+      return null;
+    }
+
+    const res = await api.createInspection({
+      shiftId: shift.id,
+      vehicleId,
+      type: inspectionType,
+      notes
+    });
+
+    setInspectionId(res.data.id);
+    return res.data.id;
+  }
+
+  async function submitChecklist() {
+    const missingStatus = CHECKLIST_KEYS.some((key) => !checks[key]);
+    if (missingStatus) {
+      addToast(t('inspection.select_status_error'), 'error');
       return;
     }
+
+    const missingIssuePhotos = CHECKLIST_KEYS.filter((key) => checks[key] === 'bad' && !issuePhotos[key]);
+    if (missingIssuePhotos.length > 0) {
+      addToast(t('inspection.bad_photo_required'), 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      const type = inspectionType;
-      const res = await api.createInspection({
-        shiftId: shift.id,
-        vehicleId,
-        type,
-        notes
-      });
-      setInspectionId(res.data.id);
+      const createdInspectionId = await ensureInspectionCreated();
+      if (!createdInspectionId) return;
       setStep('photos');
     } catch (err) {
       const code = err.errorCode || err.code;
@@ -127,26 +160,49 @@ export default function DriverInspection() {
   }
 
   function triggerPhotoCapture(direction) {
-    setCurrentDirection(direction);
+    setPhotoTarget({ type: 'direction', key: direction });
+    fileRef.current?.click();
+  }
+
+  function triggerIssuePhotoCapture(checkKey) {
+    setPhotoTarget({ type: 'issue', key: checkKey });
     fileRef.current?.click();
   }
 
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0];
-    if (!file || !currentDirection || !inspectionId) return;
+    if (!file || !photoTarget || isInspectionLocked) return;
 
-    const formData = new FormData();
-    formData.append('photo', file);
-    formData.append('direction', currentDirection);
+    const direction = photoTarget.type === 'direction'
+      ? photoTarget.key
+      : CHECKLIST_PHOTO_CODES[photoTarget.key];
 
     try {
-      await api.uploadInspectionPhoto(inspectionId, currentDirection, formData);
-      setPhotos(prev => ({ ...prev, [currentDirection]: URL.createObjectURL(file) }));
+      const createdInspectionId = await ensureInspectionCreated();
+      if (!createdInspectionId) return;
+
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('direction', direction);
+
+      const res = await api.uploadInspectionPhoto(createdInspectionId, direction, formData);
+      if (photoTarget.type === 'direction') {
+        setPhotos(prev => ({ ...prev, [photoTarget.key]: URL.createObjectURL(file) }));
+      } else {
+        setIssuePhotos(prev => ({
+          ...prev,
+          [photoTarget.key]: {
+            preview: URL.createObjectURL(file),
+            photoUrl: res?.data?.photoUrl || ''
+          }
+        }));
+      }
     } catch (err) {
       const code = err.errorCode || err.code;
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     }
 
+    setPhotoTarget(null);
     e.target.value = '';
   }
 
@@ -157,7 +213,15 @@ export default function DriverInspection() {
     }
     setLoading(true);
     try {
-      await api.completeInspection(inspectionId, { checklistData: { checks, notes } });
+      await api.completeInspection(inspectionId, {
+        checklistData: {
+          checks,
+          notes,
+          badItemPhotos: Object.fromEntries(
+            Object.entries(issuePhotos).map(([key, value]) => [key, value.photoUrl || null])
+          )
+        }
+      });
       setStep('done');
     } catch (err) {
       const code = err.errorCode || err.code;
@@ -260,34 +324,74 @@ export default function DriverInspection() {
           <p className="text-muted text-sm mb-md">{t('inspection.checklist_desc')}</p>
           <div className="grid grid-2 gap-sm" style={{ marginBottom: 'var(--space-lg)' }}>
             {CHECKLIST_KEYS.map(key => (
-              <button
-                type="button"
+              <div
                 key={key}
                 className="card"
-                onClick={() => !isInspectionLocked && toggleCheck(key)}
-                disabled={isInspectionLocked}
                 style={{
                   padding: 'var(--space-md)',
-                  cursor: isInspectionLocked ? 'not-allowed' : 'pointer',
-                  borderColor: checks[key] ? 'var(--color-success)' : 'var(--color-border)',
-                  background: checks[key] ? 'var(--color-success-bg)' : 'var(--color-bg-secondary)',
+                  borderColor: checks[key] === 'bad'
+                    ? 'var(--color-danger)'
+                    : checks[key] === 'good'
+                      ? 'var(--color-success)'
+                      : 'var(--color-border)',
+                  background: checks[key] === 'bad'
+                    ? 'var(--color-danger-bg)'
+                    : checks[key] === 'good'
+                      ? 'var(--color-success-bg)'
+                      : 'var(--color-bg-secondary)',
                   opacity: isInspectionLocked ? 0.6 : 1,
                   textAlign: 'left'
                 }}
               >
-                <div className="flex items-center gap-sm">
-                  <div style={{
-                    width: '22px', height: '22px', borderRadius: '6px',
-                    border: `2px solid ${checks[key] ? 'var(--color-success)' : 'var(--color-border-light)'}`,
-                    background: checks[key] ? 'var(--color-success)' : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all var(--transition-fast)', flexShrink: 0
-                  }}>
-                    {checks[key] && <CheckCircle size={14} style={{ color: 'white' }} />}
-                  </div>
-                  <span className="text-sm">{t(`inspection.checklist.${key}`)}</span>
+                <div className="text-sm" style={{ marginBottom: 'var(--space-sm)', fontWeight: 600 }}>
+                  {t(`inspection.checklist.${key}`)}
                 </div>
-              </button>
+
+                <div className="flex items-center gap-sm" style={{ marginBottom: checks[key] === 'bad' ? 'var(--space-sm)' : 0 }}>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${checks[key] === 'good' ? 'btn-success' : 'btn-secondary'}`}
+                    onClick={() => !isInspectionLocked && setCheckStatus(key, 'good')}
+                    disabled={isInspectionLocked}
+                  >
+                    {t('inspection.good')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${checks[key] === 'bad' ? 'btn-danger' : 'btn-secondary'}`}
+                    onClick={() => !isInspectionLocked && setCheckStatus(key, 'bad')}
+                    disabled={isInspectionLocked}
+                  >
+                    {t('inspection.bad')}
+                  </button>
+                </div>
+
+                {checks[key] === 'bad' && (
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => triggerIssuePhotoCapture(key)}
+                      disabled={isInspectionLocked}
+                    >
+                      <Upload size={14} /> {issuePhotos[key] ? t('inspection.captured') : t('inspection.upload_proof_photo')}
+                    </button>
+                    {issuePhotos[key]?.preview && (
+                      <img
+                        src={issuePhotos[key].preview}
+                        alt={t(`inspection.checklist.${key}`)}
+                        style={{
+                          width: '100%',
+                          maxHeight: '120px',
+                          objectFit: 'cover',
+                          borderRadius: 'var(--radius-sm)',
+                          marginTop: 'var(--space-sm)'
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
 
@@ -347,8 +451,8 @@ export default function DriverInspection() {
             {CHECKLIST_KEYS.map(key => (
               <div key={key} className="flex items-center justify-between" style={{ padding: '0.375rem 0' }}>
                 <span className="text-sm">{t(`inspection.checklist.${key}`)}</span>
-                <span className={`badge badge-status ${checks[key] ? 'badge-success' : 'badge-danger'}`}>
-                  {checks[key] ? t('inspection.pass') : t('inspection.fail')}
+                <span className={`badge badge-status ${checks[key] === 'good' ? 'badge-success' : 'badge-danger'}`}>
+                  {checks[key] === 'good' ? t('inspection.good') : t('inspection.bad')}
                 </span>
               </div>
             ))}
@@ -374,7 +478,21 @@ export default function DriverInspection() {
             </div>
           </div>
 
-          {CHECKLIST_KEYS.some(key => !checks[key]) && (
+          {CHECKLIST_KEYS.some(key => checks[key] === 'bad') && (
+            <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
+              <h3 className="card-title" style={{ marginBottom: 'var(--space-md)' }}>{t('inspection.bad_items_photo_proof')}</h3>
+              {CHECKLIST_KEYS.filter(key => checks[key] === 'bad').map((key) => (
+                <div key={key} className="flex items-center justify-between" style={{ padding: '0.375rem 0' }}>
+                  <span className="text-sm">{t(`inspection.checklist.${key}`)}</span>
+                  <span className={issuePhotos[key] ? 'badge badge-status badge-success' : 'badge badge-status badge-danger'}>
+                    {issuePhotos[key] ? t('inspection.uploaded') : t('inspection.missing')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {CHECKLIST_KEYS.some(key => checks[key] === 'bad') && (
             <div className="alert alert-info mb-md">
               <AlertCircle size={16} />
               {t('inspection.flag_alert')}

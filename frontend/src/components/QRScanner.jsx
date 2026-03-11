@@ -56,11 +56,11 @@ export default function QRScanner({ onScan, onCancel }) {
       } catch (err) {
         console.error('Camera error:', err);
         if (typeof err === 'string' && err.includes('NotAllowedError')) {
-          setError(t('shift.camera_denied') || 'Camera access denied. Please allow camera permissions.');
+          setError(t('shift.camera_denied'));
         } else if (typeof err === 'string' && err.includes('NotFoundError')) {
-          setError(t('shift.no_camera') || 'No camera found on this device.');
+          setError(t('shift.no_camera'));
         } else {
-          setError(t('shift.camera_error') || 'Could not access camera. Try manual entry.');
+          setError(t('shift.camera_error'));
         }
       } finally {
         setLoading(false);
@@ -112,7 +112,7 @@ export default function QRScanner({ onScan, onCancel }) {
           style={{ borderRadius: 'calc(var(--radius-md) - 2px)', padding: '0.6rem' }}
         >
           <Camera size={16} />
-          <span style={{ marginLeft: '0.5rem' }}>{t('shift.scan_vehicle') || 'Scan Camera'}</span>
+          <span style={{ marginLeft: '0.5rem' }}>{t('shift.scan_camera')}</span>
         </button>
         <button
           className={`flex-1 btn-sm ${scanMode === 'manual' ? 'btn-primary' : 'btn-ghost'}`}
@@ -120,7 +120,7 @@ export default function QRScanner({ onScan, onCancel }) {
           style={{ borderRadius: 'calc(var(--radius-md) - 2px)', padding: '0.6rem' }}
         >
           <QrCode size={16} />
-          <span style={{ marginLeft: '0.5rem' }}>{t('shift.manual_qr_label') || 'Type Manually'}</span>
+          <span style={{ marginLeft: '0.5rem' }}>{t('shift.type_manually')}</span>
         </button>
       </div>
 
@@ -133,7 +133,7 @@ export default function QRScanner({ onScan, onCancel }) {
                 padding: '3rem', color: 'var(--color-text-muted)'
               }}>
                 <Loader size={24} className="spinning" />
-                <span style={{ marginLeft: '0.5rem' }}>Starting camera...</span>
+                <span style={{ marginLeft: '0.5rem' }}>{t('shift.starting_camera')}</span>
               </div>
             )}
             <div
@@ -152,7 +152,7 @@ export default function QRScanner({ onScan, onCancel }) {
                 border: '1px solid rgba(34, 197, 94, 0.3)'
               }}>
                 <CheckCircle size={18} style={{ color: 'var(--color-success)' }} />
-                <span style={{ fontWeight: 600 }}>Scanned: {scannedValue}</span>
+                <span style={{ fontWeight: 600 }}>{t('shift.scanned_value', { value: scannedValue })}</span>
               </div>
             )}
           </div>
@@ -160,7 +160,7 @@ export default function QRScanner({ onScan, onCancel }) {
           <div className="manual-entry-view card" style={{ padding: 'var(--space-xl)', background: 'var(--color-bg-secondary)' }}>
             <form onSubmit={handleManualSubmit}>
               <div className="form-group" style={{ marginBottom: 'var(--space-lg)' }}>
-                <label className="form-label">{t('shift.manual_qr_label') || 'Enter Vehicle Code:'}</label>
+                <label className="form-label">{t('shift.enter_vehicle_code')}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -178,7 +178,7 @@ export default function QRScanner({ onScan, onCancel }) {
                 style={{ width: '100%', padding: '1rem' }}
               >
                 <CheckCircle size={20} />
-                <span style={{ marginLeft: '0.5rem' }}>Confirm Assignment</span>
+                <span style={{ marginLeft: '0.5rem' }}>{t('shift.confirm_assignment')}</span>
               </button>
             </form>
           </div>

@@ -108,7 +108,7 @@ export default function DriverShift() {
         return insp.status === 'completed' && photoCount >= 4;
       });
       if (!hasCompletedInspection) {
-        addToast(t('shift.inspection_required') || t('errors.INSPECTION_REQUIRED'), 'warning');
+        addToast(t('shift.inspection_required'), 'warning');
         navigate('/driver/inspection');
         return;
       }
@@ -138,7 +138,7 @@ export default function DriverShift() {
         return insp.status === 'completed' && isAfterStart && photoCount >= 4;
       });
       if (startedAt && !hasEndInspection) {
-        addToast(t('errors.INSPECTION_REQUIRED') || t('shift.inspection_required'), 'warning');
+        addToast(t('shift.inspection_required'), 'warning');
         navigate('/driver/inspection');
         return;
       }

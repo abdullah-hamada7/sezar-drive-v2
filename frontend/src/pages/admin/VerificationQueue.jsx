@@ -25,11 +25,11 @@ export default function VerificationQueue() {
       const res = await api.getPendingVerifications(query);
       setPending(res.data || []);
     } catch (err) {
-      addToast(err.message, 'error');
+      addToast(err.message || t('common.error'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast, sortBy, sortOrder, status]);
+  }, [addToast, sortBy, sortOrder, status, t]);
 
   useEffect(() => {
     loadPending();
@@ -54,7 +54,7 @@ export default function VerificationQueue() {
       });
       loadPending();
     } catch (err) {
-      addToast(err.message, 'error');
+      addToast(err.message || t('common.error'), 'error');
     }
   }
 
@@ -70,7 +70,7 @@ export default function VerificationQueue() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('verification.title')}</h1>
-          <p className="page-subtitle">{t('verification.subtitle') || 'Review and manage driver identities'}</p>
+          <p className="page-subtitle">{t('verification.subtitle')}</p>
         </div>
         <div className="flex gap-sm">
           <select
@@ -109,7 +109,7 @@ export default function VerificationQueue() {
                 }}
                 onClick={() => { setStatus(s); setLoading(true); }}
               >
-                {t(`common.status.${s.toLowerCase()}`) || s}
+                {t(`verification.filter.${s.toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -123,7 +123,7 @@ export default function VerificationQueue() {
         <div className="card p-xl text-center glass-card" style={{ marginTop: '2rem' }}>
           <div className="text-muted mb-md"><User size={48} style={{ opacity: 0.2, margin: '0 auto' }} /></div>
           <p className="font-bold text-lg">{t('verification.card.empty')}</p>
-          <p className="text-sm text-muted">{t('verification.messages.no_pending_desc') || 'All caught up! No verifications match your filter.'}</p>
+          <p className="text-sm text-muted">{t('verification.messages.no_pending_desc')}</p>
         </div>
       ) : (
         <div className="grid gap-md">

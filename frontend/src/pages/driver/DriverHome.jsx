@@ -72,7 +72,7 @@ export default function DriverHome() {
         <div className="flex items-center gap-md">
           <div className="glow-effect" style={{ width: 64, height: 64, borderRadius: 'var(--radius-full)', background: 'var(--color-bg-tertiary)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--color-primary)', boxShadow: 'var(--shadow-glow)' }}>
             {user?.avatarUrl || user?.profilePhotoUrl
-              ? <img src={user.avatarUrl || user.profilePhotoUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={user.avatarUrl || user.profilePhotoUrl} alt={t('driver_home.avatar_alt')} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : <User size={32} className="text-primary" />}
           </div>
           <div>

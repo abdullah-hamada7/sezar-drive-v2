@@ -246,7 +246,7 @@ export default function ShiftsPage() {
                           <div className="inspection-badges">
                             {timing && (
                               <span className="badge badge-info" style={{ textTransform: 'capitalize' }}>
-                                {timing === 'before' ? t('inspection.before_shift') || 'Before shift' : timing === 'after' ? t('inspection.after_shift') || 'After shift' : t('inspection.during_shift') || 'During shift'}
+                                {timing === 'before' ? t('inspection.before_shift') : timing === 'after' ? t('inspection.after_shift') : t('inspection.during_shift')}
                               </span>
                             )}
                             <span className={`badge badge-status ${INSP_STATUS_BADGES[insp.status]}`}>
@@ -259,7 +259,7 @@ export default function ShiftsPage() {
                         <div className="inspection-section">
                           <div className="inspection-grid">
                             <div className="inspection-block">
-                              <div className="inspection-block-title">{t('inspection.marked') || 'Marked'}</div>
+                              <div className="inspection-block-title">{t('inspection.marked')}</div>
                               <div className="inspection-count">{marked.length}</div>
                               <div className="inspection-chips">
                                 {marked.length === 0 ? (
@@ -270,7 +270,7 @@ export default function ShiftsPage() {
                               </div>
                             </div>
                             <div className="inspection-block">
-                              <div className="inspection-block-title">{t('inspection.not_marked') || 'Not marked'}</div>
+                              <div className="inspection-block-title">{t('inspection.not_marked')}</div>
                               <div className="inspection-count">{unmarked.length}</div>
                               <div className="inspection-chips">
                                 {unmarked.length === 0 ? (

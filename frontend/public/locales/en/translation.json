@@ -128,6 +128,12 @@
     "vehicle_checkin": "Vehicle Check-in",
     "assigned": "Assigned",
     "scan_vehicle_desc": "Scan Vehicle QR",
+    "scan_camera": "Scan Camera",
+    "type_manually": "Type Manually",
+    "starting_camera": "Starting camera...",
+    "scanned_value": "Scanned: {{value}}",
+    "enter_vehicle_code": "Enter Vehicle Code:",
+    "confirm_assignment": "Confirm Assignment",
     "activate_and_drive_btn": "Activate Shift & Start Driving",
     "cancel_request_btn": "Cancel Shift Request",
     "cancel_request_confirm": "Are you sure you want to cancel this shift request?",
@@ -153,8 +159,10 @@
       "fluids": "Oil & Fluids",
       "seatbelts": "Seatbelts",
       "horn": "Horn",
-      "wipers": "Wipers & Washer"
+    "wipers": "Wipers & Washer"
     },
+    "marked": "Marked",
+    "not_marked": "Not marked",
     "notes_label": "Notes / Observations",
     "notes_placeholder": "Describe any issues or leave blank if everything is fine...",
     "continue_photos": "Continue to Photos",
@@ -171,11 +179,17 @@
     "review_complete": "Review & Complete",
     "summary_title": "Inspection Summary",
     "photos": "Photos",
-    "pass": "Pass",
-    "fail": "Fail",
+    "pass": "Good",
+    "fail": "Bad",
     "uploaded": "Uploaded",
     "missing": "Missing",
-    "flag_alert": "Items marked as 'Fail' will be flagged for admin review.",
+    "good": "Good",
+    "bad": "Bad",
+    "upload_proof_photo": "Upload proof photo",
+    "bad_items_photo_proof": "Bad Items Photo Proof",
+    "select_status_error": "Please mark all required items as Good or Bad.",
+    "bad_photo_required": "Please upload a photo proof for every item marked Bad.",
+    "flag_alert": "Items marked as 'Bad' will be flagged for admin review.",
     "submit": "Submit Inspection",
     "done_title": "Success",
     "done_desc": "Your inspection has been submitted successfully.",
@@ -200,6 +214,7 @@
     "refresh_status": "Refresh Status",
     "upload_docs": "Upload Documents",
     "edit_photo": "Edit Photo",
+    "avatar_alt": "Driver avatar",
     "current_vehicle": "Current Vehicle",
     "scan_qr_desc": "Scan vehicle QR code to start driving.",
     "enter_qr": "Enter QR Code (e.g. VH-QR-001)",
@@ -779,12 +794,22 @@
       "unknown": "Unknown Driver",
       "submitted": "Submitted: {{date}}",
       "selfie": "Selfie",
+      "shift_selfie": "Shift Selfie",
+      "profile_photo": "Profile Photo",
       "id_front": "ID Front",
       "id_back": "ID Back",
+      "id_short": "ID",
+      "zoom": "Zoom",
       "no_photo": "No {{label}}",
       "approve": "Approve",
       "reject": "Reject",
       "empty": "No pending verifications"
+    },
+    "filter": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "all": "All"
     },
     "messages": {
       "reject_prompt": "Enter rejection reason:",
@@ -793,6 +818,8 @@
       "confirm_reject": "Are you sure you want to reject this verification?",
       "success_approve": "Verification approved",
       "success_reject": "Verification rejected",
+      "review_failed": "Review failed",
+      "loading_queue": "Loading queue...",
       "no_pending_desc": "All caught up! No verifications match your filter."
     }
   },
@@ -870,6 +897,10 @@
     "card": {
       "title": "Active Drivers",
       "empty": "No active drivers currently"
+    },
+    "messages": {
+      "reconnecting": "Live tracking disconnected. Reconnecting...",
+      "load_failed": "Failed to load active drivers."
     }
   },
   "reports": {
@@ -899,5 +930,19 @@
       "expenses": "Total Expenses",
       "net": "Net Revenue"
     }
+  },
+  "error_boundary": {
+    "title": "Something went wrong",
+    "description": "The application encountered an unexpected error. We have been notified and are looking into it.",
+    "reload": "Reload Page",
+    "home": "Go to Home"
+  },
+  "face_capture": {
+    "process_failed": "Failed to process image.",
+    "camera_denied": "Camera access denied or not available.",
+    "capture_selfie": "Capture Selfie",
+    "confirm_identity": "Confirm Identity",
+    "retake": "Retake",
+    "captured_alt": "Captured selfie"
   }
 }

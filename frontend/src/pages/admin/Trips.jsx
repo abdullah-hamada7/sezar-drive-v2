@@ -32,7 +32,7 @@ export default function TripsPage() {
     dropoffLocation: '',
     price: '',
     scheduledTime: '',
-    passengers: [{ name: '', phone: '', companionCount: 0 }]
+    passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
   });
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [, setError] = useState('');
@@ -143,7 +143,7 @@ export default function TripsPage() {
         dropoffLocation: '',
         price: '',
         scheduledTime: '',
-        passengers: [{ name: '', phone: '', companionCount: 0 }]
+        passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
       });
       setSelectedDriverName('');
       setRefresh(r => r + 1);
@@ -366,7 +366,7 @@ export default function TripsPage() {
                           required
                         />
                       </div>
-                      <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                      <div className="form-group" style={{ maxWidth: '180px' }}>
                         <input
                           type="number"
                           className="form-input text-sm"
@@ -377,6 +377,22 @@ export default function TripsPage() {
                           onChange={e => {
                             const newPassengers = [...form.passengers];
                             newPassengers[0] = { ...newPassengers[0], companionCount: parseInt(e.target.value || '0', 10) };
+                            setForm({ ...form, passengers: newPassengers });
+                          }}
+                          required
+                        />
+                      </div>
+                      <div className="form-group" style={{ maxWidth: '180px' }}>
+                        <input
+                          type="number"
+                          className="form-input text-sm"
+                          placeholder={t('trips.modal.bags_ph')}
+                          value={form.passengers[0]?.bagCount ?? 0}
+                          min="0"
+                          step="1"
+                          onChange={e => {
+                            const newPassengers = [...form.passengers];
+                            newPassengers[0] = { ...newPassengers[0], bagCount: parseInt(e.target.value || '0', 10) };
                             setForm({ ...form, passengers: newPassengers });
                           }}
                           required
@@ -474,6 +490,9 @@ export default function TripsPage() {
                           )}
                           <div className="text-xs">
                             <span className="text-muted">{t('trips.modal.companion_count_ph')}:</span> <span className="font-medium">{p.companionCount ?? 0}</span>
+                          </div>
+                          <div className="text-xs">
+                            <span className="text-muted">{t('trips.modal.bags_ph')}:</span> <span className="font-medium">{p.bagCount ?? 0}</span>
                           </div>
                         </div>
                       </div>

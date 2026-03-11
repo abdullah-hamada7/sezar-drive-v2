@@ -118,7 +118,7 @@ export default function AdminsPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t('nav.admins') || 'Admins'}</h1>
+          <h1 className="page-title">{t('nav.admins')}</h1>
           <p className="page-subtitle">{t('admins_page.subtitle')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>

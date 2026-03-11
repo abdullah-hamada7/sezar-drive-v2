@@ -55,7 +55,7 @@ export default function AdminLayout() {
 
   const translatedNavItems = [
     { to: '/admin', icon: LayoutDashboard, label: t('nav.dashboard'), end: true },
-    ...(user?.adminRole === 'SUPER_ADMIN' ? [{ to: '/admin/admins', icon: UserCheck, label: t('nav.admins') || 'Admins' }] : []),
+    ...(user?.adminRole === 'SUPER_ADMIN' ? [{ to: '/admin/admins', icon: UserCheck, label: t('nav.admins') }] : []),
     { to: '/admin/drivers', icon: Users, label: t('nav.drivers') },
     { to: '/admin/vehicles', icon: Car, label: t('nav.vehicles') },
     { to: '/admin/shifts', icon: ClipboardCheck, label: t('nav.shifts') },

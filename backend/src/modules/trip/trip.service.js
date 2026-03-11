@@ -63,6 +63,12 @@ async function assignTrip(data, adminId, ipAddress) {
         passenger?.companionsCount ??
         0
       );
+      const bagCount = Number(
+        passenger?.bagCount ??
+        passenger?.bagsCount ??
+        passenger?.numberOfBags ??
+        0
+      );
 
       if (!passenger?.name || !String(passenger.name).trim()) {
         throw new ValidationError('Passenger name is required');
@@ -80,10 +86,15 @@ async function assignTrip(data, adminId, ipAddress) {
         throw new ValidationError('Companion count must be a non-negative integer');
       }
 
+      if (!Number.isInteger(bagCount) || bagCount < 0) {
+        throw new ValidationError('Bag count must be a non-negative integer');
+      }
+
       return {
         name: String(passenger.name).trim(),
         phone: String(passenger.phone).trim(),
         companionCount,
+        bagCount,
       };
     });
 

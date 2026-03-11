@@ -178,7 +178,7 @@ export default function DriversPage() {
         await api.reviewIdentity(data.id, { action: 'approve' });
       } else if (type === 'reactivate') {
         await api.reactivateDriver(data.id);
-        addToast(t('drivers.messages.updated') || 'Driver reactivated successfully', 'success');
+        addToast(t('drivers.messages.updated'), 'success');
       }
       load();
     } catch (err) {
