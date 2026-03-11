@@ -344,9 +344,9 @@
   "errors": {
     "fetch_failed": "Couldn’t load data. Check your connection and try again.",
     "NO_ACTIVE_SHIFT": "No active shift found. The driver must start and activate a shift first.",
-    "ACTIVE_TRIP_EXISTS": "This driver already has an assigned or active trip.",
+    "ACTIVE_TRIP_EXISTS": "You can’t end the shift while a trip is in progress.",
     "DRIVER_ALREADY_HAS_ACTIVE_OR_ASSIGNED_TRIP": "This driver already has an assigned or active trip.",
-    "SHIFT_HAS_ACTIVE_TRIP": "You can’t end the shift while there’s an assigned or active trip.",
+    "SHIFT_HAS_ACTIVE_TRIP": "You can’t end the shift while a trip is in progress.",
     "NO_VEHICLE_ASSIGNED": "No vehicle is assigned to this shift. Scan the vehicle QR first.",
     "INSPECTION_REQUIRED": "Inspection not completed. Finish the vehicle inspection before continuing.",
     "TRIP_TOO_EARLY": "This trip is scheduled for later. You can start it up to 1 hour before the scheduled time.",

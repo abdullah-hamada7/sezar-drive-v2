@@ -144,9 +144,9 @@ export default function DriverShift() {
       }
       const tripsRes = await tripService.getTrips('limit=50');
       const trips = tripsRes.data?.trips || [];
-      const hasActiveTrip = trips.some(t => t.status === 'ASSIGNED' || t.status === 'ACCEPTED' || t.status === 'IN_PROGRESS');
-      if (hasActiveTrip) {
-        addToast(t('errors.SHIFT_HAS_ACTIVE_TRIP'), 'warning');
+      const hasInProgressTrip = trips.some((trip) => trip.status === 'IN_PROGRESS');
+      if (hasInProgressTrip) {
+        addToast(t('errors.ACTIVE_TRIP_EXISTS'), 'warning');
         return;
       }
       await shiftService.closeShift(shift.id);

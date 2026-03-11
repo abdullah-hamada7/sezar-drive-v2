@@ -3,6 +3,7 @@ const { ConflictError, NotFoundError, ValidationError, ForbiddenError } = requir
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
 const { sanitizeDeep } = require('../../utils/sanitize');
+const { notifyAdmins } = require('../tracking/tracking.ws');
 
 /**
  * Create a full or checklist inspection for a shift.
@@ -35,6 +36,13 @@ async function createInspection(data, driverId, ipAddress) {
     ipAddress,
   });
 
+  notifyAdmins(
+    'inspection_created',
+    'Inspection Created',
+    'A driver created a new inspection.',
+    { inspectionId: inspection.id, shiftId, vehicleId, driverId }
+  );
+
   return inspection;
 }
 
@@ -51,6 +59,19 @@ async function uploadInspectionPhoto(inspectionId, direction, photoUrl, driverId
   const photo = await prisma.inspectionPhoto.create({
     data: { inspectionId, direction, photoUrl },
   });
+
+  notifyAdmins(
+    'inspection_photo_uploaded',
+    'Inspection Photo Uploaded',
+    'A driver uploaded an inspection photo.',
+    {
+      inspectionId: inspection.id,
+      shiftId: inspection.shiftId,
+      driverId,
+      direction,
+      photoId: photo.id,
+    }
+  );
 
   return { ...photo, photoUrl: await FileService.getUrl(photo.photoUrl) };
 }
@@ -94,6 +115,18 @@ async function completeInspection(inspectionId, driverId, checklistData, ipAddre
     newState: { status: 'completed' },
     ipAddress,
   });
+
+  notifyAdmins(
+    'inspection_completed',
+    'Inspection Completed',
+    'A driver completed an inspection.',
+    {
+      inspectionId,
+      shiftId: inspection.shiftId,
+      driverId,
+      type: inspection.type,
+    }
+  );
 
   const finalInspection = await prisma.inspection.findUnique({
     where: { id: inspectionId },

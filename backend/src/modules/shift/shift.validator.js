@@ -77,12 +77,12 @@ class ShiftValidator {
       throw new ConflictError('INSPECTION_PHOTOS_REQUIRED', 'All 4 sides of the vehicle must be photographed for end-shift inspection');
     }
 
-    // Check no active trip
+    // Check no in-progress trip
     const activeTrip = await prisma.trip.findFirst({
-      where: { shiftId, status: { in: ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS'] } },
+      where: { shiftId, status: 'IN_PROGRESS' },
     });
     if (activeTrip) {
-      throw new ConflictError('ACTIVE_TRIP_EXISTS', 'Cannot close shift with active trip', { tripId: activeTrip.id });
+      throw new ConflictError('ACTIVE_TRIP_EXISTS', 'Cannot close shift while a trip is in progress', { tripId: activeTrip.id });
     }
 
     return { endInspection, activeTrip };

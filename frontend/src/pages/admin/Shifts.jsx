@@ -15,6 +15,16 @@ const STATUS_BADGES = {
 };
 
 const CHECKLIST_KEYS = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
+const CHECKLIST_PHOTO_CODES = {
+  tires: 'tire',
+  lights: 'light',
+  brakes: 'brake',
+  mirrors: 'mirror',
+  fluids: 'fluid',
+  seatbelts: 'seat',
+  horn: 'horn',
+  wipers: 'wiper',
+};
 
 const INSP_STATUS_BADGES = {
   pending: 'badge-warning',
@@ -57,6 +67,33 @@ export default function ShiftsPage() {
       window.removeEventListener('ws:shift_closed', handleUpdate);
     };
   }, [load]);
+
+  useEffect(() => {
+    const refreshSelectedShiftInspections = async () => {
+      if (!showInspections || !selectedShift?.id) return;
+      try {
+        const res = await inspApi.getInspections(`shiftId=${selectedShift.id}`);
+        setSelectedShiftInspections(res.data || []);
+      } catch {
+        // Ignore transient refresh errors.
+      }
+    };
+
+    const handleInspectionUpdate = () => {
+      load();
+      refreshSelectedShiftInspections();
+    };
+
+    window.addEventListener('ws:inspection_created', handleInspectionUpdate);
+    window.addEventListener('ws:inspection_photo_uploaded', handleInspectionUpdate);
+    window.addEventListener('ws:inspection_completed', handleInspectionUpdate);
+
+    return () => {
+      window.removeEventListener('ws:inspection_created', handleInspectionUpdate);
+      window.removeEventListener('ws:inspection_photo_uploaded', handleInspectionUpdate);
+      window.removeEventListener('ws:inspection_completed', handleInspectionUpdate);
+    };
+  }, [load, selectedShift?.id, showInspections]);
 
   async function handleAdminClose(id) {
     setPromptData({ isOpen: true, shiftId: id });
@@ -226,12 +263,16 @@ export default function ShiftsPage() {
                     {selectedShiftInspections.map(insp => {
                       const timing = getInspectionTiming(insp);
                       const checks = insp.checklistData?.checks || insp.checklistData || {};
-                      const checkEntriesRaw = Object.entries(checks).filter(([key]) => key !== 'notes');
-                      const checkEntries = checkEntriesRaw.length > 0
-                        ? checkEntriesRaw
-                        : CHECKLIST_KEYS.map(key => [key, false]);
-                      const marked = checkEntries.filter(([, val]) => !!val).map(([key]) => key);
-                      const unmarked = checkEntries.filter(([, val]) => !val).map(([key]) => key);
+                      const badItemPhotos = insp.checklistData?.badItemPhotos || {};
+                      const checkEntries = CHECKLIST_KEYS.map((key) => {
+                        const value = checks[key];
+                        if (value === 'good' || value === true) return [key, 'good'];
+                        if (value === 'bad' || value === false) return [key, 'bad'];
+                        return [key, null];
+                      });
+                      const goodItems = checkEntries.filter(([, status]) => status === 'good').map(([key]) => key);
+                      const badItems = checkEntries.filter(([, status]) => status === 'bad').map(([key]) => key);
+                      const orderedBadItems = CHECKLIST_KEYS.filter((key) => badItems.includes(key));
 
                       return (
                       <div key={insp.id} className="inspection-card">
@@ -260,27 +301,54 @@ export default function ShiftsPage() {
                         <div className="inspection-section">
                           <div className="inspection-grid">
                             <div className="inspection-block">
-                              <div className="inspection-block-title">{t('inspection.marked')}</div>
-                              <div className="inspection-count">{marked.length}</div>
+                              <div className="inspection-block-title">{t('inspection.good')}</div>
+                              <div className="inspection-count">{goodItems.length}</div>
                               <div className="inspection-chips">
-                                {marked.length === 0 ? (
+                                {goodItems.length === 0 ? (
                                   <span className="text-xs text-muted">—</span>
-                                ) : marked.map(k => (
+                                ) : goodItems.map(k => (
                                   <span key={k} className="badge badge-success" style={{ fontSize: '0.65rem' }}>{t(`inspection.checklist.${k}`) || k}</span>
                                 ))}
                               </div>
                             </div>
                             <div className="inspection-block">
-                              <div className="inspection-block-title">{t('inspection.not_marked')}</div>
-                              <div className="inspection-count">{unmarked.length}</div>
+                              <div className="inspection-block-title">{t('inspection.bad')}</div>
+                              <div className="inspection-count">{badItems.length}</div>
                               <div className="inspection-chips">
-                                {unmarked.length === 0 ? (
+                                {badItems.length === 0 ? (
                                   <span className="text-xs text-muted">—</span>
-                                ) : unmarked.map(k => (
+                                ) : badItems.map(k => (
                                   <span key={k} className="badge badge-danger" style={{ fontSize: '0.65rem' }}>{t(`inspection.checklist.${k}`) || k}</span>
                                 ))}
                               </div>
                             </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {orderedBadItems.length > 0 && (
+                        <div className="inspection-section">
+                          <div className="inspection-block-title">{t('inspection.bad_items_photo_proof')}</div>
+                          <div className="inspection-proof-grid">
+                            {orderedBadItems.map((itemKey) => {
+                              const fallbackPhotoUrl = insp.photos?.find(
+                                (photo) => photo.direction === CHECKLIST_PHOTO_CODES[itemKey],
+                              )?.photoUrl;
+                              const proofUrl = badItemPhotos[itemKey] || fallbackPhotoUrl || null;
+
+                              return (
+                                <div key={itemKey} className="inspection-proof-item">
+                                  <div className="text-sm" style={{ fontWeight: 600 }}>{t(`inspection.checklist.${itemKey}`)}</div>
+                                  {proofUrl ? (
+                                    <a href={proofUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border border-border mt-xs">
+                                      <img src={proofUrl} alt={t(`inspection.checklist.${itemKey}`)} className="w-full" style={{ aspectRatio: '1 / 1', objectFit: 'cover' }} />
+                                    </a>
+                                  ) : (
+                                    <div className="text-xs text-muted mt-xs">{t('inspection.missing')}</div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -345,6 +413,8 @@ export default function ShiftsPage() {
         .inspection-count { font-size: 1.25rem; font-weight: 700; color: var(--color-text); margin-bottom: var(--space-xs); }
         .inspection-chips { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
         .inspection-photos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); }
+        .inspection-proof-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-md); }
+        .inspection-proof-item { background: var(--color-bg-tertiary); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-sm); }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
         .p-xs { padding: 0.25rem; }
         .px-sm { padding-left: 0.75rem; padding-right: 0.75rem; }
@@ -354,6 +424,7 @@ export default function ShiftsPage() {
           .grid-3 { grid-template-columns: 1fr; }
           .inspection-grid { grid-template-columns: 1fr; }
           .inspection-photos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .inspection-proof-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
       `}</style>
     </div>
