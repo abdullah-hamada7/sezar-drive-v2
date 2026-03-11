@@ -3,10 +3,11 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ToastContext } from '../contexts/toastContext';
 import { useContext } from 'react';
-import { Camera, ShipWheel, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { authService as api } from '../services/auth.service';
 import { http } from '../services/http.service';
+import SteeringWheelIcon from '../components/icons/SteeringWheelIcon';
 import './Login.css'; // Reuse login styles for consistency
 
 export default function DeviceVerificationPage() {
@@ -139,7 +140,7 @@ export default function DeviceVerificationPage() {
       <div className="login-card glass-card">
         <div className="login-header">
           <div className="login-logo text-gradient shadow-glow">
-            <ShipWheel size={32} />
+            <SteeringWheelIcon size={32} />
           </div>
           <h1 className="login-title text-gradient">{t('auth.device_security_title')}</h1>
           <p className="login-subtitle">
