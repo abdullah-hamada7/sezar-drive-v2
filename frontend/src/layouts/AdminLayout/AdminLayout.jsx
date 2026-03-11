@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Car, Route, ClipboardCheck,
   Receipt, AlertTriangle, MapPin, FileBarChart, Shield,
   Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
-  Sun, Moon, ShieldCheck
+  Sun, Moon, SteeringWheel
 } from 'lucide-react';
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
@@ -197,7 +197,7 @@ export default function AdminLayout() {
       <header className="mobile-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <ShieldCheck size={20} />
+            <SteeringWheel size={20} />
           </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
@@ -211,7 +211,7 @@ export default function AdminLayout() {
         <div className="sidebar-header">
           <div className="sidebar-brand">
             <div className="brand-icon">
-              <ShieldCheck size={20} />
+              <SteeringWheel size={20} />
             </div>
             <span className="brand-text">{t('common.brand')}</span>
           </div>
