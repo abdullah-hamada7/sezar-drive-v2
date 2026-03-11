@@ -492,6 +492,70 @@ async function getMe(userId) {
   return { user: await fileService.signDriverUrls(sanitizeUser(user)), accessToken };
 }
 
+/**
+ * Update current user's profile fields.
+ */
+async function updateMe(userId, data, ipAddress) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new NotFoundError('User');
+
+  const updates = {};
+  const nextName = typeof data.name === 'string' ? data.name.trim() : undefined;
+  const nextEmail = typeof data.email === 'string' ? data.email.trim().toLowerCase() : undefined;
+  const nextPhone = typeof data.phone === 'string' ? data.phone.trim() : undefined;
+
+  if (nextName !== undefined && nextName && nextName !== user.name) updates.name = nextName;
+  if (nextEmail !== undefined && nextEmail && nextEmail !== user.email) updates.email = nextEmail;
+  if (nextPhone !== undefined && nextPhone && nextPhone !== user.phone) updates.phone = nextPhone;
+
+  if (!Object.keys(updates).length) {
+    return { user: await fileService.signDriverUrls(sanitizeUser(user)), message: 'No profile changes detected' };
+  }
+
+  if (updates.email || updates.phone) {
+    const uniqueConditions = [];
+    if (updates.email) uniqueConditions.push({ email: updates.email });
+    if (updates.phone) uniqueConditions.push({ phone: updates.phone });
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: uniqueConditions,
+        id: { not: userId },
+      },
+    });
+
+    if (existing) {
+      if (updates.email && existing.email === updates.email) {
+        throw new ConflictError('EMAIL_ALREADY_EXISTS', 'User with this email already exists');
+      }
+      if (updates.phone && existing.phone === updates.phone) {
+        throw new ConflictError('PHONE_ALREADY_EXISTS', 'User with this phone already exists');
+      }
+      throw new ConflictError('USER_ALREADY_EXISTS', 'User with this email or phone already exists');
+    }
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: updates,
+  });
+
+  await AuditService.log({
+    actorId: userId,
+    actionType: 'user.profile_updated',
+    entityType: 'user',
+    entityId: userId,
+    previousState: { name: user.name, email: user.email, phone: user.phone },
+    newState: { name: updatedUser.name, email: updatedUser.email, phone: updatedUser.phone },
+    ipAddress,
+  });
+
+  return {
+    user: await fileService.signDriverUrls(sanitizeUser(updatedUser)),
+    message: 'Profile updated successfully',
+  };
+}
+
 function sanitizeUser(user) {
   const safe = { ...user };
   delete safe.passwordHash;
@@ -579,6 +643,7 @@ module.exports = {
   reviewIdentity,
   getPendingVerifications,
   getMe,
+  updateMe,
   updatePreferences,
   verifyResetToken,
   resetPassword,

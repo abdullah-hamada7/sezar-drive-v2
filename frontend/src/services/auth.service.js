@@ -28,6 +28,9 @@ export const authService = {
   getMe() {
     return http.request('/auth/me');
   },
+  updateMe(data) {
+    return http.request('/auth/me', { method: 'PUT', body: data });
+  },
   updatePreferences(data) {
     return http.request('/auth/preferences', { method: 'PUT', body: data });
   },

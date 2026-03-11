@@ -10,7 +10,7 @@ import OfflineBanner from "./components/OfflineBanner";
 
 // Loading Component
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-slate-950">
+  <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--color-bg)' }}>
     <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
   </div>
 );
@@ -36,6 +36,7 @@ const DamageReportsPage = lazy(() => import("./pages/admin/DamageReports"));
 const TrackingPage = lazy(() => import("./pages/admin/Tracking"));
 const ReportsPage = lazy(() => import("./pages/admin/Reports"));
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogs"));
+const AdminProfilePage = lazy(() => import("./pages/admin/Profile"));
 
 // Driver Pages
 const DriverLayout = lazy(() => import("./layouts/DriverLayout/DriverLayout"));
@@ -126,6 +127,7 @@ function AppRoutes() {
         <Route path="tracking" element={<TrackingPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="audit" element={<AuditLogsPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
         <Route path="verification" element={<VerificationQueuePage />} />
       </Route>
 

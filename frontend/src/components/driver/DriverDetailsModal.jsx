@@ -1,9 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { X, CreditCard, User, Phone, Mail } from 'lucide-react';
 
 export default function DriverDetailsModal({ driver, isOpen, onClose }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
 
   if (!isOpen || !driver) return null;
 
@@ -143,6 +145,16 @@ export default function DriverDetailsModal({ driver, isOpen, onClose }) {
         </div>
 
         <div className="modal-actions">
+          <button
+            className="btn btn-primary w-full"
+            onClick={() => {
+              onClose();
+              navigate('/change-password');
+            }}
+            style={{ padding: '0.75rem' }}
+          >
+            {t('auth.change_password')}
+          </button>
           <button className="btn btn-secondary w-full" onClick={onClose} style={{ padding: '0.75rem' }}>
             {t('drivers.modal.close')}
           </button>

@@ -6,7 +6,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import {
   LayoutDashboard, Users, Car, Route, ClipboardCheck,
   Receipt, AlertTriangle, MapPin, FileBarChart, Shield,
-  Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
+  Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck, User,
   Sun, Moon
 } from 'lucide-react';
 import './AdminLayout.css';
@@ -65,6 +65,7 @@ export default function AdminLayout() {
     { to: '/admin/tracking', icon: MapPin, label: t('nav.tracking') },
     { to: '/admin/reports', icon: FileBarChart, label: t('nav.reports') },
     { to: '/admin/audit', icon: Shield, label: t('nav.audit_logs') },
+    { to: '/admin/profile', icon: User, label: t('nav.profile') },
   ];
 
   useEffect(() => {
@@ -125,9 +126,9 @@ export default function AdminLayout() {
       <div className="notifications-container">
         {notifications.map(n => (
           <div key={n.id} className="notification-toast">
-            <div className="notification-icon">
-              {n.type.includes('damage') ? <AlertTriangle size={18} color="#ef4444" /> : <Info size={18} color="#3b82f6" />}
-            </div>
+              <div className="notification-icon">
+              {n.type.includes('damage') ? <AlertTriangle size={18} color="#ef4444" /> : <Info size={18} style={{ color: 'var(--color-primary)' }} />}
+              </div>
             <div className="notification-content">
               <div className="notification-title">{n.title}</div>
               <div className="notification-message">{n.message}</div>

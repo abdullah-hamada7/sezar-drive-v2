@@ -197,7 +197,7 @@
   color: var(--color-primary-light);
   opacity: 1;
   transform: translateY(-1px);
-  text-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
 
 .btn-ghost {

@@ -172,6 +172,26 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
+// ─── PUT /api/v1/auth/me ──────────────────────────
+router.put(
+  '/me',
+  authenticate,
+  [
+    body('name').optional().isString().trim().isLength({ min: 2, max: 255 }),
+    body('email').optional().isEmail().matches(EMAIL_REGEX).normalizeEmail(),
+    body('phone').optional().isString().trim().isLength({ min: 7, max: 20 }),
+  ],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const result = await authService.updateMe(req.user.id, req.body, req.clientIp);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 
 
 // ─── GET /api/v1/auth/identity/pending ────────────

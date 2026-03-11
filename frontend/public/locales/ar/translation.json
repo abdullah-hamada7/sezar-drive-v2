@@ -14,7 +14,8 @@
     "verification": "التحقق",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
-    "admins": "المشرفين"
+    "admins": "المشرفين",
+    "profile": "ملفي الشخصي"
   },
   "nav_driver": {
     "home": "الرئيسية",
@@ -69,6 +70,13 @@
     "passwords_dont_match": "كلمات المرور غير متطابقة",
     "change_password_failed": "فشل تغيير كلمة المرور",
     "invalid_token": "رمز غير صالح"
+  },
+  "admin_profile": {
+    "title": "ملفي الشخصي",
+    "subtitle": "عرض وتعديل معلومات الحساب",
+    "messages": {
+      "updated": "تم تحديث الملف الشخصي بنجاح"
+    }
   },
   "trip": {
     "title": "تفاصيل الرحلة",

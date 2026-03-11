@@ -14,7 +14,8 @@
     "verification": "Verification",
     "settings": "Settings",
     "logout": "Logout",
-    "admins": "Admins"
+    "admins": "Admins",
+    "profile": "My Profile"
   },
   "nav_driver": {
     "home": "Home",
@@ -69,6 +70,13 @@
     "passwords_dont_match": "Passwords do not match",
     "change_password_failed": "Change password failed",
     "invalid_token": "Invalid token"
+  },
+  "admin_profile": {
+    "title": "My Profile",
+    "subtitle": "View and update your account information",
+    "messages": {
+      "updated": "Profile updated successfully"
+    }
   },
   "trip": {
     "title": "Trip Details",
