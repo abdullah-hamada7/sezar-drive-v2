@@ -4,7 +4,8 @@ import { ThemeContext } from '../contexts/theme';
 import { ToastContext } from '../contexts/toastContext';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
-import { Eye, EyeOff, LogIn, Sun, Moon, ShipWheel } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Sun, Moon } from 'lucide-react';
+import BrandIcon from '../components/BrandIcon';
 import { authService as api } from '../services/auth.service';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import './Login.css';
@@ -100,7 +101,7 @@ export default function LoginPage() {
       <div className="login-card glass-card">
         <div className="login-header">
           <div className="login-logo glow-effect">
-            <ShipWheel size={32} />
+            <BrandIcon size={32} />
           </div>
           <h1 className="login-title text-gradient">{t('common.brand')}</h1>
           <p className="login-subtitle">
