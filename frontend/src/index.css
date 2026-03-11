@@ -7,9 +7,10 @@
 
 :root {
   /* ── Industrial Precision Tokens ── */
-  --color-primary: #a3a3a3;
-  --color-primary-dark: #737373;
-  --color-primary-light: #d4d4d4;
+  --color-primary: #3b82f6;
+  /* Sharp Blue */
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
@@ -17,19 +18,25 @@
   /* Vibrant Orange */
 
   /* Neutrals (Refined for High Contrast) */
-  --color-bg: #000000;
-  --color-bg-secondary: rgba(10, 10, 10, 0.86);
-  --color-bg-tertiary: #121212;
-  --color-bg-hover: #1e1e1e;
-  --color-surface: rgba(10, 10, 10, 0.92);
+  --color-bg: #030712;
+  /* Slate 950 */
+  --color-bg-secondary: rgba(17, 24, 39, 0.7);
+  /* Slate 900 w/ translucency */
+  --color-bg-tertiary: #1f2937;
+  /* Slate 800 */
+  --color-bg-hover: #374151;
+  /* Slate 700 */
+  --color-surface: rgba(17, 24, 39, 0.85);
 
   --color-text: #f9fafb;
   /* Slate 50 */
-  --color-text-secondary: #c4c4c4;
-  --color-text-muted: #8c8c8c;
+  --color-text-secondary: #9ca3af;
+  /* Slate 400 */
+  --color-text-muted: #6b7280;
+  /* Slate 500 */
 
-  --color-border: rgba(255, 255, 255, 0.12);
-  --color-border-light: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.04);
   --color-border-focus: var(--color-primary);
 
   /* Typography */
@@ -40,7 +47,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(255, 255, 255, 0.14);
+  --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.25);
 
   /* Layout Features */
   --radius-sm: 6px;
@@ -77,9 +84,6 @@
 }
 
 [data-theme="light"] {
-  --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
-  --color-primary-light: #60a5fa;
   --color-bg: #f8fafc;
   --color-bg-secondary: rgba(255, 255, 255, 0.8);
   --color-bg-tertiary: #f1f5f9;
@@ -300,12 +304,12 @@ img {
 .btn-primary {
   background: var(--color-primary);
   color: white;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--color-primary-light);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 40%, transparent);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 .btn-secondary {
@@ -662,7 +666,7 @@ tr:hover td:last-child {
 
 .stat-card:hover {
   transform: translateY(-4px);
-  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  border-color: rgba(59, 130, 246, 0.3);
   box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.5);
 }
 

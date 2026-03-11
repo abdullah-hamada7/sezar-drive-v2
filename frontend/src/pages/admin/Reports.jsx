@@ -129,7 +129,7 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: 'color-mix(in srgb, var(--color-primary) 14%, transparent)', color: 'var(--color-primary)' }}><Calendar size={24} /></div>
+              <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' }}><Calendar size={24} /></div>
               <div>
                 <div className="stat-value">{report.tripCount || 0}</div>
                 <div className="stat-label">{t('reports.stats.trips')}</div>

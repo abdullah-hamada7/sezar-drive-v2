@@ -32,3 +32,7 @@ plan
 terraform.tfvars
 .agent/
 *.pem
+test-results/
+frontend/e2e
+frontend/test-results/
+frontend/playwright-report/

@@ -10,7 +10,7 @@ import OfflineBanner from "./components/OfflineBanner";
 
 // Loading Component
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--color-bg)' }}>
+  <div className="flex items-center justify-center min-h-screen bg-slate-950">
     <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
   </div>
 );

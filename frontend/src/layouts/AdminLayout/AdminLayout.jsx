@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useContext, useMemo } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { ThemeContext } from '../../contexts/theme';
 import { useLanguage } from '../../hooks/useLanguage';
 import {
   LayoutDashboard, Users, Car, Route, ClipboardCheck,
   Receipt, AlertTriangle, MapPin, FileBarChart, Shield,
-  Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck, User,
+  Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
   Sun, Moon
 } from 'lucide-react';
 import './AdminLayout.css';
@@ -26,6 +26,7 @@ export default function AdminLayout() {
   });
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const wsRef = useRef(null);
 
   const displayedCounts = useMemo(() => {
@@ -65,7 +66,6 @@ export default function AdminLayout() {
     { to: '/admin/tracking', icon: MapPin, label: t('nav.tracking') },
     { to: '/admin/reports', icon: FileBarChart, label: t('nav.reports') },
     { to: '/admin/audit', icon: Shield, label: t('nav.audit_logs') },
-    { to: '/admin/profile', icon: User, label: t('nav.profile') },
   ];
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export default function AdminLayout() {
         {notifications.map(n => (
           <div key={n.id} className="notification-toast">
               <div className="notification-icon">
-              {n.type.includes('damage') ? <AlertTriangle size={18} color="#ef4444" /> : <Info size={18} style={{ color: 'var(--color-primary)' }} />}
+              {n.type.includes('damage') ? <AlertTriangle size={18} color="#ef4444" /> : <Info size={18} color="#3b82f6" />}
               </div>
             <div className="notification-content">
               <div className="notification-title">{n.title}</div>
@@ -199,7 +199,24 @@ export default function AdminLayout() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-user">
+          <button
+            type="button"
+            className="sidebar-user"
+            title={t('nav.profile')}
+            onClick={() => {
+              navigate('/admin/profile');
+              if (window.innerWidth <= 1024) setSidebarOpen(false);
+            }}
+            style={{
+              width: '100%',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              textAlign: 'inherit',
+              cursor: 'pointer',
+              color: 'inherit'
+            }}
+          >
             <div className="user-avatar">
               {(user?.name?.charAt(0) || user?.email?.charAt(0) || '').toUpperCase()}
             </div>
@@ -209,7 +226,7 @@ export default function AdminLayout() {
                 <div className="user-role">{user?.role}</div>
               </div>
             )}
-          </div>
+          </button>
           <div className="footer-actions flex gap-sm">
             <button
               className="btn-icon"

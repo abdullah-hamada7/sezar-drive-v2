@@ -100,7 +100,7 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    { icon: Users, label: t('dashboard.stats.drivers'), value: stats?.totalDrivers || 0, color: 'var(--color-primary)', bg: 'color-mix(in srgb, var(--color-primary) 14%, transparent)' },
+    { icon: Users, label: t('dashboard.stats.drivers'), value: stats?.totalDrivers || 0, color: '#6366f1', bg: 'rgba(99, 102, 241, 0.12)' },
     { icon: Car, label: t('dashboard.stats.vehicles'), value: stats?.totalVehicles || 0, color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' },
     { icon: Route, label: t('dashboard.stats.trips'), value: stats?.totalTrips || 0, color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
     { icon: ClipboardCheck, label: t('dashboard.stats.shifts'), value: stats?.activeShifts || 0, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' },
