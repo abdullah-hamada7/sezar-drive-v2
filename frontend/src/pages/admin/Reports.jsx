@@ -31,7 +31,7 @@ export default function ReportsPage() {
 
   async function downloadFile(type) {
     try {
-      const lang = i18n.language || 'en';
+      const lang = i18n.resolvedLanguage ?? i18n.language ?? 'en';
       if (!startDate || !endDate) {
         addToast(t('reports.messages.select_dates'), 'error');
         return;

@@ -93,7 +93,7 @@ export default function RecentActivityList() {
             <div key={item.id || idx} className="p-sm rounded flex justify-between items-center transition-all" style={rowStyle}>
               <div>
                 <div className="font-bold text-sm" style={{ color: item.status === 'CANCELLED' ? '#f43f5e' : (isLight ? '#0f172a' : '#f8fafc'), display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {(item.type || 'activity').toUpperCase()}
+                  {(item.type ? item.type : t('common.activity')).toUpperCase()}
                   <span className="opacity-40 text-[10px]">•</span>
                   <span className="opacity-80 text-[11px]">{item.status || '...'}</span>
                 </div>

@@ -200,7 +200,7 @@ export default function AdminLayout() {
         <div className="sidebar-footer">
           <div className="sidebar-user">
             <div className="user-avatar">
-              {user?.name?.charAt(0) || 'A'}
+              {(user?.name?.charAt(0) || user?.email?.charAt(0) || '').toUpperCase()}
             </div>
             {sidebarOpen && (
               <div className="user-info">
@@ -213,7 +213,7 @@ export default function AdminLayout() {
             <button
               className="btn-icon"
               onClick={toggleTheme}
-              title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              title={theme === 'dark' ? t('common.theme.light_mode') : t('common.theme.dark_mode')}
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>

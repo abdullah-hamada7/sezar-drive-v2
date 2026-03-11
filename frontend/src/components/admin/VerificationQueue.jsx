@@ -5,6 +5,8 @@ import { Check, X, User, Loader, ClipboardCheck } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import PromptModal from '../common/PromptModal';
 
+const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/150';
+
 export default function VerificationQueue() {
   const { t } = useTranslation();
   const { addToast } = useContext(ToastContext);
@@ -125,7 +127,7 @@ export default function VerificationQueue() {
                 <span className="text-xs text-muted font-bold uppercase tracking-wider">{t('verification.card.profile_photo')}</span>
                 <div className="aspect-square overflow-hidden rounded-md border border-boundary group relative">
                   <img
-                    src={item.driver?.avatarUrl || 'https://via.placeholder.com/150'}
+                    src={item.driver?.avatarUrl ?? PLACEHOLDER_IMAGE}
                     alt={t('verification.card.profile_photo')}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
@@ -135,7 +137,7 @@ export default function VerificationQueue() {
                 <span className="text-xs text-muted font-bold uppercase tracking-wider text-primary">{t('verification.card.shift_selfie')}</span>
                 <div className="aspect-square overflow-hidden rounded-md border-2 border-primary cursor-zoom-in relative group" onClick={() => window.open(item.startSelfieUrl, '_blank')}>
                   <img
-                    src={item.startSelfieUrl || 'https://via.placeholder.com/150'}
+                    src={item.startSelfieUrl ?? PLACEHOLDER_IMAGE}
                     alt={t('verification.card.shift_selfie')}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />

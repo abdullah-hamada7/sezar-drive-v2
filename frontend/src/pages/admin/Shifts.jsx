@@ -11,6 +11,7 @@ const STATUS_BADGES = {
   PendingVerification: 'badge-warning',
   Active: 'badge-success',
   Closed: 'badge-neutral',
+  DEFAULT: 'badge-neutral',
 };
 
 const CHECKLIST_KEYS = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
@@ -146,7 +147,7 @@ export default function ShiftsPage() {
                     <td style={{ fontWeight: 500 }}>{s.driver?.name || '—'}</td>
                     <td>{s.vehicle?.plateNumber || '—'}</td>
                     <td>
-                      <span className={`badge badge-status ${STATUS_BADGES[s.status] || 'badge-neutral'}`}>
+                      <span className={`badge badge-status ${STATUS_BADGES[s.status] ?? STATUS_BADGES.DEFAULT}`}>
                         {t(`common.status.${s.status.toLowerCase()}`)}
                       </span>
                     </td>
@@ -198,7 +199,7 @@ export default function ShiftsPage() {
                       <div className="text-sm text-muted">{selectedShift.vehicle?.plateNumber || '—'}</div>
                     </div>
                     <div className="flex items-center gap-sm">
-                      <span className={`badge badge-status ${STATUS_BADGES[selectedShift.status] || 'badge-neutral'}`}>{t(`common.status.${selectedShift.status.toLowerCase()}`)}</span>
+                      <span className={`badge badge-status ${STATUS_BADGES[selectedShift.status] ?? STATUS_BADGES.DEFAULT}`}>{t(`common.status.${selectedShift.status.toLowerCase()}`)}</span>
                       <span className="badge badge-neutral">{selectedShiftInspections.length} {t('shifts.actions.inspections')}</span>
                     </div>
                   </div>

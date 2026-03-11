@@ -271,8 +271,13 @@
     "confirm_password_placeholder": "Confirm new password",
     "enter_value_placeholder": "Enter value",
     "now": "Just now",
+    "activity": "Activity",
     "no_data": "No data available",
     "last_updated": "Latest updates",
+    "theme": {
+      "light_mode": "Light Mode",
+      "dark_mode": "Dark Mode"
+    },
     "errors": {
       "validation_failed": "Validation failed. Please check the fields below.",
       "check_fields": "Please fix the errors in the form before submitting."

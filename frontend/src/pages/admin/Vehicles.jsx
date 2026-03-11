@@ -12,6 +12,7 @@ const STATUS_BADGES = {
   in_use: 'badge-warning',
   damaged: 'badge-danger',
   maintenance: 'badge-neutral',
+  DEFAULT: 'badge-neutral',
 };
 
 export default function VehiclesPage() {
@@ -180,7 +181,7 @@ export default function VehiclesPage() {
                   <td>{t('vehicles.table.seats', { count: v.capacity })}</td>
                   <td><span className="flex items-center gap-sm"><QrCode size={14} /> {v.qrCode}</span></td>
                   <td>
-                    <span className={`badge badge-status ${STATUS_BADGES[v.status] || 'badge-neutral'}`}>
+                    <span className={`badge badge-status ${STATUS_BADGES[v.status] ?? STATUS_BADGES.DEFAULT}`}>
                       {t(`common.status.${v.status.toLowerCase()}`)}
                     </span>
                   </td>

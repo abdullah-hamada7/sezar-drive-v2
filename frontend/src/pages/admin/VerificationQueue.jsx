@@ -136,7 +136,7 @@ export default function VerificationQueue() {
                   <p className="text-xs text-muted">{t('verification.card.submitted', { date: new Date(item.createdAt).toLocaleString() })}</p>
                 </div>
                 <span className={`badge badge-status ${item.status === 'approved' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
-                  {t(`common.status.${(item.status || 'pending').toLowerCase()}`)}
+                  {t(`common.status.${(item.status ?? 'pending').toLowerCase()}`)}
                 </span>
               </div>
 

@@ -271,8 +271,13 @@
     "confirm_password_placeholder": "أكّد كلمة المرور الجديدة",
     "enter_value_placeholder": "أدخل قيمة",
     "now": "الآن",
+    "activity": "نشاط",
     "no_data": "لا يوجد بيانات متاحة",
     "last_updated": "آخر التحديثات",
+    "theme": {
+      "light_mode": "الوضع الفاتح",
+      "dark_mode": "الوضع الداكن"
+    },
     "errors": {
       "validation_failed": "فشل التحقق. يرجى مراجعة الحقول أدناه.",
       "check_fields": "يرجى تصحيح الأخطاء في النموذج قبل الإرسال."

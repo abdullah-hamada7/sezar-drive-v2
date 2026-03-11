@@ -154,9 +154,14 @@ export default function AuditPage() {
                     <div className="text-sm text-muted">{l.actor?.email}</div>
                   </td>
                   <td className="text-sm">
-                    <span className={`badge badge-status ${l.actor?.role === 'admin' ? 'badge-info' : 'badge-neutral'}`}>
-                      {t(`common.role.${l.actor?.role || 'system'}`, l.actor?.role || 'system')}
-                    </span>
+                    {(() => {
+                      const actorRole = l.actor?.role ?? 'system';
+                      return (
+                        <span className={`badge badge-status ${l.actor?.role === 'admin' ? 'badge-info' : 'badge-neutral'}`}>
+                          {t(`common.role.${actorRole}`)}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td>
                     <span className="badge badge-neutral" style={{ background: 'var(--color-bg-tertiary)' }}>

@@ -12,6 +12,7 @@ const STATUS_BADGES = {
   IN_PROGRESS: 'badge-warning',
   COMPLETED: 'badge-success',
   CANCELLED: 'badge-danger',
+  DEFAULT: 'badge-neutral',
 };
 
 export default function TripsPage() {
@@ -237,7 +238,7 @@ export default function TripsPage() {
                   </td>
                   <td><span className="flex items-center gap-sm"><DollarSign size={14} /> {t_obj.price} {t('common.currency')}</span></td>
                   <td>
-                    <span className={`badge badge-status ${STATUS_BADGES[t_obj.status] || 'badge-neutral'}`}>
+                    <span className={`badge badge-status ${STATUS_BADGES[t_obj.status] ?? STATUS_BADGES.DEFAULT}`}>
                       {t(`common.trip_status.${t_obj.status.toLowerCase()}`)}
                     </span>
                   </td>
@@ -367,6 +368,7 @@ export default function TripsPage() {
                         />
                       </div>
                       <div className="form-group" style={{ maxWidth: '180px' }}>
+                        <label className="form-label">{t('trips.modal.companion_count_ph')}</label>
                         <input
                           type="number"
                           className="form-input text-sm"
@@ -383,6 +385,7 @@ export default function TripsPage() {
                         />
                       </div>
                       <div className="form-group" style={{ maxWidth: '180px' }}>
+                        <label className="form-label">{t('trips.modal.bags_ph')}</label>
                         <input
                           type="number"
                           className="form-input text-sm"

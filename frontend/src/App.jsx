@@ -160,7 +160,7 @@ function GlobalToastListener() {
       const detail = event?.detail || {};
       const code = detail.code;
       const defaultMessage = detail.message || t('common.error');
-      const type = detail.type || 'error';
+      const type = detail.type ?? 'error';
 
       // Check for translation using the code first (e.g., errors.NO_ACTIVE_SHIFT)
       let finalMessage = defaultMessage;
