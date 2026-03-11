@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useContext } from "react";
+import { lazy, Suspense, useEffect, useContext, useRef, useCallback } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
@@ -202,6 +202,78 @@ function GlobalToastListener() {
   return null;
 }
 
+function GlobalRealtimeResync() {
+  const { isAdmin, isDriver } = useAuth();
+  const inFlightRef = useRef(false);
+  const lastRunRef = useRef(0);
+
+  const runResync = useCallback(async (detail) => {
+    const now = Date.now();
+    if (inFlightRef.current) return;
+    if (now - lastRunRef.current < 5000) return;
+
+    inFlightRef.current = true;
+    lastRunRef.current = now;
+
+    try {
+      if (isAdmin) {
+        const [statsMod, auditMod, trackingMod, authMod] = await Promise.all([
+          import('./services/stats.service'),
+          import('./services/audit.service'),
+          import('./services/tracking.service'),
+          import('./services/auth.service'),
+        ]);
+
+        await Promise.allSettled([
+          statsMod.statsService.getSummaryStats(),
+          auditMod.auditService.getAuditLogs('limit=5'),
+          trackingMod.trackingService.getActiveDrivers(),
+          authMod.authService.getPendingRescueRequests(),
+          authMod.authService.getPendingVerifications('status=pending&limit=10'),
+        ]);
+      }
+
+      if (isDriver) {
+        const [authMod, shiftMod, tripMod, expenseMod, inspectionMod] = await Promise.all([
+          import('./services/auth.service'),
+          import('./services/shift.service'),
+          import('./services/trip.service'),
+          import('./services/expense.service'),
+          import('./services/inspection.service'),
+        ]);
+
+        await Promise.allSettled([
+          authMod.authService.getMe(),
+          shiftMod.shiftService.getActiveShift(),
+          tripMod.tripService.getTrips('limit=20'),
+          expenseMod.expenseService.getExpenses('limit=20'),
+          inspectionMod.inspectionService.getInspections('limit=10'),
+        ]);
+      }
+    } finally {
+      inFlightRef.current = false;
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('ws:update', {
+          detail: { type: 'resync_completed', source: 'global-resync', trigger: detail?.eventType || null },
+        }));
+      }
+    }
+  }, [isAdmin, isDriver]);
+
+  useEffect(() => {
+    const handleResyncRequired = (event) => {
+      runResync(event?.detail || null);
+    };
+
+    window.addEventListener('ws:resync-required', handleResyncRequired);
+    return () => {
+      window.removeEventListener('ws:resync-required', handleResyncRequired);
+    };
+  }, [runResync]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -210,6 +282,7 @@ export default function App() {
           <ShiftProvider>
             <ToastProvider>
               <GlobalToastListener />
+              <GlobalRealtimeResync />
               <OfflineBanner />
               <AppRoutes />
             </ToastProvider>

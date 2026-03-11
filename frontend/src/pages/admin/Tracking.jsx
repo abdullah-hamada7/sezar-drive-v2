@@ -37,6 +37,24 @@ export default function TrackingPage() {
   const reconnectTimerRef = useRef(null);
   const fallbackPollTimerRef = useRef(null);
 
+  const loadInitialPositions = useCallback(async () => {
+    try {
+      const { trackingService: api } = await import('../../services/tracking.service');
+      const res = await api.getActiveDrivers();
+      const formatted = (res.data || []).map(d => ({
+        id: d.id,
+        name: d.name,
+        lat: d.lastKnownLat ? parseFloat(d.lastKnownLat) : null,
+        lng: d.lastKnownLng ? parseFloat(d.lastKnownLng) : null,
+        lastUpdate: d.lastLocationAt
+      }));
+      setDrivers(formatted.filter(d => d.lat !== null));
+    } catch (err) {
+      addToast(err.message || t('tracking.messages.load_failed'), 'error');
+    }
+    finally { setLoading(false); }
+  }, [addToast, t]);
+
   const connectWebSocket = useCallback(async () => {
     let token = http.getAccessToken();
     if (!token) {
@@ -105,25 +123,7 @@ export default function TrackingPage() {
         }
       } catch (err) { console.error(err); }
     };
-  }, [addToast, t]);
-
-  const loadInitialPositions = useCallback(async () => {
-    try {
-      const { trackingService: api } = await import('../../services/tracking.service');
-      const res = await api.getActiveDrivers();
-      const formatted = (res.data || []).map(d => ({
-        id: d.id,
-        name: d.name,
-        lat: d.lastKnownLat ? parseFloat(d.lastKnownLat) : null,
-        lng: d.lastKnownLng ? parseFloat(d.lastKnownLng) : null,
-        lastUpdate: d.lastLocationAt
-      }));
-      setDrivers(formatted.filter(d => d.lat !== null));
-    } catch (err) {
-      addToast(err.message || t('tracking.messages.load_failed'), 'error');
-    }
-    finally { setLoading(false); }
-  }, [addToast, t]);
+  }, [addToast, t, loadInitialPositions]);
 
   useEffect(() => {
     loadInitialPositions();
