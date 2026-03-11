@@ -1,9 +1,9 @@
 /**
- * BrandIcon — Shield with road inside.
+ * BrandIcon — Shield with a curving road/highway inside.
+ * Matches Option C: shield outline + sweeping road perspective.
  * Drop-in replacement for any lucide icon in brand-logo positions.
- * Accepts `size` and any extra SVG props.
  */
-export default function BrandIcon({ size = 20, ...props }) {
+export default function BrandIcon({ size = 20, className = '', ...props }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -12,21 +12,28 @@ export default function BrandIcon({ size = 20, ...props }) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
+      strokeWidth="1.75"
       strokeLinecap="round"
       strokeLinejoin="round"
+      className={className}
       {...props}
     >
       {/* Shield outline */}
-      <path d="M12 2l7.5 3.5v5c0 5.25-3.5 9.5-7.5 11.5-4-2-7.5-6.25-7.5-11.5v-5L12 2z" />
+      <path d="M12 2L4 5.5v5.5c0 5.5 3.5 10 8 12 4.5-2 8-6.5 8-12V5.5L12 2z" />
 
-      {/* Road — two parallel lane lines converging toward horizon */}
-      <line x1="10.5" y1="17" x2="11.2" y2="8" />
-      <line x1="13.5" y1="17" x2="12.8" y2="8" />
-      {/* Center dashed lane marker */}
-      <line x1="12" y1="10" x2="12" y2="11.5" strokeDasharray="1.2 1.2" />
-      <line x1="12" y1="13" x2="12" y2="14.5" strokeDasharray="1.2 1.2" />
-      <line x1="12" y1="15.5" x2="12" y2="17" strokeDasharray="1.2 1.2" />
+      {/* Curving road — sweeps from bottom-left to upper-right inside the shield */}
+      <path
+        d="M8 18c1-3 2.5-5.5 5-7.5 1.5-1.2 2.5-2 3.5-3"
+        strokeWidth="2.2"
+        fill="none"
+      />
+      {/* Second lane edge for road width */}
+      <path
+        d="M6.5 16.5c1.5-2.5 3-4.5 5-6 1.5-1.2 2.8-2 4-3"
+        strokeWidth="0.8"
+        opacity="0.5"
+        fill="none"
+      />
     </svg>
   );
 }
