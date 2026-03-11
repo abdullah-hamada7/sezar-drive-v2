@@ -6,6 +6,7 @@ import { useAuth } from "./hooks/useAuth";
 import { ToastProvider } from "./contexts/ToastContext.jsx";
 import { ShiftProvider } from "./contexts/ShiftContext.jsx";
 import { ToastContext } from "./contexts/toastContext";
+import OfflineBanner from "./components/OfflineBanner";
 
 // Loading Component
 const PageLoader = () => (
@@ -207,6 +208,7 @@ export default function App() {
           <ShiftProvider>
             <ToastProvider>
               <GlobalToastListener />
+              <OfflineBanner />
               <AppRoutes />
             </ToastProvider>
           </ShiftProvider>

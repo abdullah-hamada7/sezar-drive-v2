@@ -1,5 +1,37 @@
+import { offlineQueue } from './offline-queue.service';
+import { readCache } from './read-cache.service';
+
 const API_BASE =
   import.meta.env.VITE_API_URL || '/api/v1';
+
+const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const CACHEABLE_GET_PATTERNS = [
+  /^\/trips(?:$|\?|\/[^/?]+(?:\?|$))/,
+  /^\/shifts\/active(?:$|\?)/,
+  /^\/shifts(?:$|\?)/,
+  /^\/expenses(?:$|\?)/,
+  /^\/expenses\/categories(?:$|\?)/,
+  /^\/inspections(?:$|\?)/,
+];
+const BLOCKED_OFFLINE_PATTERNS = [
+  { method: 'POST', pattern: /^\/verify\/shift-selfie(?:$|\?)/ },
+  { method: 'POST', pattern: /^\/shifts(?:$|\?)/ },
+  { method: 'POST', pattern: /^\/trips(?:$|\?)/ },
+];
+
+function stripQuery(endpoint) {
+  return String(endpoint || '').split('?')[0] || '';
+}
+
+function isCacheableGetEndpoint(endpoint) {
+  return CACHEABLE_GET_PATTERNS.some((pattern) => pattern.test(endpoint));
+}
+
+function isBlockedOfflineWrite(method, endpoint) {
+  return BLOCKED_OFFLINE_PATTERNS.some(
+    (entry) => entry.method === method && entry.pattern.test(endpoint),
+  );
+}
 
 class HttpService {
   constructor() {
@@ -13,6 +45,7 @@ class HttpService {
   clearTokens() {
     this.accessToken = null;
     localStorage.removeItem('user');
+    readCache.clear().catch(() => {});
   }
 
   getAccessToken() {
@@ -21,30 +54,81 @@ class HttpService {
 
   async request(endpoint, options = {}) {
     const url = `${API_BASE}${endpoint}`;
-    const headers = { ...options.headers };
+    const requestOptions = { ...options };
+    const method = String(requestOptions.method || 'GET').toUpperCase();
+    const endpointPath = stripQuery(endpoint);
+    const headers = { ...(requestOptions.headers || {}) };
+    const rawBody = requestOptions.body;
+    const isFormDataBody = rawBody instanceof FormData;
 
-    const notifyToast = (message, type = 'error', code = null) => {
-      if (options.suppressToast || options.toast !== true) return;
+    const dispatchToast = (message, type = 'error', code = null) => {
       if (typeof window === 'undefined') return;
       window.dispatchEvent(new CustomEvent('app:toast', { detail: { message, type, code } }));
     };
 
-    if (this.accessToken && !options.skipAuth) {
+    const notifyToast = (message, type = 'error', code = null) => {
+      if (requestOptions.suppressToast || requestOptions.toast !== true) return;
+      dispatchToast(message, type, code);
+    };
+
+    if (this.accessToken && !requestOptions.skipAuth) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    if (options.body && !(options.body instanceof FormData)) {
+    if (requestOptions.body && !isFormDataBody) {
       headers['Content-Type'] = 'application/json';
-      options.body = JSON.stringify(options.body);
+      requestOptions.body = JSON.stringify(requestOptions.body);
     }
 
     let response;
     try {
-      response = await fetch(url, { ...options, headers, credentials: 'include' });
+      response = await fetch(url, { ...requestOptions, method, headers, credentials: 'include' });
     } catch (err) {
-      notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
       err.isNetworkError = true;
       err.code = 'NETWORK_ERROR';
+
+      if (method === 'GET') {
+        try {
+          const cached = await readCache.get(endpoint);
+          if (cached) {
+            return { data: cached.data, fromCache: true };
+          }
+        } catch {
+          // Ignore cache failures and preserve normal network error behavior.
+        }
+      }
+
+      const shouldHandleAsOfflineWrite =
+        WRITE_METHODS.includes(method)
+        && !requestOptions.skipOfflineQueue
+        && !requestOptions.skipAuth;
+
+      if (shouldHandleAsOfflineWrite) {
+        if (isFormDataBody || isBlockedOfflineWrite(method, endpointPath)) {
+          const blocked = new Error('This action requires an internet connection');
+          blocked.isNetworkError = true;
+          blocked.code = 'BLOCKED_OFFLINE';
+          dispatchToast(blocked.message, 'warning', 'BLOCKED_OFFLINE');
+          throw blocked;
+        }
+
+        try {
+          await offlineQueue.enqueue({
+            idempotencyKey: headers['Idempotency-Key'] || headers['idempotency-key'] || null,
+            endpoint,
+            method,
+            body: rawBody || null,
+            headers,
+          });
+        } catch {
+          notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
+          throw err;
+        }
+        dispatchToast('Saved offline - will sync when connected', 'info', 'QUEUED_OFFLINE');
+        return { data: null, queued: true };
+      }
+
+      notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
       throw err;
     }
 
@@ -56,12 +140,12 @@ class HttpService {
     };
 
     // Token refresh on 401
-    if (response.status === 401 && !options._retried && !options.skipAuth) {
+    if (response.status === 401 && !requestOptions._retried && !requestOptions.skipAuth) {
       const refreshed = await this.tryRefresh();
       if (refreshed) {
         headers['Authorization'] = `Bearer ${this.accessToken}`;
         try {
-          response = await fetch(url, { ...options, headers, credentials: 'include', _retried: true });
+          response = await fetch(url, { ...requestOptions, method, headers, credentials: 'include', _retried: true });
         } catch (err) {
           notifyToast('Network error. Please check your connection and try again.', 'error', 'NETWORK_ERROR');
           err.isNetworkError = true;
@@ -71,7 +155,7 @@ class HttpService {
       } else {
         notifySessionExpired();
       }
-    } else if (response.status === 401 && !options.skipAuth) {
+    } else if (response.status === 401 && !requestOptions.skipAuth) {
       notifySessionExpired();
     }
 
@@ -96,6 +180,9 @@ class HttpService {
 
     if (response.headers.get('content-type')?.includes('application/json')) {
       const json = await response.json();
+      if (method === 'GET' && isCacheableGetEndpoint(endpointPath)) {
+        readCache.set(endpoint, json).catch(() => {});
+      }
       return { data: json };
     }
     return response;

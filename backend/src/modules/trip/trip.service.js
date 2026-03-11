@@ -46,7 +46,11 @@ async function assignTrip(data, adminId, ipAddress) {
     throw new ValidationError('Pickup and dropoff locations are required');
   }
 
-  const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId);
+  const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId, {
+    shiftId: data.shiftId,
+    vehicleId: data.vehicleId,
+    allowUnassigned: true,
+  });
 
   const incomingPassengers = Array.isArray(data.passengers)
     ? data.passengers
@@ -101,7 +105,7 @@ async function assignTrip(data, adminId, ipAddress) {
   const trip = await prisma.trip.create({
     data: {
       driverId,
-      shiftId: shift.id,
+      shiftId: shift?.id || null,
       vehicleId: assignment.vehicleId,
       pickupLocation,
       dropoffLocation,
@@ -144,6 +148,8 @@ async function startTrip(tripId, driverId, ipAddress) {
     data: {
       status: 'IN_PROGRESS',
       actualStartTime: new Date(),
+      shiftId: assignment.shiftId,
+      vehicleId: assignment.vehicleId,
       version: { increment: 1 },
     },
   });

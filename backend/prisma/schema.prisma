@@ -169,8 +169,8 @@ model Shift {
 model Trip {
   id                 String         @id @default(uuid()) @db.Uuid
   driverId           String         @map("driver_id") @db.Uuid
-  shiftId            String         @map("shift_id") @db.Uuid
-  vehicleId          String         @map("vehicle_id") @db.Uuid
+  shiftId            String?        @map("shift_id") @db.Uuid
+  vehicleId          String?        @map("vehicle_id") @db.Uuid
   pickupLocation     String         @map("pickup_location") @db.VarChar(500)
   dropoffLocation    String         @map("dropoff_location") @db.VarChar(500)
   scheduledTime      DateTime?      @map("scheduled_time") @db.Timestamptz(6)
@@ -188,8 +188,8 @@ model Trip {
   locationLogs       LocationLog[]
   canceller          User?          @relation("TripCanceller", fields: [cancelledBy], references: [id])
   driver             User           @relation(fields: [driverId], references: [id])
-  shift              Shift          @relation(fields: [shiftId], references: [id])
-  vehicle            Vehicle        @relation(fields: [vehicleId], references: [id])
+  shift              Shift?         @relation(fields: [shiftId], references: [id])
+  vehicle            Vehicle?       @relation(fields: [vehicleId], references: [id])
 
   @@index([driverId])
   @@index([shiftId])

@@ -249,7 +249,7 @@ async function generateExcel(reportData, res, { lang } = {}) {
     tripsSheet.addRow({
       date: t.actualEndTime?.toISOString().slice(0, 19),
       driver: t.driver.name,
-      vehicle: t.vehicle.plateNumber,
+      vehicle: t.vehicle?.plateNumber || '-',
       pickup: t.pickupLocation,
       dropoff: t.dropoffLocation,
       price: parseFloat(t.price),

@@ -9,12 +9,73 @@ class TripValidator {
   /**
    * Validate preconditions for assigning a trip.
    */
-  static async validateAssignmentPreconditions(driverId) {
+  static async validateAssignmentPreconditions(driverId, options = {}) {
+    const { shiftId, vehicleId, allowUnassigned = false } = options;
     const driver = await prisma.user.findUnique({ where: { id: driverId } });
     if (!driver) throw new NotFoundError('Driver');
 
+    const openShiftStatuses = ['PendingVerification', 'Active'];
+
+    if (shiftId) {
+      const shift = await prisma.shift.findUnique({
+        where: { id: shiftId },
+        include: {
+          assignments: {
+            where: { active: true },
+            orderBy: { assignedAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+
+      if (!shift || shift.driverId !== driverId) {
+        throw new ConflictError('SHIFT_MISMATCH', 'Provided shift does not belong to the selected driver');
+      }
+
+      if (!openShiftStatuses.includes(shift.status)) {
+        throw new ConflictError('SHIFT_NOT_OPEN', 'Provided shift must be Active or PendingVerification');
+      }
+
+      const activeAssignment = shift.assignments[0] || null;
+      const resolvedVehicleId = vehicleId || activeAssignment?.vehicleId || shift.vehicleId;
+
+      if (!resolvedVehicleId) {
+        if (allowUnassigned) {
+          return {
+            driver,
+            shift: { id: shift.id, status: shift.status },
+            assignment: { vehicleId: null, shiftId: shift.id },
+          };
+        }
+        throw new ConflictError(
+          'NO_SHIFT_ASSIGNMENT',
+          'Driver does not have an active or pending shift assignment. Assign a vehicle first.',
+        );
+      }
+
+      if (vehicleId) {
+        const matchesActiveAssignment = activeAssignment && activeAssignment.vehicleId === vehicleId;
+        const matchesShiftVehicle = shift.vehicleId && shift.vehicleId === vehicleId;
+        if (!matchesActiveAssignment && !matchesShiftVehicle) {
+          throw new ConflictError('VEHICLE_SHIFT_MISMATCH', 'Provided vehicle does not match the selected shift');
+        }
+      }
+
+      return {
+        driver,
+        shift: { id: shift.id, status: shift.status },
+        assignment: { vehicleId: resolvedVehicleId, shiftId: shift.id },
+      };
+    }
+
     let assignment = await prisma.vehicleAssignment.findFirst({
-      where: { driverId, active: true },
+      where: {
+        driverId,
+        active: true,
+        shift: {
+          status: { in: openShiftStatuses },
+        },
+      },
       include: {
         shift: {
           select: { id: true, status: true },
@@ -24,41 +85,39 @@ class TripValidator {
     });
 
     if (!assignment) {
-      const latestAnyAssignment = await prisma.vehicleAssignment.findFirst({
-        where: { driverId },
-        include: {
-          shift: {
-            select: { id: true, status: true },
-          },
+      const latestOpenShiftWithVehicle = await prisma.shift.findFirst({
+        where: {
+          driverId,
+          status: { in: openShiftStatuses },
+          vehicleId: { not: null },
         },
-        orderBy: { assignedAt: 'desc' },
-      });
-
-      if (latestAnyAssignment) {
-        assignment = latestAnyAssignment;
-      }
-    }
-
-    if (!assignment) {
-      const latestShiftWithVehicle = await prisma.shift.findFirst({
-        where: { driverId, vehicleId: { not: null } },
         select: { id: true, status: true, vehicleId: true },
         orderBy: { createdAt: 'desc' },
       });
 
-      if (latestShiftWithVehicle) {
+      if (latestOpenShiftWithVehicle) {
         assignment = {
-          vehicleId: latestShiftWithVehicle.vehicleId,
+          vehicleId: latestOpenShiftWithVehicle.vehicleId,
           shift: {
-            id: latestShiftWithVehicle.id,
-            status: latestShiftWithVehicle.status,
+            id: latestOpenShiftWithVehicle.id,
+            status: latestOpenShiftWithVehicle.status,
           },
         };
       }
     }
 
     if (!assignment || !assignment.shift) {
-      throw new ConflictError('NO_SHIFT_AVAILABLE', `Driver ${driver.name} has no shift history yet. Assign a vehicle first.`);
+      if (allowUnassigned) {
+        return {
+          driver,
+          shift: null,
+          assignment: { vehicleId: null, shiftId: null },
+        };
+      }
+      throw new ConflictError(
+        'NO_SHIFT_ASSIGNMENT',
+        'Driver does not have an active or pending shift assignment. Assign a vehicle first.',
+      );
     }
 
     return { driver, shift: assignment.shift, assignment };

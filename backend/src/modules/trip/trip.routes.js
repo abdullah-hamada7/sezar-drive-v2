@@ -19,6 +19,8 @@ router.post(
   authenticate, enforcePasswordChanged, authorize('admin'),
   [
     body('driverId').isUUID().withMessage('Valid driver ID is required'),
+    body('shiftId').optional().isUUID().withMessage('shiftId must be a valid UUID'),
+    body('vehicleId').optional().isUUID().withMessage('vehicleId must be a valid UUID'),
     body('pickupLocation').optional().notEmpty().withMessage('Pickup location is required').trim().escape(),
     body('pickup').optional().notEmpty().withMessage('Pickup location is required').trim().escape(),
     body('dropoffLocation').optional().notEmpty().withMessage('Dropoff location is required').trim().escape(),
@@ -46,6 +48,8 @@ router.post(
   authenticate, enforcePasswordChanged, authorize('admin'),
   [
     body('driverId').isUUID().withMessage('Valid driver ID is required'),
+    body('shiftId').optional().isUUID().withMessage('shiftId must be a valid UUID'),
+    body('vehicleId').optional().isUUID().withMessage('vehicleId must be a valid UUID'),
     body('pickupLocation').optional().notEmpty().withMessage('Pickup location is required').trim().escape(),
     body('pickup').optional().notEmpty().withMessage('Pickup location is required').trim().escape(),
     body('dropoffLocation').optional().notEmpty().withMessage('Dropoff location is required').trim().escape(),
