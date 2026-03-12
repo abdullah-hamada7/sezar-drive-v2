@@ -239,7 +239,13 @@
     "status_refreshed": "Status refreshed",
     "photo_updated": "Profile photo updated",
     "recent_activity": "Recent Activity",
-    "shift_performance": "Shift Performance"
+    "shift_performance": "Shift Performance",
+    "activity_types": {
+      "trip": "Trip",
+      "expense": "Expense"
+    },
+    "activity_trip_to": "Trip to {{location}}",
+    "expense_default_title": "Expense"
   },
   "common": {
     "save": "Save",
@@ -547,6 +553,7 @@
       "add_title": "Add New Driver",
       "edit_title": "Edit Driver",
       "avatar": "Personal Photo",
+      "selfie_label": "Selfie Photo",
       "id_card_front": "National ID (Front)",
       "id_card_back": "National ID (Back)",
       "id_front": "National ID (Front)",

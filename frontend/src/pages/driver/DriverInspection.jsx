@@ -1,4 +1,4 @@
-import { useState, useRef, useContext, useEffect } from 'react';
+import { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { inspectionService as api } from '../../services/inspection.service';
 import { offlineQueue } from '../../services/offline-queue.service';
@@ -43,21 +43,38 @@ export default function DriverInspection() {
   const fileRef = useRef(null);
   const [photoTarget, setPhotoTarget] = useState(null);
 
-  useEffect(() => {
-    async function loadExisting() {
-      if (!shift?.id) return;
-      setLoadingExisting(true);
-      try {
-        const res = await api.getInspections(`shiftId=${shift.id}`);
-        setExistingInspections(res.data || []);
-      } catch (err) {
-        console.error('Failed to load inspections:', err);
-      } finally {
-        setLoadingExisting(false);
-      }
+  const loadExisting = useCallback(async () => {
+    if (!shift?.id) return;
+    setLoadingExisting(true);
+    try {
+      const res = await api.getInspections(`shiftId=${shift.id}`);
+      setExistingInspections(res.data || []);
+    } catch (err) {
+      console.error('Failed to load inspections:', err);
+    } finally {
+      setLoadingExisting(false);
     }
-    loadExisting();
   }, [shift?.id]);
+
+  useEffect(() => {
+    loadExisting();
+  }, [loadExisting]);
+
+  useEffect(() => {
+    const handleInspectionUpdate = () => {
+      loadExisting();
+    };
+
+    window.addEventListener('ws:inspection_created', handleInspectionUpdate);
+    window.addEventListener('ws:inspection_photo_uploaded', handleInspectionUpdate);
+    window.addEventListener('ws:inspection_completed', handleInspectionUpdate);
+
+    return () => {
+      window.removeEventListener('ws:inspection_created', handleInspectionUpdate);
+      window.removeEventListener('ws:inspection_photo_uploaded', handleInspectionUpdate);
+      window.removeEventListener('ws:inspection_completed', handleInspectionUpdate);
+    };
+  }, [loadExisting]);
 
   function setCheckStatus(key, status) {
     setChecks(prev => ({ ...prev, [key]: status }));
@@ -260,8 +277,8 @@ export default function DriverInspection() {
           const formData = new FormData();
           formData.append('photo', issue.file);
           formData.append('direction', issue.direction);
-          const uploadRes = await api.uploadInspectionPhoto(createdInspectionId, issue.direction, formData);
-          badItemPhotos[checkKey] = uploadRes?.data?.photoUrl || null;
+          await api.uploadInspectionPhoto(createdInspectionId, issue.direction, formData);
+          badItemPhotos[checkKey] = issue.direction;
         }
 
         await api.completeInspection(createdInspectionId, {
@@ -277,6 +294,7 @@ export default function DriverInspection() {
       }
 
       setStep('done');
+      await loadExisting();
     } catch (err) {
       const code = err.errorCode || err.code;
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');

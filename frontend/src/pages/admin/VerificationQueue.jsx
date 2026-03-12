@@ -39,9 +39,11 @@ export default function VerificationQueue() {
     const handleUpdate = () => loadPending();
     window.addEventListener('ws:identity_upload', handleUpdate);
     window.addEventListener('ws:identity_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     return () => {
       window.removeEventListener('ws:identity_upload', handleUpdate);
       window.removeEventListener('ws:identity_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
     };
   }, [loadPending]);
 

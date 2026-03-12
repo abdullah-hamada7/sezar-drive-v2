@@ -39,16 +39,29 @@
 }
 
 .brand-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  width: 34px;
+  height: 34px;
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22), transparent 52%),
+    linear-gradient(140deg, var(--color-primary), var(--color-primary-dark));
   border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35), var(--shadow-glow);
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
+}
+
+[data-theme="light"] .brand-icon {
+  border-color: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16), var(--shadow-glow);
 }
 
 .brand-text {

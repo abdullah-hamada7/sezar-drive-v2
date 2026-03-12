@@ -18,6 +18,7 @@ tests/
 # Add commands for Markdown documentation
 
 ## Code Style
+Always use Context7 when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 
 Markdown documentation: Follow standard conventions
 

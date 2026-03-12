@@ -105,6 +105,7 @@ export default function AdminLayout() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          const isHeavyTrackingEvent = data?.type === 'driver_position' || data?.type === 'initial_positions';
           const eventType = data?.type === 'notification' ? data?.payload?.type || 'notification' : data?.type;
           const guard = evaluateRealtimeEvent('admin', eventType, data);
 
@@ -125,9 +126,15 @@ export default function AdminLayout() {
               if (payload?.type) {
                 window.dispatchEvent(new CustomEvent(`ws:${payload.type}`, { detail: payload }));
               }
+              if (!isHeavyTrackingEvent) {
+                window.dispatchEvent(new CustomEvent('ws:update', { detail: payload }));
+              }
             }
           } else if (data.type && typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent(`ws:${data.type}`, { detail: data }));
+            if (!isHeavyTrackingEvent) {
+              window.dispatchEvent(new CustomEvent('ws:update', { detail: data }));
+            }
           }
         } catch (err) { console.error('WS Error:', err); }
       };

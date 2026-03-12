@@ -239,7 +239,13 @@
     "status_refreshed": "تم تحديث الحالة",
     "photo_updated": "تم تحديث الصورة الشخصية",
     "recent_activity": "النشاط الأخير",
-    "shift_performance": "أداء المناوبات"
+    "shift_performance": "أداء المناوبات",
+    "activity_types": {
+      "trip": "رحلة",
+      "expense": "مصروف"
+    },
+    "activity_trip_to": "رحلة إلى {{location}}",
+    "expense_default_title": "مصروف"
   },
   "common": {
     "save": "حفظ",
@@ -363,6 +369,9 @@
     "SHIFT_HAS_ACTIVE_TRIP": "لا يمكنك إنهاء المناوبة أثناء وجود رحلة قيد التنفيذ.",
     "NO_VEHICLE_ASSIGNED": "لا توجد مركبة معينة لمناوبتك الحالية.",
     "INSPECTION_REQUIRED": "لم يتم إكمال فحص المركبة.",
+    "INSPECTION_PHOTOS_REQUIRED": "يرجى رفع صور الجهات الأربع للمركبة قبل المتابعة.",
+    "TRIP_TOO_EARLY": "هذه الرحلة مجدولة لوقت لاحق. يمكنك بدء الرحلة قبل الموعد بساعة واحدة فقط.",
+    "ADMIN_OVERRIDE_REQUIRED": "فقط المسؤول يمكنه إلغاء الرحلة بعد أن تبدأ.",
     "IDENTITY_NOT_VERIFIED": "لم يتم التحقق من هوية السائق.",
     "NETWORK_ERROR": "خطأ في الشبكة. يرجى التحقق من اتصالك.",
     "UNAUTHORIZED": "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.",
@@ -396,6 +405,7 @@
     "TOO_MANY_REQUESTS": "محاولات كثيرة جداً. يرجى المحاولة مرة أخرى لاحقاً.",
     "PAYLOAD_TOO_LARGE": "الملف المرفوع كبير جداً.",
     "CORS_BLOCKED": "تم حظر الطلب. يرجى الاتصال بالدعم.",
+    "VALIDATION_ERROR": "بعض الحقول مفقودة أو غير صحيحة. يرجى المراجعة والمحاولة مرة أخرى.",
     "validation_failed": "فشل التحقق. يرجى مراجعة الحقول أدناه.",
     "check_fields": "يرجى تصحيح الأخطاء في النموذج قبل الإرسال."
   },

@@ -62,11 +62,13 @@ export default function TripsPage() {
     window.addEventListener('ws:trip_started', handleUpdate);
     window.addEventListener('ws:trip_completed', handleUpdate);
     window.addEventListener('ws:trip_cancelled', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     return () => {
       window.removeEventListener('ws:trip_assigned', handleUpdate);
       window.removeEventListener('ws:trip_started', handleUpdate);
       window.removeEventListener('ws:trip_completed', handleUpdate);
       window.removeEventListener('ws:trip_cancelled', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
     };
   }, []);
 

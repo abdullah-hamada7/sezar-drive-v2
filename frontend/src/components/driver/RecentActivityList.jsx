@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { statsService } from '../../services/stats.service';
 import { ThemeContext } from '../../contexts/theme';
@@ -10,23 +10,42 @@ export default function RecentActivityList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    async function loadActivity() {
-      try {
-        setLoading(true);
-        setError(null);
-        const res = await statsService.getDriverActivity();
-        const result = res.data || res;
-        setData(Array.isArray(result) ? result : []);
-      } catch (err) {
-        console.error('Failed to load activity:', err);
-        setError(t('errors.fetch_failed'));
-      } finally {
-        setLoading(false);
-      }
+  const loadActivity = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await statsService.getDriverActivity();
+      const result = res.data || res;
+      setData(Array.isArray(result) ? result : []);
+    } catch (err) {
+      console.error('Failed to load activity:', err);
+      setError(t('errors.fetch_failed'));
+    } finally {
+      setLoading(false);
     }
-    loadActivity();
   }, [t]);
+
+  useEffect(() => {
+    loadActivity();
+  }, [loadActivity]);
+
+  useEffect(() => {
+    const handleRefresh = () => loadActivity();
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      loadActivity();
+    };
+
+    window.addEventListener('ws:update', handleRefresh);
+    window.addEventListener('online', handleRefresh);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('ws:update', handleRefresh);
+      window.removeEventListener('online', handleRefresh);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [loadActivity]);
 
   const formatTime = (ts) => {
     if (!ts) return '—';
@@ -46,6 +65,39 @@ export default function RecentActivityList() {
       return new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(-diffHours, 'hour');
     }
     return d.toLocaleDateString();
+  };
+
+  const getActivityTypeLabel = (item) => {
+    const type = String(item?.type || '').toLowerCase();
+    if (!type) return t('common.activity');
+    return t(`driver_home.activity_types.${type}`, type);
+  };
+
+  const getActivityStatusLabel = (item) => {
+    const status = String(item?.status || '').toLowerCase();
+    if (!status) return '—';
+    if (String(item?.type || '').toLowerCase() === 'trip') {
+      return t(`common.trip_status.${status}`, item.status);
+    }
+    return t(`common.status.${status}`, item.status);
+  };
+
+  const getActivityTitle = (item) => {
+    const type = String(item?.type || '').toLowerCase();
+    const rawTitle = String(item?.title || '').trim();
+    if (!rawTitle) return '—';
+
+    if (type === 'trip') {
+      const prefix = 'Trip to ';
+      const location = rawTitle.startsWith(prefix) ? rawTitle.slice(prefix.length).trim() : rawTitle;
+      return t('driver_home.activity_trip_to', { location });
+    }
+
+    if (type === 'expense' && rawTitle.toLowerCase() === 'expense') {
+      return t('driver_home.expense_default_title');
+    }
+
+    return rawTitle;
   };
 
   const isLight = theme === 'light';
@@ -93,11 +145,11 @@ export default function RecentActivityList() {
             <div key={item.id || idx} className="p-sm rounded flex justify-between items-center transition-all" style={rowStyle}>
               <div>
                 <div className="font-bold text-sm" style={{ color: item.status === 'CANCELLED' ? '#f43f5e' : (isLight ? '#0f172a' : '#f8fafc'), display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {(item.type ? item.type : t('common.activity')).toUpperCase()}
+                  {getActivityTypeLabel(item)}
                   <span className="opacity-40 text-[10px]">•</span>
-                  <span className="opacity-80 text-[11px]">{item.status || '...'}</span>
+                  <span className="opacity-80 text-[11px]">{getActivityStatusLabel(item)}</span>
                 </div>
-                <div className="text-xs truncate max-w-[180px]" style={mutedStyle}>{item.title || '—'}</div>
+                <div className="text-xs truncate max-w-[180px]" style={mutedStyle}>{getActivityTitle(item)}</div>
               </div>
               <div className="text-right">
                 <div style={{ color: amountColor(item.amount), fontWeight: 700, letterSpacing: '0.01em' }}>

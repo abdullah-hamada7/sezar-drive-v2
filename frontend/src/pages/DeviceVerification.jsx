@@ -3,7 +3,8 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ToastContext } from '../contexts/toastContext';
 import { useContext } from 'react';
-import { Camera, RefreshCw, CheckCircle2, ShipWheel } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2 } from 'lucide-react';
+import BrandIcon from '../components/BrandIcon';
 import { useAuth } from '../hooks/useAuth';
 import { authService as api } from '../services/auth.service';
 import { http } from '../services/http.service';
@@ -139,7 +140,7 @@ export default function DeviceVerificationPage() {
       <div className="login-card glass-card">
         <div className="login-header">
           <div className="login-logo text-gradient shadow-glow">
-            <ShipWheel size={32} />
+            <BrandIcon size={32} />
           </div>
           <h1 className="login-title text-gradient">{t('auth.device_security_title')}</h1>
           <p className="login-subtitle">

@@ -187,10 +187,26 @@ export default function QRScanner({ onScan, onCancel }) {
 
       {/* Hide default html5-qrcode styles */}
       <style>{`
+        .qr-scanner-wrapper {
+          width: 100%;
+        }
+
+        .qr-scanner-content {
+          width: 100%;
+        }
+
         #qr-reader {
           border: none !important;
           box-shadow: none !important;
+          width: 100% !important;
         }
+
+        #qr-reader video {
+          width: 100% !important;
+          height: auto !important;
+          border-radius: var(--radius-lg) !important;
+        }
+
         #qr-reader__dashboard_section_csr button {
           background: var(--color-primary) !important;
           color: white !important;
@@ -221,6 +237,24 @@ export default function QRScanner({ onScan, onCancel }) {
         }
         #qr-reader__dashboard_section_fsr {
           display: none !important;
+        }
+
+        @media (max-width: 520px) {
+          .segmented-control {
+            flex-direction: column;
+            gap: 0.35rem;
+            padding: 0.35rem;
+          }
+
+          .manual-entry-view {
+            padding: var(--space-md) !important;
+          }
+
+          .manual-entry-view .form-input {
+            font-size: 1rem !important;
+            letter-spacing: 1px !important;
+            text-align: start !important;
+          }
         }
       `}</style>
 

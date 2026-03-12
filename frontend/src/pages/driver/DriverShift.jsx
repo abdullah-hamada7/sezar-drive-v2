@@ -28,6 +28,57 @@ export default function DriverShift() {
     loadUser();
   }, []);
 
+  useEffect(() => {
+    const handleRealtimeUpdate = () => {
+      refreshShift();
+    };
+
+    window.addEventListener('ws:update', handleRealtimeUpdate);
+    window.addEventListener('online', handleRealtimeUpdate);
+
+    return () => {
+      window.removeEventListener('ws:update', handleRealtimeUpdate);
+      window.removeEventListener('online', handleRealtimeUpdate);
+    };
+  }, [refreshShift]);
+
+  function normalizeScannedQrValue(rawValue) {
+    if (typeof rawValue !== 'string') return String(rawValue || '').trim();
+
+    let candidate = rawValue.trim();
+    if (!candidate) return candidate;
+
+    if ((candidate.startsWith('{') && candidate.endsWith('}')) || (candidate.startsWith('[') && candidate.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(candidate);
+        const extracted = parsed?.qrCode || parsed?.qrIdentifier || parsed?.code || parsed?.id;
+        if (typeof extracted === 'string' && extracted.trim()) {
+          candidate = extracted.trim();
+        }
+      } catch {
+        // Use original candidate if JSON parsing fails.
+      }
+    }
+
+    if (candidate.includes('://')) {
+      try {
+        const url = new URL(candidate);
+        const queryCode =
+          url.searchParams.get('qrCode')
+          || url.searchParams.get('qr')
+          || url.searchParams.get('code')
+          || url.searchParams.get('id');
+        if (queryCode && queryCode.trim()) {
+          candidate = queryCode.trim();
+        }
+      } catch {
+        // Use original candidate if URL parsing fails.
+      }
+    }
+
+    return candidate.trim();
+  }
+
   async function loadUser() {
     try {
       const res = await authService.getMe();
@@ -86,7 +137,13 @@ export default function DriverShift() {
   async function handleQRScan(qrCode) {
     setActionLoading(true);
     try {
-      await vehicleService.assignSelfVehicle(qrCode);
+      const normalizedQrCode = normalizeScannedQrValue(qrCode);
+      if (!normalizedQrCode) {
+        addToast(t('shift.camera_error'), 'error');
+        return;
+      }
+
+      await vehicleService.assignSelfVehicle(normalizedQrCode);
       addToast(t('common.success'), 'success');
       setActiveStep(null);
       await refreshShift();

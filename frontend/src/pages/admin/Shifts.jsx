@@ -64,10 +64,12 @@ export default function ShiftsPage() {
     window.addEventListener('ws:shift_started', handleUpdate);
     window.addEventListener('ws:shift_activated', handleUpdate);
     window.addEventListener('ws:shift_closed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     return () => {
       window.removeEventListener('ws:shift_started', handleUpdate);
       window.removeEventListener('ws:shift_activated', handleUpdate);
       window.removeEventListener('ws:shift_closed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
     };
   }, [load]);
 
@@ -148,7 +150,7 @@ export default function ShiftsPage() {
           <h1 className="page-title">{t('shifts.title')}</h1>
           <p className="page-subtitle">{t('shifts.subtitle')}</p>
         </div>
-        <div className="flex gap-sm">
+        <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {['', 'PendingVerification', 'Active', 'Closed'].map(s => (
             <button key={s} className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => { setStatusFilter(s); setPage(1); }}>
@@ -333,7 +335,14 @@ export default function ShiftsPage() {
                               const fallbackPhotoUrl = insp.photos?.find(
                                 (photo) => photo.direction === CHECKLIST_PHOTO_CODES[itemKey],
                               )?.photoUrl;
-                              const proofUrl = badItemPhotos[itemKey] || fallbackPhotoUrl || null;
+                              const mappedProof = badItemPhotos[itemKey];
+                              const mappedProofUrl = typeof mappedProof === 'string' && /^https?:\/\//i.test(mappedProof)
+                                ? mappedProof
+                                : null;
+                              const mappedDirectionUrl = typeof mappedProof === 'string' && !/^https?:\/\//i.test(mappedProof)
+                                ? insp.photos?.find((photo) => photo.direction === mappedProof)?.photoUrl
+                                : null;
+                              const proofUrl = mappedProofUrl || mappedDirectionUrl || fallbackPhotoUrl || null;
 
                               return (
                                 <div key={itemKey} className="inspection-proof-item">

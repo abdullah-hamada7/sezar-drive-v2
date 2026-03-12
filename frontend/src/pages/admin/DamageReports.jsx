@@ -33,9 +33,11 @@ export default function DamageReportsPage() {
     const handleUpdate = () => load();
     window.addEventListener('ws:damage_reported', handleUpdate);
     window.addEventListener('ws:damage_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     return () => {
       window.removeEventListener('ws:damage_reported', handleUpdate);
       window.removeEventListener('ws:damage_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
     };
   }, [load]);
 

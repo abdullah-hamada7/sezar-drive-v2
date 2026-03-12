@@ -48,15 +48,28 @@
 }
 
 .brand-icon {
-  width: 32px;
-  height: 32px;
-  background: var(--color-primary);
+  width: 34px;
+  height: 34px;
+  background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.24), transparent 52%),
+    linear-gradient(140deg, var(--color-primary), var(--color-primary-dark));
   color: white;
   border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-glow);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35), var(--shadow-glow);
+}
+
+.brand-icon svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
+}
+
+[data-theme="light"] .brand-icon {
+  border-color: rgba(15, 23, 42, 0.18);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16), var(--shadow-glow);
 }
 
 .brand-text {
@@ -193,6 +206,23 @@
 }
 
 @media (max-width: 480px) {
+  .driver-header {
+    padding-inline: max(var(--space-sm), env(safe-area-inset-left, 0px)) max(var(--space-sm), env(safe-area-inset-right, 0px));
+  }
+
+  .brand-text {
+    font-size: 0.95rem;
+  }
+
+  .driver-header-right {
+    gap: 0.15rem;
+  }
+
+  .driver-header-right .btn-icon {
+    width: 34px;
+    height: 34px;
+  }
+
   .driver-sync-chip {
     max-width: 5.6rem;
     overflow: hidden;
@@ -208,6 +238,18 @@
   }
   .driver-main {
     padding-bottom: calc(65px + env(safe-area-inset-bottom, 0.5rem));
+  }
+}
+
+@media (max-width: 390px) {
+  .brand-text {
+    display: none;
+  }
+
+  .driver-sync-chip {
+    max-width: 4.4rem;
+    font-size: 0.62rem;
+    padding: 0 0.45rem;
   }
 }
 

@@ -53,11 +53,13 @@ export default function VehiclesPage() {
     window.addEventListener('ws:shift_closed', handleUpdate);
     window.addEventListener('ws:damage_reported', handleUpdate);
     window.addEventListener('ws:damage_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     return () => {
       window.removeEventListener('ws:shift_activated', handleUpdate);
       window.removeEventListener('ws:shift_closed', handleUpdate);
       window.removeEventListener('ws:damage_reported', handleUpdate);
       window.removeEventListener('ws:damage_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
     };
   }, [load]);
 

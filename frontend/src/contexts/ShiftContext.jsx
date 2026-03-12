@@ -46,6 +46,9 @@ export function ShiftProvider({ children }) {
     window.addEventListener('ws:shift_started', handleShiftUpdate);
     window.addEventListener('ws:shift_activated', handleShiftUpdate);
     window.addEventListener('ws:shift_closed', handleShiftClosed);
+    window.addEventListener('ws:inspection_created', handleShiftUpdate);
+    window.addEventListener('ws:inspection_photo_uploaded', handleShiftUpdate);
+    window.addEventListener('ws:inspection_completed', handleShiftUpdate);
     window.addEventListener('ws:trip_assigned', handleShiftUpdate); // Refresh to show assignment
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibility);
@@ -55,6 +58,9 @@ export function ShiftProvider({ children }) {
       window.removeEventListener('ws:shift_started', handleShiftUpdate);
       window.removeEventListener('ws:shift_activated', handleShiftUpdate);
       window.removeEventListener('ws:shift_closed', handleShiftClosed);
+      window.removeEventListener('ws:inspection_created', handleShiftUpdate);
+      window.removeEventListener('ws:inspection_photo_uploaded', handleShiftUpdate);
+      window.removeEventListener('ws:inspection_completed', handleShiftUpdate);
       window.removeEventListener('ws:trip_assigned', handleShiftUpdate);
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibility);

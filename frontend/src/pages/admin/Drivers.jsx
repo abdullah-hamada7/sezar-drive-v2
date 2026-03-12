@@ -65,7 +65,11 @@ export default function DriversPage() {
   useEffect(() => {
     const handleUpdate = () => load();
     window.addEventListener('ws:identity_reviewed', handleUpdate);
-    return () => window.removeEventListener('ws:identity_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws:identity_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
+    };
   }, [load]);
 
   function openCreate() {

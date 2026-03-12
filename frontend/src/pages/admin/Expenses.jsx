@@ -40,10 +40,14 @@ export default function ExpensesPage() {
   useEffect(() => {
     const handleUpdate = () => setRefresh(r => r + 1);
     window.addEventListener('ws:expense_pending', handleUpdate);
+    window.addEventListener('ws:expense_update', handleUpdate);
     window.addEventListener('ws:expense_reviewed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     return () => {
       window.removeEventListener('ws:expense_pending', handleUpdate);
+      window.removeEventListener('ws:expense_update', handleUpdate);
       window.removeEventListener('ws:expense_reviewed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
     };
   }, []);
 
@@ -68,7 +72,7 @@ export default function ExpensesPage() {
           <h1 className="page-title">{t('admin_expenses.title')}</h1>
           <p className="page-subtitle">{t('admin_expenses.subtitle')}</p>
         </div>
-        <div className="flex gap-sm">
+        <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {['', 'pending', 'approved', 'rejected'].map(s => (
             <button key={s} className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => { setStatusFilter(s); setPage(1); }}>
@@ -94,6 +98,7 @@ export default function ExpensesPage() {
         <div className="loading-page"><div className="spinner"></div></div>
       ) : (
         <div className="table-container">
+          <div className="table-responsive">
           <table>
             <thead>
               <tr>
@@ -132,6 +137,7 @@ export default function ExpensesPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

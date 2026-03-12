@@ -95,12 +95,14 @@ export default function DashboardPage() {
 
     window.addEventListener('ws:notification', handleUpdate);
     window.addEventListener('ws:rescue_request', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
     window.addEventListener('online', handleOnline);
     document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       window.clearInterval(poll);
       window.removeEventListener('ws:notification', handleUpdate);
       window.removeEventListener('ws:rescue_request', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibility);
     };

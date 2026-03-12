@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { reportService as api } from '../../services/report.service';
 import { http } from '../../services/http.service';
@@ -15,18 +15,51 @@ export default function ReportsPage() {
   const [report, setReport] = useState(null);
   const rangeLabel = startDate && endDate ? `${startDate} - ${endDate}` : '—';
 
-  async function handleGenerate(e) {
-    e.preventDefault();
+  const loadReport = useCallback(async (silent = false) => {
+    if (!startDate || !endDate) {
+      if (!silent) {
+        addToast(t('reports.messages.select_dates'), 'error');
+      }
+      return;
+    }
+
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (startDate) params.set('startDate', startDate);
-      if (endDate) params.set('endDate', endDate);
+      params.set('startDate', startDate);
+      params.set('endDate', endDate);
       const res = await api.getRevenueReport(params.toString());
       setReport(res.data);
-      addToast(t('common.success'), 'success');
-    } catch (err) { addToast(err.message || t('common.error'), 'error'); }
-    finally { setLoading(false); }
+      if (!silent) {
+        addToast(t('common.success'), 'success');
+      }
+    } catch (err) {
+      if (!silent) {
+        addToast(err.message || t('common.error'), 'error');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast, endDate, startDate, t]);
+
+  useEffect(() => {
+    const handleRealtimeUpdate = () => {
+      if (!report) return;
+      loadReport(true);
+    };
+
+    window.addEventListener('ws:update', handleRealtimeUpdate);
+    window.addEventListener('online', handleRealtimeUpdate);
+
+    return () => {
+      window.removeEventListener('ws:update', handleRealtimeUpdate);
+      window.removeEventListener('online', handleRealtimeUpdate);
+    };
+  }, [loadReport, report]);
+
+  async function handleGenerate(e) {
+    e.preventDefault();
+    await loadReport(false);
   }
 
   async function downloadFile(type) {

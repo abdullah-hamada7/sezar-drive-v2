@@ -18,7 +18,7 @@ export default function DriverHome() {
   const { activeShift, loading: shiftLoading } = useShift();
   const [showDetails, setShowDetails] = useState(false);
 
-  const refreshStatus = useCallback(async () => {
+  const refreshStatus = useCallback(async (silent = false) => {
     try {
       const res = await authService.getMe();
       if (res.data?.user) {
@@ -26,11 +26,15 @@ export default function DriverHome() {
         if (res.data.accessToken) {
           http.setTokens(res.data.accessToken, undefined);
         }
-        addToast(t('driver_home.status_refreshed'), 'success');
+        if (!silent) {
+          addToast(t('driver_home.status_refreshed'), 'success');
+        }
       }
     } catch (err) {
       const code = err.errorCode || err.code;
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      if (!silent) {
+        addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      }
     }
   }, [t, updateUser, addToast]);
 
@@ -42,27 +46,28 @@ export default function DriverHome() {
       } else {
         addToast(`${t('driver_home.identity_rejected')}: ${reason || ''}`, 'error');
       }
-      refreshStatus();
+      refreshStatus(true);
     };
 
     window.addEventListener('ws:identity_update', handleIdentityUpdate);
-    window.addEventListener('ws:trip_assigned', refreshStatus);
-    window.addEventListener('ws:trip_cancelled', refreshStatus);
-    window.addEventListener('ws:trip_completed', refreshStatus);
-    window.addEventListener('ws:update', refreshStatus);
-    window.addEventListener('online', refreshStatus);
+    const handleSilentRefresh = () => refreshStatus(true);
+    window.addEventListener('ws:trip_assigned', handleSilentRefresh);
+    window.addEventListener('ws:trip_cancelled', handleSilentRefresh);
+    window.addEventListener('ws:trip_completed', handleSilentRefresh);
+    window.addEventListener('ws:update', handleSilentRefresh);
+    window.addEventListener('online', handleSilentRefresh);
     const poll = window.setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      refreshStatus();
+      refreshStatus(true);
     }, 30000);
 
     return () => {
       window.removeEventListener('ws:identity_update', handleIdentityUpdate);
-      window.removeEventListener('ws:trip_assigned', refreshStatus);
-      window.removeEventListener('ws:trip_cancelled', refreshStatus);
-      window.removeEventListener('ws:trip_completed', refreshStatus);
-      window.removeEventListener('ws:update', refreshStatus);
-      window.removeEventListener('online', refreshStatus);
+      window.removeEventListener('ws:trip_assigned', handleSilentRefresh);
+      window.removeEventListener('ws:trip_cancelled', handleSilentRefresh);
+      window.removeEventListener('ws:trip_completed', handleSilentRefresh);
+      window.removeEventListener('ws:update', handleSilentRefresh);
+      window.removeEventListener('online', handleSilentRefresh);
       window.clearInterval(poll);
     };
   }, [t, addToast, refreshStatus]);

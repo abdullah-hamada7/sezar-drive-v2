@@ -45,6 +45,14 @@ export default function AdminsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    const handleUpdate = () => load();
+    window.addEventListener('ws:update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws:update', handleUpdate);
+    };
+  }, [load]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setIsSubmitting(true);

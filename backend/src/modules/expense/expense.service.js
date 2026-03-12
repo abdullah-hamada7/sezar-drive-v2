@@ -53,8 +53,28 @@ async function createExpense(data, driverId, ipAddress) {
   });
 
   if (status === 'pending') {
-    notifyAdmins('expense_pending', 'New Expense Approval', `Driver ${shift.driver.name} submitted a EGP${amount} expense for ${category.name}.`, { expenseId: expense.id });
+    notifyAdmins('expense_pending', 'New Expense Approval', `Driver ${shift.driver.name} submitted a EGP${amount} expense for ${category.name}.`, {
+      expenseId: expense.id,
+      status,
+      driverId,
+      categoryId,
+    });
+  } else {
+    notifyAdmins('expense_update', 'Expense Submitted', `Driver ${shift.driver.name} submitted an expense for ${category.name}.`, {
+      expenseId: expense.id,
+      status,
+      driverId,
+      categoryId,
+    });
   }
+
+  notifyDriver(driverId, {
+    type: 'expense_update',
+    expenseId: expense.id,
+    status,
+    categoryId,
+    amount,
+  });
 
   return FileService.signExpense(expense);
 }
@@ -157,8 +177,16 @@ async function reviewExpense(expenseId, adminId, action, rejectionReason, ipAddr
   // Real-time Notification
   notifyDriver(expense.driverId, {
     type: 'expense_update',
+    expenseId,
     status,
-    reason: rejectionReason
+    reason: rejectionReason,
+  });
+
+  notifyDriver(expense.driverId, {
+    type: 'expense_reviewed',
+    expenseId,
+    status,
+    reason: rejectionReason,
   });
 
   notifyAdmins(

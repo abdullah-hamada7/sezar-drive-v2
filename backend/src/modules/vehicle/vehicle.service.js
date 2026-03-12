@@ -2,6 +2,61 @@ const prisma = require('../../config/database');
 const { NotFoundError, ConflictError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 
+function normalizeQrCodeInput(input) {
+  if (typeof input !== 'string') {
+    return input;
+  }
+
+  let candidate = input.trim();
+  if (!candidate) {
+    return candidate;
+  }
+
+  if ((candidate.startsWith('{') && candidate.endsWith('}')) || (candidate.startsWith('[') && candidate.endsWith(']'))) {
+    try {
+      const parsed = JSON.parse(candidate);
+      const extracted = parsed?.qrCode || parsed?.qrIdentifier || parsed?.code || parsed?.id;
+      if (typeof extracted === 'string' && extracted.trim()) {
+        candidate = extracted.trim();
+      }
+    } catch {
+      // Keep original candidate when JSON parse fails.
+    }
+  }
+
+  if (candidate.includes('://')) {
+    try {
+      const url = new URL(candidate);
+      const queryCode =
+        url.searchParams.get('qrCode')
+        || url.searchParams.get('qr')
+        || url.searchParams.get('code')
+        || url.searchParams.get('id');
+
+      if (queryCode && queryCode.trim()) {
+        candidate = queryCode.trim();
+      } else {
+        const segments = url.pathname.split('/').filter(Boolean);
+        const lastSegment = segments[segments.length - 1];
+        if (lastSegment && !['vehicle', 'vehicles', 'scan', 'qr'].includes(lastSegment.toLowerCase())) {
+          candidate = lastSegment.trim();
+        }
+      }
+    } catch {
+      // Keep original candidate when URL parse fails.
+    }
+  }
+
+  if (candidate.includes(':')) {
+    const parts = candidate.split(':').map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 2 && ['qr', 'qrcode', 'vehicle', 'sezar'].includes(parts[0].toLowerCase())) {
+      candidate = parts[parts.length - 1];
+    }
+  }
+
+  return candidate.trim();
+}
+
 /**
  * Create a new vehicle (admin only).
  */
@@ -134,10 +189,12 @@ async function updateVehicle(id, data, adminId, ipAddress) {
  * Validate vehicle by QR code scan.
  */
 async function validateQrCode(qrCode) {
+  const normalizedQrCode = normalizeQrCodeInput(qrCode);
+
   // Use findFirst with insensitive mode for better UX
   const vehicle = await prisma.vehicle.findFirst({
     where: {
-      qrCode: { equals: qrCode, mode: 'insensitive' }
+      qrCode: { equals: normalizedQrCode, mode: 'insensitive' }
     }
   });
   if (!vehicle || !vehicle.isActive) throw new NotFoundError('Vehicle with this QR code');
@@ -153,6 +210,23 @@ async function validateQrCode(qrCode) {
 async function assignVehicle(vehicleId, driverId, shiftId, adminId, ipAddress) {
   const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
   if (!vehicle) throw new NotFoundError('Vehicle');
+
+  const existingDriverAssignment = await prisma.vehicleAssignment.findFirst({
+    where: { driverId, active: true },
+  });
+
+  if (existingDriverAssignment) {
+    const isSameAssignment =
+      existingDriverAssignment.vehicleId === vehicleId
+      && existingDriverAssignment.shiftId === shiftId;
+
+    if (isSameAssignment) {
+      return existingDriverAssignment;
+    }
+
+    throw new ConflictError('DRIVER_ALREADY_HAS_VEHICLE', 'Driver already has an assigned vehicle');
+  }
+
   if (vehicle.status !== 'available') {
     throw new ConflictError('VEHICLE_UNAVAILABLE', `Vehicle is currently ${vehicle.status}`);
   }
@@ -171,14 +245,20 @@ async function assignVehicle(vehicleId, driverId, shiftId, adminId, ipAddress) {
       where: { vehicleId, active: true },
     });
     if (existingVehicleAssignment) {
+      if (existingVehicleAssignment.driverId === driverId && existingVehicleAssignment.shiftId === shiftId) {
+        return existingVehicleAssignment;
+      }
       throw new ConflictError('VEHICLE_ALREADY_ASSIGNED', 'Vehicle is already assigned to another driver');
     }
 
     // Check driver doesn't already have a vehicle
-    const existingDriverAssignment = await tx.vehicleAssignment.findFirst({
+    const existingDriverAssignmentTx = await tx.vehicleAssignment.findFirst({
       where: { driverId, active: true },
     });
-    if (existingDriverAssignment) {
+    if (existingDriverAssignmentTx) {
+      if (existingDriverAssignmentTx.vehicleId === vehicleId && existingDriverAssignmentTx.shiftId === shiftId) {
+        return existingDriverAssignmentTx;
+      }
       throw new ConflictError('DRIVER_ALREADY_HAS_VEHICLE', 'Driver already has an assigned vehicle');
     }
 

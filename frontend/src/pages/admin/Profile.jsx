@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
@@ -15,26 +15,38 @@ export default function AdminProfilePage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
 
-  useEffect(() => {
-    async function loadProfile() {
-      setLoading(true);
-      try {
-        const res = await authService.getMe();
-        const me = res?.data?.user || user;
-        setForm({
-          name: me?.name || '',
-          email: me?.email || '',
-          phone: me?.phone || '',
-        });
-      } catch (err) {
+  const loadProfile = useCallback(async (silent = false) => {
+    setLoading(true);
+    try {
+      const res = await authService.getMe();
+      const me = res?.data?.user || user;
+      setForm({
+        name: me?.name || '',
+        email: me?.email || '',
+        phone: me?.phone || '',
+      });
+    } catch (err) {
+      if (!silent) {
         addToast(err.message || t('common.error'), 'error');
-      } finally {
-        setLoading(false);
       }
+    } finally {
+      setLoading(false);
     }
-
-    loadProfile();
   }, [addToast, t, user]);
+
+  useEffect(() => {
+    loadProfile(false);
+  }, [loadProfile]);
+
+  useEffect(() => {
+    const handleRealtimeUpdate = () => loadProfile(true);
+    window.addEventListener('ws:update', handleRealtimeUpdate);
+    window.addEventListener('online', handleRealtimeUpdate);
+    return () => {
+      window.removeEventListener('ws:update', handleRealtimeUpdate);
+      window.removeEventListener('online', handleRealtimeUpdate);
+    };
+  }, [loadProfile]);
 
   async function handleSubmit(event) {
     event.preventDefault();
