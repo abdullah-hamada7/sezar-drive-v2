@@ -170,7 +170,7 @@ export default function DriverShift() {
       addToast(t('common.success'), 'success');
       setActiveStep(null);
       await refreshShift();
-      navigate('/driver');
+      navigate('/driver/shift');
     } catch (err) {
       const code = err?.code;
       addToast(getQrScanErrorMessage(err), code === 'NETWORK_ERROR' ? 'warning' : 'error');
