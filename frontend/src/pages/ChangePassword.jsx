@@ -71,7 +71,7 @@ export default function ChangePasswordPage() {
       </div>
       <div className="login-card" style={{ maxWidth: '460px' }}>
         <div className="login-header">
-          <div className="login-logo text-gradient shadow-glow">
+          <div className="login-logo shadow-glow">
             <BrandIcon size={28} />
           </div>
           <h1 className="login-title text-gradient">{t('auth.change_password')}</h1>

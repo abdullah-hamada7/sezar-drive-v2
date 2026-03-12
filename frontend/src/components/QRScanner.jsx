@@ -259,9 +259,23 @@ export default function QRScanner({ onScan, onCancel }) {
       `}</style>
 
       {error && (
-        <div className="alert alert-danger">
-          <AlertCircle size={18} />
-          <span>{error}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="alert alert-danger">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+
+          {scanMode === 'camera' && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => switchMode('manual')}
+              style={{ width: '100%' }}
+            >
+              <QrCode size={18} />
+              <span style={{ marginLeft: '0.5rem' }}>{t('shift.type_manually')}</span>
+            </button>
+          )}
         </div>
       )}
 

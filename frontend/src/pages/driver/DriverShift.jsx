@@ -79,6 +79,29 @@ export default function DriverShift() {
     return candidate.trim();
   }
 
+  function getQrScanErrorMessage(err) {
+    const code = err?.code;
+    if (!code) return err?.message || t('common.error');
+
+    const knownCodes = new Set([
+      'VEHICLE_NOT_FOUND',
+      'VEHICLE_UNAVAILABLE',
+      'VEHICLE_ALREADY_ASSIGNED',
+      'DRIVER_ALREADY_HAS_VEHICLE',
+      'NO_ACTIVE_SHIFT',
+      'NETWORK_ERROR',
+      'BLOCKED_OFFLINE',
+      'UNAUTHORIZED',
+      'SESSION_EXPIRED',
+    ]);
+
+    if (knownCodes.has(code)) {
+      return t(`errors.${code}`, err?.message || t('common.error'));
+    }
+
+    return err?.message || t('common.error');
+  }
+
   async function loadUser() {
     try {
       const res = await authService.getMe();
@@ -139,7 +162,7 @@ export default function DriverShift() {
     try {
       const normalizedQrCode = normalizeScannedQrValue(qrCode);
       if (!normalizedQrCode) {
-        addToast(t('shift.camera_error'), 'error');
+        addToast(t('shift.enter_vehicle_code'), 'warning');
         return;
       }
 
@@ -147,9 +170,14 @@ export default function DriverShift() {
       addToast(t('common.success'), 'success');
       setActiveStep(null);
       await refreshShift();
+      navigate('/driver');
     } catch (err) {
       const code = err?.code;
-      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+      addToast(getQrScanErrorMessage(err), code === 'NETWORK_ERROR' ? 'warning' : 'error');
+
+      if (code === 'UNAUTHORIZED' || code === 'SESSION_EXPIRED') {
+        navigate('/login');
+      }
     } finally {
       setActionLoading(false);
     }
