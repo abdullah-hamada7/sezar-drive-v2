@@ -15,7 +15,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         description: 'Fleet Transportation & Trip Management Platform',
-        theme_color: '#3b82f6',
+        theme_color: '#111111',
         background_color: '#ffffff',
         icons: [
           {

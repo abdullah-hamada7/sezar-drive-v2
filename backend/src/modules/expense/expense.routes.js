@@ -22,6 +22,7 @@ router.post(
   receiptUpload.fields([{ name: 'receipt', maxCount: 1 }, { name: 'receiptPhoto', maxCount: 1 }]),
   [
     body('shiftId').isUUID().withMessage('Valid shift ID is required'),
+    body('tripId').optional().isUUID().withMessage('tripId must be a valid UUID'),
     body('categoryId').optional().isUUID(),
     body('category').optional().isUUID(),
     body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
@@ -59,6 +60,7 @@ router.get(
     query('status').optional().isIn(['pending', 'approved', 'rejected']),
     query('driverId').optional().isUUID(),
     query('shiftId').optional().isUUID(),
+    query('tripId').optional().isUUID(),
   ],
   async (req, res, next) => {
     try {

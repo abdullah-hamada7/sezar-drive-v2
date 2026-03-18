@@ -4,9 +4,63 @@ import { tripService as api } from '../../services/trip.service';
 import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
+import { useAuth } from '../../hooks/useAuth';
 import PromptModal from '../../components/common/PromptModal';
+import { MapContainer, Marker, TileLayer, Polyline } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
 
 const STATUS_BADGES = { ASSIGNED: 'badge-info', IN_PROGRESS: 'badge-warning', COMPLETED: 'badge-success', CANCELLED: 'badge-danger' };
+
+function toCoord(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function TripMiniMap({ trip, currentLat, currentLng }) {
+  const pickupLat = toCoord(trip?.pickupLat);
+  const pickupLng = toCoord(trip?.pickupLng);
+  const dropoffLat = toCoord(trip?.dropoffLat);
+  const dropoffLng = toCoord(trip?.dropoffLng);
+  const curLat = toCoord(currentLat);
+  const curLng = toCoord(currentLng);
+
+  const pickup = pickupLat != null && pickupLng != null ? [pickupLat, pickupLng] : null;
+  const dropoff = dropoffLat != null && dropoffLng != null ? [dropoffLat, dropoffLng] : null;
+  const current = curLat != null && curLng != null ? [curLat, curLng] : null;
+
+  if (!pickup && !dropoff && !current) return null;
+
+  const center = pickup || current || dropoff || [30.0444, 31.2357];
+  const polyline = [current, pickup, dropoff].filter(Boolean);
+
+  return (
+    <div className="card" style={{ padding: '0.6rem', border: '1px solid var(--color-border)', marginTop: 'var(--space-md)' }}>
+      <div style={{ height: 220, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+        <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {polyline.length >= 2 && (
+            <Polyline positions={polyline} pathOptions={{ color: '#64748b', weight: 4, opacity: 0.9 }} />
+          )}
+          {current && <Marker position={current} />}
+          {pickup && <Marker position={pickup} />}
+          {dropoff && <Marker position={dropoff} />}
+        </MapContainer>
+      </div>
+    </div>
+  );
+}
 
 export default function DriverTrips() {
   const { t } = useTranslation();
@@ -16,6 +70,7 @@ export default function DriverTrips() {
   const [rejectPrompt, setRejectPrompt] = useState({ isOpen: false, tripId: null });
   const { addToast } = useContext(ToastContext);
   const { activeShift } = useShift();
+  const { user } = useAuth();
 
   useEffect(() => { load(); }, []);
 
@@ -109,6 +164,17 @@ export default function DriverTrips() {
     <div>
       <h2 className="page-title" style={{ marginBottom: 'var(--space-lg)' }}>{t('trip.my_trips')}</h2>
 
+      <div className="card mb-md" style={{ padding: 'var(--space-md)' }}>
+        <div className="text-xs text-muted" style={{ marginBottom: '0.4rem' }}>{t('trip.current_location')}</div>
+        {user?.lastKnownLat && user?.lastKnownLng ? (
+          <div className="text-sm" style={{ fontWeight: 600 }}>
+            {Number(user.lastKnownLat).toFixed(5)}, {Number(user.lastKnownLng).toFixed(5)}
+          </div>
+        ) : (
+          <div className="text-sm text-muted">{t('trip.location_not_available')}</div>
+        )}
+      </div>
+
       {!activeShift && (
         <div className="alert alert-warning mb-md">
           <AlertTriangle size={20} />
@@ -130,15 +196,15 @@ export default function DriverTrips() {
                 <span className="text-sm text-muted">{trip.price} {t('trip.price_unit')}</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 'var(--space-md)' }}>
-                <div className="flex items-center gap-sm">
-                  <MapPin size={14} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
-                  <span className="text-sm">{trip.pickupLocation}</span>
-                </div>
-                <div className="flex items-center gap-sm">
-                  <MapPin size={14} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
-                  <span className="text-sm">{trip.dropoffLocation}</span>
-                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 'var(--space-md)' }}>
+                  <div className="flex items-center gap-sm">
+                    <MapPin size={14} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
+                     <span className="text-sm">{t('trip.source_pickup_label')}: {trip.pickupLocation}</span>
+                   </div>
+                   <div className="flex items-center gap-sm">
+                     <MapPin size={14} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
+                     <span className="text-sm">{t('trip.destination_label')}: {trip.dropoffLocation}</span>
+                   </div>
                 {trip.scheduledTime && (
                   <div className="flex items-center gap-sm">
                     <Clock size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
@@ -175,14 +241,20 @@ export default function DriverTrips() {
                 )}
               </div>
 
+              <TripMiniMap
+                trip={trip}
+                currentLat={user?.lastKnownLat}
+                currentLng={user?.lastKnownLng}
+              />
+
               {trip.status === 'ASSIGNED' && (
                 <div className="flex gap-sm" style={{ width: '100%' }}>
                   {trip.scheduledTime && new Date(trip.scheduledTime) > new Date() ? (
-                    <button className="btn btn-primary" onClick={() => handleAccept(trip.id)} disabled={actionLoading === trip.id} style={{ flex: 1 }}>
+                    <button className="btn btn-primary" onClick={() => handleAccept(trip.id)} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
                       <CheckCircle size={16} /> {t('trip.accept_trip')}
                     </button>
                   ) : (
-                    <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ flex: 1 }}>
+                    <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
                       <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
                     </button>
                   )}
@@ -198,7 +270,7 @@ export default function DriverTrips() {
               )}
               {trip.status === 'ACCEPTED' && (
                 <div className="flex gap-sm" style={{ width: '100%' }}>
-                  <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id} style={{ flex: 1 }}>
+                  <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
                     <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
                   </button>
                   <button

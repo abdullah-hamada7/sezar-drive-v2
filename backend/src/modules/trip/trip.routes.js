@@ -25,6 +25,10 @@ router.post(
     body('pickup').optional().notEmpty().withMessage('Pickup location is required').trim().escape(),
     body('dropoffLocation').optional().notEmpty().withMessage('Dropoff location is required').trim().escape(),
     body('dropoff').optional().notEmpty().withMessage('Dropoff location is required').trim().escape(),
+    body('pickupLat').optional().isFloat({ min: -90, max: 90 }).withMessage('pickupLat must be between -90 and 90'),
+    body('pickupLng').optional().isFloat({ min: -180, max: 180 }).withMessage('pickupLng must be between -180 and 180'),
+    body('dropoffLat').optional().isFloat({ min: -90, max: 90 }).withMessage('dropoffLat must be between -90 and 90'),
+    body('dropoffLng').optional().isFloat({ min: -180, max: 180 }).withMessage('dropoffLng must be between -180 and 180'),
     body('price').isFloat({ min: 0.01 }).withMessage('Price must be greater than 0'),
     body('scheduledTime').optional().isISO8601().withMessage('Invalid scheduled time format'),
     body().custom(body => {
@@ -54,6 +58,10 @@ router.post(
     body('pickup').optional().notEmpty().withMessage('Pickup location is required').trim().escape(),
     body('dropoffLocation').optional().notEmpty().withMessage('Dropoff location is required').trim().escape(),
     body('dropoff').optional().notEmpty().withMessage('Dropoff location is required').trim().escape(),
+    body('pickupLat').optional().isFloat({ min: -90, max: 90 }).withMessage('pickupLat must be between -90 and 90'),
+    body('pickupLng').optional().isFloat({ min: -180, max: 180 }).withMessage('pickupLng must be between -180 and 180'),
+    body('dropoffLat').optional().isFloat({ min: -90, max: 90 }).withMessage('dropoffLat must be between -90 and 90'),
+    body('dropoffLng').optional().isFloat({ min: -180, max: 180 }).withMessage('dropoffLng must be between -180 and 180'),
     body('price').isFloat({ min: 0.01 }).withMessage('Price must be greater than 0'),
     body('scheduledTime').optional().isISO8601().withMessage('Invalid scheduled time format'),
     body().custom(payload => {
@@ -67,6 +75,34 @@ router.post(
       handleValidation(req);
       const trip = await tripService.assignTrip(req.body, req.user.id, req.clientIp);
       res.status(201).json(trip);
+    } catch (err) { next(err); }
+  }
+);
+
+// ─── GET /api/v1/trips/assignment-charge (admin) ──
+router.get(
+  '/assignment-charge',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  async (req, res, next) => {
+    try {
+      const settings = await tripService.getTripAssignmentCharge();
+      res.json(settings);
+    } catch (err) { next(err); }
+  }
+);
+
+// ─── PATCH /api/v1/trips/assignment-charge (admin) ─
+router.patch(
+  '/assignment-charge',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  [
+    body('charge').isFloat({ min: 0 }).withMessage('charge must be a non-negative number'),
+  ],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const settings = await tripService.updateTripAssignmentCharge(req.body.charge, req.user.id, req.clientIp);
+      res.json(settings);
     } catch (err) { next(err); }
   }
 );

@@ -1,0 +1,46 @@
+Verify whether the following features are implemented correctly.
+For each item, return: Implemented / Partial / Not Implemented + missing details
+
+1. Expenses & Trips
+
+Expenses linked to trips
+
+Driver selects trip (dropdown of accepted trips)
+
+Admin sees trip label in expense details
+
+2. Admin Expenses Page
+
+Search/filter expenses by trip
+
+3. Dark Mode
+
+Color changed from blue → black across app
+
+4. Confirmation Dialogs
+
+Yes/No dialog after important actions
+
+5. Driver Navigation Fix
+
+“Go to Shifts” correctly redirects after inspection
+
+6. Trip Assignment
+
+Admin sets pickup, dropoff, assigns driver
+
+7. Driver Map View
+
+Shows current location, pickup, dropoff on map (live tracking)
+
+8. Inspection Photos
+
+Required uploads: dashboard, tank
+
+9. Multiple Photo Upload
+
+Driver can upload multiple additional images
+
+Feature: <name>
+Status: Implemented / Partial / Not Implemented
+Missing/Issues: <details>

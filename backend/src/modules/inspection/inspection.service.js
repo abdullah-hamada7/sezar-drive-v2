@@ -106,7 +106,7 @@ async function completeInspection(inspectionId, driverId, checklistData, ipAddre
 
   if (['full', 'pre', 'post'].includes(inspection.type)) {
     const directions = inspection.photos.map((p) => p.direction);
-    const required = ['front', 'back', 'left', 'right'];
+    const required = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
     const missing = required.filter((d) => !directions.includes(d));
     if (missing.length > 0) {
       throw new ValidationError('Missing inspection photos', { missingDirections: missing });

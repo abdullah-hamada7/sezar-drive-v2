@@ -173,8 +173,14 @@ model Trip {
   vehicleId          String?        @map("vehicle_id") @db.Uuid
   pickupLocation     String         @map("pickup_location") @db.VarChar(500)
   dropoffLocation    String         @map("dropoff_location") @db.VarChar(500)
+  pickupLat          Decimal?       @map("pickup_lat") @db.Decimal(10, 7)
+  pickupLng          Decimal?       @map("pickup_lng") @db.Decimal(10, 7)
+  dropoffLat         Decimal?       @map("dropoff_lat") @db.Decimal(10, 7)
+  dropoffLng         Decimal?       @map("dropoff_lng") @db.Decimal(10, 7)
   scheduledTime      DateTime?      @map("scheduled_time") @db.Timestamptz(6)
   price              Decimal        @db.Decimal(10, 2)
+  adminCharge        Decimal        @default(0) @map("admin_charge") @db.Decimal(10, 2)
+  driverNetPrice     Decimal        @default(0) @map("driver_net_price") @db.Decimal(10, 2)
   actualStartTime    DateTime?      @map("actual_start_time") @db.Timestamptz(6)
   actualEndTime      DateTime?      @map("actual_end_time") @db.Timestamptz(6)
   cancellationReason String?        @map("cancellation_reason")
@@ -185,6 +191,7 @@ model Trip {
   passengers         Json?          @map("passengers")
   status             TripState      @default(ASSIGNED)
   damageReports      DamageReport[]
+  expenses           Expense[]
   locationLogs       LocationLog[]
   canceller          User?          @relation("TripCanceller", fields: [cancelledBy], references: [id])
   driver             User           @relation(fields: [driverId], references: [id])
@@ -246,6 +253,7 @@ model ExpenseCategory {
 model Expense {
   id              String          @id @default(uuid()) @db.Uuid
   shiftId         String          @map("shift_id") @db.Uuid
+  tripId          String?         @map("trip_id") @db.Uuid
   driverId        String          @map("driver_id") @db.Uuid
   categoryId      String          @map("category_id") @db.Uuid
   amount          Decimal         @db.Decimal(10, 2)
@@ -261,8 +269,10 @@ model Expense {
   driver          User            @relation(fields: [driverId], references: [id])
   reviewer        User?           @relation("ExpenseReviewer", fields: [reviewedBy], references: [id])
   shift           Shift           @relation(fields: [shiftId], references: [id])
+  trip            Trip?           @relation(fields: [tripId], references: [id])
 
   @@index([shiftId])
+  @@index([tripId])
   @@index([driverId])
   @@index([categoryId])
   @@index([status])

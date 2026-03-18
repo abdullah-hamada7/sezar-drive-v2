@@ -23,6 +23,7 @@ export default function DriverShift() {
   const [activeStep, setActiveStep] = useState(null); // 'face' | 'qr'
   const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
+  const requiredInspectionDirections = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
 
   useEffect(() => {
     loadUser();
@@ -189,8 +190,8 @@ export default function DriverShift() {
       const inspectionsRes = await inspectionService.getInspections(`shiftId=${shift.id}`);
       const inspections = inspectionsRes.data || [];
       const hasCompletedInspection = inspections.some((insp) => {
-        const photoCount = Array.isArray(insp.photos) ? insp.photos.length : 0;
-        return insp.status === 'completed' && photoCount >= 4;
+        const directions = new Set((insp.photos || []).map((photo) => photo.direction));
+        return insp.status === 'completed' && requiredInspectionDirections.every((direction) => directions.has(direction));
       });
       if (!hasCompletedInspection) {
         addToast(t('shift.inspection_required'), 'warning');
@@ -219,8 +220,9 @@ export default function DriverShift() {
       const hasEndInspection = inspections.some((insp) => {
         const createdAt = insp?.createdAt ? new Date(insp.createdAt) : null;
         const isAfterStart = startedAt && createdAt && createdAt > startedAt;
-        const photoCount = Array.isArray(insp.photos) ? insp.photos.length : 0;
-        return insp.status === 'completed' && isAfterStart && photoCount >= 4;
+        const directions = new Set((insp.photos || []).map((photo) => photo.direction));
+        const hasAllDirections = requiredInspectionDirections.every((direction) => directions.has(direction));
+        return insp.status === 'completed' && isAfterStart && hasAllDirections;
       });
       if (startedAt && !hasEndInspection) {
         addToast(t('shift.inspection_required'), 'warning');
@@ -381,10 +383,10 @@ export default function DriverShift() {
               <div style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
                 {t('shift.active')}
               </div>
-              <div className="text-sm text-muted">{t('trip.status')}: {t('common.trip_status.in_progress')}</div>
+              <div className="text-sm text-muted">{t('shift.status')}: {t('common.shift_status.active')}</div>
             </div>
             <span className="badge badge-status badge-success" style={{ marginLeft: 'auto' }}>
-              {t('common.trip_status.in_progress')}
+              {t('common.shift_status.active')}
             </span>
           </div>
 

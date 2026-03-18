@@ -9,7 +9,7 @@ const { ValidationError } = require('../../errors');
 
 const router = express.Router();
 const inspectionUpload = createUploader();
-const PHOTO_DIRECTIONS = ['front', 'back', 'left', 'right', 'tire', 'light', 'brake', 'mirror', 'fluid', 'seat', 'horn', 'wiper'];
+const PHOTO_DIRECTIONS = ['front', 'back', 'left', 'right', 'dashboard', 'tank', 'tire', 'light', 'brake', 'mirror', 'fluid', 'seat', 'horn', 'wiper', 'extra'];
 
 function handleValidation(req) {
   const errors = validationResult(req);

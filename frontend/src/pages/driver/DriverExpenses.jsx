@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { expenseService as api } from '../../services/expense.service';
+import { tripService } from '../../services/trip.service';
 import { offlineQueue } from '../../services/offline-queue.service';
 import { Receipt, Plus, X, Upload, CheckCircle } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
@@ -13,16 +14,18 @@ export default function DriverExpenses() {
   const { addToast } = useContext(ToastContext);
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [acceptedTrips, setAcceptedTrips] = useState([]);
   const { activeShift } = useShift();
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ categoryId: '', amount: '', description: '', receipt: null });
+  const [form, setForm] = useState({ tripId: '', categoryId: '', amount: '', description: '', receipt: null });
 
-  useEffect(() => { load(); loadCategories(); }, []);
+  useEffect(() => { load(); loadCategories(); loadAcceptedTrips(); }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
       load();
+      loadAcceptedTrips();
     };
 
     window.addEventListener('ws:expense_update', handleUpdate);
@@ -58,10 +61,23 @@ export default function DriverExpenses() {
     } catch { /* ignore */ }
   }
 
+  async function loadAcceptedTrips() {
+    try {
+      const res = await tripService.getTrips('status=ACCEPTED&limit=100');
+      setAcceptedTrips(res.data?.trips || []);
+    } catch {
+      setAcceptedTrips([]);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!activeShift) {
       addToast(t('expenses.error_shift'), 'error');
+      return;
+    }
+    if (!form.tripId) {
+      addToast(t('expenses.trip_required'), 'error');
       return;
     }
     try {
@@ -75,6 +91,7 @@ export default function DriverExpenses() {
             __offlineType: 'expense_bundle',
             payload: {
               shiftId: activeShift.id,
+              tripId: form.tripId,
               categoryId: form.categoryId,
               amount: form.amount,
               description: form.description,
@@ -84,7 +101,7 @@ export default function DriverExpenses() {
         });
 
         setShowForm(false);
-        setForm({ categoryId: '', amount: '', description: '', receipt: null });
+        setForm({ tripId: '', categoryId: '', amount: '', description: '', receipt: null });
         addToast(t('expenses.success_create'), 'success');
         await load();
         return;
@@ -92,6 +109,7 @@ export default function DriverExpenses() {
 
       const formData = new FormData();
       formData.append('shiftId', activeShift.id);
+      formData.append('tripId', form.tripId);
       formData.append('categoryId', form.categoryId);
       formData.append('amount', form.amount);
       formData.append('description', form.description);
@@ -99,7 +117,7 @@ export default function DriverExpenses() {
 
       await api.createExpense(formData);
       setShowForm(false);
-      setForm({ categoryId: '', amount: '', description: '', receipt: null });
+      setForm({ tripId: '', categoryId: '', amount: '', description: '', receipt: null });
       addToast(t('expenses.success_create'), 'success');
       load();
     } catch (err) {
@@ -135,7 +153,14 @@ export default function DriverExpenses() {
                 <span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`expenses.status.${e.status}`)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted">{e.description || '—'}</span>
+                <div>
+                  {e.trip && (
+                    <div className="text-xs text-muted" style={{ marginBottom: '0.2rem' }}>
+                      {t('expenses.trip_label')}: {e.trip.pickupLocation}{' -> '}{e.trip.dropoffLocation}
+                    </div>
+                  )}
+                  <span className="text-sm text-muted">{e.description || '—'}</span>
+                </div>
                 <span className="font-bold">{parseFloat(e.amount).toFixed(2)} {t('trip.price_unit')}</span>
               </div>
             </div>
@@ -151,6 +176,30 @@ export default function DriverExpenses() {
               <button className="btn-icon" onClick={() => setShowForm(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit}>
+              <div className="form-group mb-md">
+                <label className="form-label">{t('expenses.trip_label')}</label>
+                <select
+                  className="form-select"
+                  value={form.tripId}
+                  onChange={e => setForm({ ...form, tripId: e.target.value })}
+                  required
+                >
+                  <option value="">{t('expenses.select_trip')}</option>
+                  {acceptedTrips.map(trip => {
+                    const passengerName = trip?.passengers?.[0]?.name ? ` (${trip.passengers[0].name})` : '';
+                    return (
+                      <option key={trip.id} value={trip.id}>
+                        {trip.pickupLocation}{' -> '}{trip.dropoffLocation}{passengerName}
+                      </option>
+                    );
+                  })}
+                </select>
+                {acceptedTrips.length === 0 && (
+                  <div className="text-xs text-muted" style={{ marginTop: '0.35rem' }}>
+                    {t('expenses.no_accepted_trips')}
+                  </div>
+                )}
+              </div>
               <div className="form-group mb-md">
                 <label className="form-label">{t('expenses.category_label')}</label>
                 <select className="form-select" value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })} required>
@@ -182,7 +231,7 @@ export default function DriverExpenses() {
               </div>
               <div className="modal-actions gap-sm">
                 <button type="button" className="btn btn-secondary flex-1" onClick={() => setShowForm(false)}>{t('common.cancel')}</button>
-                <button type="submit" className="btn btn-primary flex-1">{t('expenses.submit_title')}</button>
+                <button type="submit" className="btn btn-primary flex-1" disabled={acceptedTrips.length === 0}>{t('expenses.submit_title')}</button>
               </div>
             </form>
           </div>

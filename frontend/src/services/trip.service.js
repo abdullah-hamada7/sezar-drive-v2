@@ -15,6 +15,12 @@ export const tripService = {
   assignTrip(data) {
     return http.request('/trips', { method: 'POST', body: data });
   },
+  getAssignmentCharge() {
+    return http.request('/trips/assignment-charge');
+  },
+  updateAssignmentCharge(data) {
+    return http.request('/trips/assignment-charge', { method: 'PATCH', body: data });
+  },
   acceptTrip(id) {
     return http.request(`/trips/${id}/accept`, {
       method: 'PATCH',

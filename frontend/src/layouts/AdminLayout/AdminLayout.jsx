@@ -184,7 +184,7 @@ export default function AdminLayout() {
         {notifications.map(n => (
           <div key={n.id} className="notification-toast">
               <div className="notification-icon">
-              {n.type.includes('damage') ? <AlertTriangle size={18} color="#ef4444" /> : <Info size={18} color="#3b82f6" />}
+              {n.type.includes('damage') ? <AlertTriangle size={18} color="#ef4444" /> : <Info size={18} color="#111111" />}
               </div>
             <div className="notification-content">
               <div className="notification-title">{n.title}</div>

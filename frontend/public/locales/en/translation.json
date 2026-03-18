@@ -93,6 +93,11 @@
     "status": "Trip Status",
     "pickup": "Pickup Location",
     "dropoff": "Drop-off Location",
+    "source_pickup_label": "Source / pickup",
+    "destination_label": "Destination",
+    "current_location": "Current location",
+    "location_not_available": "Location not available yet",
+    "passenger_route": "Passenger route",
     "price_unit": "EGP",
     "passenger": "Passenger",
     "bags": "Bags",
@@ -147,7 +152,8 @@
     "cancel_request_confirm": "Are you sure you want to cancel this shift request?",
     "camera_error": "Could not access camera",
     "camera_denied": "Camera access denied. Please allow camera permissions.",
-    "no_camera": "No camera found on this device."
+    "no_camera": "No camera found on this device.",
+    "status": "Shift Status"
   },
   "inspection": {
     "title": "Vehicle Inspection",
@@ -175,12 +181,15 @@
     "notes_placeholder": "Describe any issues or leave blank if everything is fine...",
     "continue_photos": "Continue to Photos",
     "photos_title": "Vehicle Photos",
-    "photos_desc": "Take clear photos of the vehicle from all 4 directions.",
+    "photos_desc": "Take clear photos of the vehicle from all required sides.",
     "directions": {
       "front": "Front Side",
       "back": "Back Side",
       "left": "Left Side",
-      "right": "Right Side"
+      "right": "Right Side",
+      "dashboard": "Dashboard",
+      "tank": "Fuel Tank",
+      "extra": "Optional"
     },
     "captured": "Photo Captured",
     "tap_capture": "Tap to Capture",
@@ -204,13 +213,14 @@
     "no_shift_title": "No Active Shift",
     "no_shift_desc": "You must start a shift before you can perform a vehicle inspection.",
     "go_shifts": "Go to Shifts",
-    "photos_missing_error": "Please take photos of all 4 sides before completing.",
+    "photos_missing_error": "Please upload all required vehicle photos before completing.",
     "camera_error": "Could not access camera",
     "mileage": "Current Mileage (KM)"
     ,"progress": "Progress"
     ,"step_checklist": "Checklist"
     ,"step_photos": "Photos"
     ,"step_review": "Review"
+    ,"back_to_shift": "Back to Shift"
   },
   "driver_home": {
     "identity_pending": "Identity verification pending",
@@ -269,6 +279,8 @@
     "print": "Print",
     "yes": "Yes",
     "no": "No",
+    "confirm_action_prompt": "Do you want to continue with this operation?",
+    "operation_cancelled": "Operation cancelled",
     "or": "or",
     "currency": "EGP",
     "amount_placeholder": "e.g. 150.00",
@@ -349,6 +361,11 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "offline_pending_sync": "Offline Pending Sync"
+    },
+    "shift_status": {
+      "active": "Active",
+      "closed": "Closed",
+      "pending_verification": "Pending Verification"
     },
     "shift_verification_status": {
       "pending": "Pending",
@@ -438,6 +455,10 @@
     "amount_label": "Amount *",
     "description_label": "Description",
     "receipt_label": "Receipt (optional)",
+    "trip_label": "Trip",
+    "select_trip": "Select accepted trip",
+    "trip_required": "Please select a trip first.",
+    "no_accepted_trips": "No accepted trips available right now.",
     "placeholder_desc": "What was this expense for?",
     "status": {
       "pending": "Pending",
@@ -602,6 +623,8 @@
       "driver": "Driver",
       "pickup": "Pickup",
       "dropoff": "Dropoff",
+      "source": "Source",
+      "destination": "Destination",
       "passengers": "Passengers",
       "price": "Price",
       "status": "Status",
@@ -616,6 +639,8 @@
       "select_driver": "Select Driver",
       "pickup_label": "Pickup Location *",
       "dropoff_label": "Dropoff Location *",
+      "source_pickup_label": "Passenger source / pickup",
+      "destination_dropoff_label": "Passenger destination / dropoff",
       "price_label": "Price ({{unit}}) *",
       "time_label": "Scheduled Time",
       "passengers_label": "Passengers",
@@ -626,6 +651,8 @@
       "phone_ph": "Phone",
       "companion_count_ph": "Companion count",
       "pickup_ph": "Specific Pickup (optional)",
+      "passenger_source_placeholder": "Passenger source",
+      "passenger_destination_placeholder": "Passenger destination",
       "bags_ph": "Number of bags",
       "reason_placeholder": "Reason for cancellation",
       "pickup_placeholder": "Enter pickup location",
@@ -640,6 +667,7 @@
       "scheduled": "Scheduled",
       "started": "Started",
       "ended": "Ended",
+      "route": "Route",
       "cancel_reason": "Cancel Reason"
     },
     "messages": {

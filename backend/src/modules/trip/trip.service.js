@@ -6,6 +6,89 @@ const TripValidator = require('./trip.validator');
 const TripNotifier = require('./trip.notifier');
 const { EGYPT_PHONE_REGEX } = require('../../utils/validation');
 
+const ASSIGNMENT_CHARGE_CONFIG_KEY = 'trip_assignment_charge';
+
+function toMoneyNumber(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Number(parsed.toFixed(2));
+}
+
+function toCoordinateNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function getTripAssignmentChargeValue() {
+  const config = await prisma.adminConfig.findUnique({
+    where: { key: ASSIGNMENT_CHARGE_CONFIG_KEY },
+  });
+
+  if (!config?.value || typeof config.value !== 'object') return 0;
+  const charge = Number(config.value.charge);
+  if (!Number.isFinite(charge) || charge < 0) return 0;
+  return Number(charge.toFixed(2));
+}
+
+async function getTripAssignmentCharge() {
+  const config = await prisma.adminConfig.findUnique({
+    where: { key: ASSIGNMENT_CHARGE_CONFIG_KEY },
+    include: { updater: { select: { id: true, name: true } } },
+  });
+
+  if (!config) {
+    return {
+      charge: 0,
+      updatedAt: null,
+      updatedBy: null,
+    };
+  }
+
+  const charge = Number(config?.value?.charge);
+  return {
+    charge: Number.isFinite(charge) && charge >= 0 ? Number(charge.toFixed(2)) : 0,
+    updatedAt: config.updatedAt,
+    updatedBy: config.updater,
+  };
+}
+
+async function updateTripAssignmentCharge(chargeInput, adminId, ipAddress) {
+  const charge = toMoneyNumber(chargeInput);
+  if (charge < 0) {
+    throw new ValidationError('Trip assignment charge cannot be negative');
+  }
+
+  const config = await prisma.adminConfig.upsert({
+    where: { key: ASSIGNMENT_CHARGE_CONFIG_KEY },
+    update: {
+      value: { charge },
+      updatedBy: adminId,
+    },
+    create: {
+      key: ASSIGNMENT_CHARGE_CONFIG_KEY,
+      value: { charge },
+      updatedBy: adminId,
+    },
+    include: { updater: { select: { id: true, name: true } } },
+  });
+
+  await AuditService.log({
+    actorId: adminId,
+    actionType: 'trip.assignment_charge.updated',
+    entityType: 'admin_config',
+    entityId: config.id,
+    newState: { key: ASSIGNMENT_CHARGE_CONFIG_KEY, charge },
+    ipAddress,
+  });
+
+  return {
+    charge,
+    updatedAt: config.updatedAt,
+    updatedBy: config.updater,
+  };
+}
+
 async function expireOverdueAssignedTrips(driverId = null) {
   const cutoff = new Date(Date.now() - (24 * 60 * 60 * 1000));
 
@@ -41,9 +124,48 @@ async function assignTrip(data, adminId, ipAddress) {
   const { driverId, scheduledTime, price } = data;
   const pickupLocation = data.pickupLocation || data.pickup;
   const dropoffLocation = data.dropoffLocation || data.dropoff;
+  const pickupLat = toCoordinateNumber(data.pickupLat);
+  const pickupLng = toCoordinateNumber(data.pickupLng);
+  const dropoffLat = toCoordinateNumber(data.dropoffLat);
+  const dropoffLng = toCoordinateNumber(data.dropoffLng);
+  const priceValue = toMoneyNumber(price);
+  const assignmentCharge = await getTripAssignmentChargeValue();
+  const driverNetPrice = Number((priceValue - assignmentCharge).toFixed(2));
 
   if (!pickupLocation || !dropoffLocation) {
     throw new ValidationError('Pickup and dropoff locations are required');
+  }
+
+  if (priceValue <= 0) {
+    throw new ValidationError('Price must be greater than 0');
+  }
+
+  if ((pickupLat === null) !== (pickupLng === null)) {
+    throw new ValidationError('Pickup latitude and longitude must both be provided');
+  }
+
+  if ((dropoffLat === null) !== (dropoffLng === null)) {
+    throw new ValidationError('Dropoff latitude and longitude must both be provided');
+  }
+
+  if (pickupLat !== null && (pickupLat < -90 || pickupLat > 90)) {
+    throw new ValidationError('Pickup latitude must be between -90 and 90');
+  }
+
+  if (pickupLng !== null && (pickupLng < -180 || pickupLng > 180)) {
+    throw new ValidationError('Pickup longitude must be between -180 and 180');
+  }
+
+  if (dropoffLat !== null && (dropoffLat < -90 || dropoffLat > 90)) {
+    throw new ValidationError('Dropoff latitude must be between -90 and 90');
+  }
+
+  if (dropoffLng !== null && (dropoffLng < -180 || dropoffLng > 180)) {
+    throw new ValidationError('Dropoff longitude must be between -180 and 180');
+  }
+
+  if (driverNetPrice < 0) {
+    throw new ValidationError('Trip price cannot be less than configured assignment charge');
   }
 
   const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId, {
@@ -109,8 +231,14 @@ async function assignTrip(data, adminId, ipAddress) {
       vehicleId: assignment.vehicleId,
       pickupLocation,
       dropoffLocation,
+      pickupLat,
+      pickupLng,
+      dropoffLat,
+      dropoffLng,
       scheduledTime: scheduledTime ? new Date(scheduledTime) : null,
-      price,
+      price: priceValue,
+      adminCharge: assignmentCharge,
+      driverNetPrice,
       passengers: normalizedPassengers,
       status: 'ASSIGNED',
     },
@@ -121,7 +249,7 @@ async function assignTrip(data, adminId, ipAddress) {
     actionType: 'trip.assigned',
     entityType: 'trip',
     entityId: trip.id,
-    newState: { status: 'ASSIGNED', driverId, price },
+    newState: { status: 'ASSIGNED', driverId, price: priceValue, adminCharge: assignmentCharge, driverNetPrice },
     ipAddress,
   });
 
@@ -472,5 +600,5 @@ async function getTripById(id, requestingUser = null) {
 
 module.exports = {
   assignTrip, acceptTrip, rejectAssignedTrip, startTrip, completeTrip, cancelTrip, overrideTrip,
-  getActiveTrip, getTrips, getTripById,
+  getActiveTrip, getTrips, getTripById, getTripAssignmentCharge, updateTripAssignmentCharge,
 };

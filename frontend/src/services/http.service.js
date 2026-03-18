@@ -84,6 +84,25 @@ class HttpService {
       dispatchToast(message, type, code);
     };
 
+    const shouldConfirmWrite =
+      WRITE_METHODS.includes(method)
+      && !requestOptions.skipConfirm
+      && !requestOptions.skipOfflineQueue
+      && requestOptions.toast !== false
+      && !requestOptions.skipAuth
+      && !endpointPath.startsWith('/auth/')
+      && typeof window !== 'undefined';
+
+    if (shouldConfirmWrite) {
+      const proceed = window.confirm(i18n.t('common.confirm_action_prompt', 'Do you want to continue with this operation?'));
+      if (!proceed) {
+        const cancelled = new Error(i18n.t('common.operation_cancelled', 'Operation cancelled'));
+        cancelled.code = 'OPERATION_CANCELLED';
+        cancelled.errorCode = 'OPERATION_CANCELLED';
+        throw cancelled;
+      }
+    }
+
     if (this.accessToken && !requestOptions.skipAuth) {
       headers['Authorization'] = `Bearer ${this.accessToken}`;
     }

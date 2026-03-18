@@ -8,6 +8,7 @@ async function replayOfflineExpenseBundle(httpService, entry) {
   const formData = new FormData();
 
   if (payload.shiftId) formData.append('shiftId', payload.shiftId);
+  if (payload.tripId) formData.append('tripId', payload.tripId);
   if (payload.categoryId) formData.append('categoryId', payload.categoryId);
   if (payload.amount !== undefined && payload.amount !== null) {
     formData.append('amount', String(payload.amount));
@@ -83,6 +84,7 @@ async function replayOfflineInspectionBundle(httpService, entry) {
 
   const directionalPhotos = payload.directionalPhotos || {};
   const issuePhotos = payload.issuePhotos || {};
+  const optionalPhotos = Array.isArray(payload.optionalPhotos) ? payload.optionalPhotos : [];
   const badItemPhotos = {};
 
   for (const [direction, photo] of Object.entries(directionalPhotos)) {
@@ -114,6 +116,19 @@ async function replayOfflineInspectionBundle(httpService, entry) {
       skipOfflineQueue: true,
     });
     badItemPhotos[checkKey] = uploadResponse?.data?.photoUrl || null;
+  }
+
+  for (const optionalPhoto of optionalPhotos) {
+    if (!optionalPhoto) continue;
+    const formData = new FormData();
+    formData.append('photo', optionalPhoto);
+    formData.append('direction', 'extra');
+    await httpService.request(`/inspections/${inspectionId}/photos/extra`, {
+      method: 'POST',
+      body: formData,
+      toast: false,
+      skipOfflineQueue: true,
+    });
   }
 
   await httpService.request(`/inspections/${inspectionId}/complete`, {

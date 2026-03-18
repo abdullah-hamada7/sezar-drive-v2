@@ -16,11 +16,22 @@ export default function ExpensesPage() {
   const [pagination, setPagination] = useState({});
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [tripSearch, setTripSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [refresh, setRefresh] = useState(0);
   const [promptData, setPromptData] = useState({ isOpen: false, expenseId: null });
   const statusLabel = statusFilter ? t(`admin_expenses.filter.${statusFilter}`) : t('admin_expenses.filter.all');
+  const [debouncedTripSearch, setDebouncedTripSearch] = useState('');
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedTripSearch(tripSearch.trim());
+      setPage(1);
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [tripSearch]);
 
   useEffect(() => {
     async function load() {
@@ -28,6 +39,7 @@ export default function ExpensesPage() {
       try {
         const params = new URLSearchParams({ page, limit: 15 });
         if (statusFilter) params.set('status', statusFilter);
+        if (debouncedTripSearch) params.set('tripSearch', debouncedTripSearch);
         const res = await api.getExpenses(params.toString());
         setExpenses(res.data.expenses || []);
         setPagination(res.data || {});
@@ -35,7 +47,7 @@ export default function ExpensesPage() {
       finally { setLoading(false); }
     }
     load();
-  }, [page, statusFilter, refresh]);
+  }, [page, statusFilter, debouncedTripSearch, refresh]);
 
   useEffect(() => {
     const handleUpdate = () => setRefresh(r => r + 1);
@@ -82,6 +94,30 @@ export default function ExpensesPage() {
         </div>
       </div>
 
+      <div className="card mb-md" style={{ padding: '0.75rem var(--space-md)' }}>
+        <div className="grid grid-2 gap-md" style={{ alignItems: 'end' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Trip</label>
+            <input
+              className="form-input"
+              value={tripSearch}
+              onChange={(e) => setTripSearch(e.target.value)}
+              placeholder="Search by pickup, dropoff, or trip ID"
+            />
+          </div>
+          <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={() => setTripSearch('')}
+              disabled={!tripSearch}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
       {!loading && (
         <div className="card mb-md" style={{ padding: '0.75rem var(--space-md)' }}>
           <div className="flex items-center justify-between">
@@ -104,6 +140,7 @@ export default function ExpensesPage() {
               <tr>
                 <th>{t('admin_expenses.table.driver')}</th>
                 <th>{t('admin_expenses.table.category')}</th>
+                <th>Trip</th>
                 <th>{t('admin_expenses.table.amount')}</th>
                 <th>{t('admin_expenses.table.description')}</th>
                 <th>{t('admin_expenses.table.status')}</th>
@@ -113,11 +150,14 @@ export default function ExpensesPage() {
             </thead>
             <tbody>
               {expenses.length === 0 ? (
-                <tr><td colSpan={7} className="empty-state">{t('admin_expenses.table.empty')}</td></tr>
+                <tr><td colSpan={8} className="empty-state">{t('admin_expenses.table.empty')}</td></tr>
               ) : expenses.map(e => (
                 <tr key={e.id}>
                   <td style={{ fontWeight: 500 }}>{e.driver?.name || '—'}</td>
                   <td>{e.category?.name || '—'}</td>
+                  <td className="text-sm">
+                    {e.trip ? `${e.trip.pickupLocation} -> ${e.trip.dropoffLocation}` : '—'}
+                  </td>
                   <td>{parseFloat(e.amount).toFixed(2)} EGP</td>
                   <td className="text-sm">{e.description || '—'}</td>
                   <td><span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`common.status.${e.status.toLowerCase()}`)}</span></td>
@@ -162,6 +202,12 @@ export default function ExpensesPage() {
               items: [
                 { label: t('admin_expenses.table.driver'), value: selected.driver?.name },
                 { label: t('admin_expenses.table.category'), value: selected.category?.name },
+                {
+                  label: 'Trip',
+                  value: selected.trip
+                    ? `${selected.trip.pickupLocation} -> ${selected.trip.dropoffLocation}`
+                    : '—'
+                },
                 { label: t('admin_expenses.table.amount'), value: `${parseFloat(selected.amount).toFixed(2)} EGP` },
                 { label: t('admin_expenses.table.date'), value: formatDate(selected.createdAt) },
                 {

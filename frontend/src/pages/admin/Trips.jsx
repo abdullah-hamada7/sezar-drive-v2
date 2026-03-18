@@ -3,9 +3,31 @@ import { useTranslation } from 'react-i18next';
 import { tripService as api } from '../../services/trip.service';
 import { driverService } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Route, Search, Eye, XCircle, MapPin, Clock, DollarSign } from 'lucide-react';
+import { Eye, XCircle, MapPin, DollarSign, Save } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 import { EGYPT_PHONE_REGEX } from '../../utils/validation';
+import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const toCoordinateLabel = (lat, lng) => `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+
+function TripMapClickHandler({ selectionMode, onSelect }) {
+  useMapEvents({
+    click(event) {
+      const { lat, lng } = event.latlng;
+      onSelect(selectionMode, lat, lng);
+    },
+  });
+  return null;
+}
 
 const STATUS_BADGES = {
   ASSIGNED: 'badge-info',
@@ -31,10 +53,18 @@ export default function TripsPage() {
     driverId: '',
     pickupLocation: '',
     dropoffLocation: '',
+    pickupLat: null,
+    pickupLng: null,
+    dropoffLat: null,
+    dropoffLng: null,
     price: '',
     scheduledTime: '',
     passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
   });
+  const [mapSelectionMode, setMapSelectionMode] = useState('pickup');
+  const [assignmentCharge, setAssignmentCharge] = useState(0);
+  const [chargeDraft, setChargeDraft] = useState('0');
+  const [savingCharge, setSavingCharge] = useState(false);
   const [selectedDriverName, setSelectedDriverName] = useState('');
   const [, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
@@ -55,6 +85,23 @@ export default function TripsPage() {
     }
     load();
   }, [page, statusFilter, refresh]);
+
+  useEffect(() => {
+    async function loadCharge() {
+      try {
+        const response = await api.getAssignmentCharge();
+        const charge = Number(response.data?.charge ?? 0);
+        const normalized = Number.isFinite(charge) ? charge : 0;
+        setAssignmentCharge(normalized);
+        setChargeDraft(String(normalized));
+      } catch (err) {
+        const msg = err.code ? t(`errors.${err.code}`) : (err.message || t('common.error'));
+        addToast(msg, 'error');
+      }
+    }
+
+    loadCharge();
+  }, [addToast, t]);
 
   useEffect(() => {
     const handleUpdate = () => setRefresh(r => r + 1);
@@ -116,6 +163,10 @@ export default function TripsPage() {
       addToast(t('trips.modal.select_driver'), 'error');
       return;
     }
+    if (!String(form.pickupLocation || '').trim() || !String(form.dropoffLocation || '').trim()) {
+      addToast(t('common.errors.check_fields'), 'error');
+      return;
+    }
     const parsedPrice = parseFloat(form.price);
     if (Number.isNaN(parsedPrice)) {
       addToast(t('trips.modal.price_label', { unit: t('common.currency') }), 'error');
@@ -144,6 +195,10 @@ export default function TripsPage() {
         driverId: '',
         pickupLocation: '',
         dropoffLocation: '',
+        pickupLat: null,
+        pickupLng: null,
+        dropoffLat: null,
+        dropoffLng: null,
         price: '',
         scheduledTime: '',
         passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
@@ -227,7 +282,7 @@ export default function TripsPage() {
             </thead>
             <tbody>
               {trips.length === 0 ? (
-                <tr><td colSpan={7} className="empty-state">{t('trips.table.empty')}</td></tr>
+                <tr><td colSpan={8} className="empty-state">{t('trips.table.empty')}</td></tr>
               ) : trips.map(t_obj => (
                 <tr key={t_obj.id}>
                   <td style={{ fontWeight: 500 }}>{t_obj.driver?.name || '—'}</td>
@@ -281,6 +336,61 @@ export default function TripsPage() {
             </div>
             <form onSubmit={handleCreate} className="modal-body">
               <div className="form-section mb-md">
+                <div className="card p-md mb-md" style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
+                    <div>
+                      <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.confirm_assignment')}</div>
+                      <div className="text-sm" style={{ fontWeight: 600 }}>{t('common.currency')}: {assignmentCharge.toFixed(2)}</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={savingCharge}
+                      onClick={async () => {
+                        setSavingCharge(true);
+                        try {
+                          const parsed = Number(chargeDraft);
+                          await api.updateAssignmentCharge({ charge: Number.isFinite(parsed) ? parsed : 0 });
+                          const response = await api.getAssignmentCharge();
+                          const charge = Number(response.data?.charge ?? 0);
+                          const normalized = Number.isFinite(charge) ? charge : 0;
+                          setAssignmentCharge(normalized);
+                          setChargeDraft(String(normalized));
+                        } catch (err) {
+                          addToast(err.message || t('common.error'), 'error');
+                        } finally {
+                          setSavingCharge(false);
+                        }
+                      }}
+                    >
+                      <Save size={16} /> {t('common.save')}
+                    </button>
+                  </div>
+                  <div className="grid grid-2 gap-md">
+                    <div className="form-group">
+                      <label className="form-label">{t('expenses.amount_label')}</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={chargeDraft}
+                        onChange={(e) => setChargeDraft(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">{t('trips.modal.price_label', { unit: t('common.currency') })}</label>
+                      <div className="text-sm text-muted">
+                        Price: {form.price || '—'} {t('common.currency')} | Net after charge: {(() => {
+                          const parsed = Number(form.price);
+                          if (!Number.isFinite(parsed)) return '—';
+                          return (parsed - assignmentCharge).toFixed(2);
+                        })()} {t('common.currency')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="form-group mb-md">
                   <label className="form-label">{t('trips.modal.driver_label')}</label>
                   <select
@@ -309,6 +419,58 @@ export default function TripsPage() {
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.dropoff_label')}</label>
                     <input className="form-input" value={form.dropoffLocation} onChange={e => { setForm({ ...form, dropoffLocation: e.target.value }); setError(''); }} required placeholder={t('trips.modal.dropoff_placeholder')} />
+                  </div>
+                </div>
+
+                <div className="card mb-md" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
+                    <div className="flex gap-sm">
+                      <button type="button" className={`btn btn-sm ${mapSelectionMode === 'pickup' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMapSelectionMode('pickup')}>
+                        {t('trips.table.pickup')}
+                      </button>
+                      <button type="button" className={`btn btn-sm ${mapSelectionMode === 'dropoff' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMapSelectionMode('dropoff')}>
+                        {t('trips.table.dropoff')}
+                      </button>
+                    </div>
+                    <div className="text-xs text-muted">
+                      {form.pickupLat != null && form.pickupLng != null ? `${t('trips.table.pickup')}: ${toCoordinateLabel(form.pickupLat, form.pickupLng)}` : `${t('trips.table.pickup')}: —`}
+                      {' | '}
+                      {form.dropoffLat != null && form.dropoffLng != null ? `${t('trips.table.dropoff')}: ${toCoordinateLabel(form.dropoffLat, form.dropoffLng)}` : `${t('trips.table.dropoff')}: —`}
+                    </div>
+                  </div>
+                  <div style={{ height: 260, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                    <MapContainer center={[30.0444, 31.2357]} zoom={12} style={{ height: '100%', width: '100%' }}>
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+                      <TripMapClickHandler
+                        selectionMode={mapSelectionMode}
+                        onSelect={(mode, lat, lng) => {
+                          if (mode === 'pickup') {
+                            setForm((prev) => ({
+                              ...prev,
+                              pickupLat: lat,
+                              pickupLng: lng,
+                              pickupLocation: prev.pickupLocation?.trim() ? prev.pickupLocation : toCoordinateLabel(lat, lng),
+                            }));
+                          } else {
+                            setForm((prev) => ({
+                              ...prev,
+                              dropoffLat: lat,
+                              dropoffLng: lng,
+                              dropoffLocation: prev.dropoffLocation?.trim() ? prev.dropoffLocation : toCoordinateLabel(lat, lng),
+                            }));
+                          }
+                        }}
+                      />
+                      {form.pickupLat != null && form.pickupLng != null && (
+                        <Marker position={[form.pickupLat, form.pickupLng]} />
+                      )}
+                      {form.dropoffLat != null && form.dropoffLng != null && (
+                        <Marker position={[form.dropoffLat, form.dropoffLng]} />
+                      )}
+                    </MapContainer>
                   </div>
                 </div>
 

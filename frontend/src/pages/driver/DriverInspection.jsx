@@ -1,12 +1,13 @@
 import { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { inspectionService as api } from '../../services/inspection.service';
 import { offlineQueue } from '../../services/offline-queue.service';
 import { Camera, CheckCircle, Upload, ChevronRight, AlertCircle } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
 
-const DIRECTIONS = ['front', 'back', 'left', 'right'];
+const DIRECTIONS = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
 const CHECKLIST_KEYS = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
 const CHECKLIST_PHOTO_CODES = {
   tires: 'tire',
@@ -26,6 +27,7 @@ const generateIdempotencyKey = () =>
 
 export default function DriverInspection() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { addToast } = useContext(ToastContext);
   const { activeShift: shift } = useShift();
   const [step, setStep] = useState('checklist'); // checklist | photos | review | done
@@ -35,6 +37,7 @@ export default function DriverInspection() {
   const [notes, setNotes] = useState('');
   const [photos, setPhotos] = useState({});
   const [issuePhotos, setIssuePhotos] = useState({});
+  const [optionalPhotos, setOptionalPhotos] = useState([]);
   const [existingInspections, setExistingInspections] = useState([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [queuedOfflineSubmit, setQueuedOfflineSubmit] = useState(false);
@@ -99,8 +102,9 @@ export default function DriverInspection() {
      review: t('inspection.step_review')
    };
   function isCompletedInspection(insp) {
-    const photoCount = Array.isArray(insp.photos) ? insp.photos.length : 0;
-    return insp.status === 'completed' && photoCount >= 4;
+    const availableDirections = new Set((insp?.photos || []).map((photo) => photo.direction));
+    const hasRequiredPhotos = DIRECTIONS.every((direction) => availableDirections.has(direction));
+    return insp.status === 'completed' && hasRequiredPhotos;
   }
 
   const hasPreInspection = existingInspections.some(insp => {
@@ -177,7 +181,7 @@ export default function DriverInspection() {
           preview: URL.createObjectURL(file),
         }
       }));
-    } else {
+    } else if (photoTarget.type === 'issue') {
       setIssuePhotos(prev => ({
         ...prev,
         [photoTarget.key]: {
@@ -186,6 +190,15 @@ export default function DriverInspection() {
           preview: URL.createObjectURL(file),
         }
       }));
+    } else if (photoTarget.type === 'optional') {
+      setOptionalPhotos((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          file,
+          preview: URL.createObjectURL(file),
+        },
+      ]);
     }
 
     setPhotoTarget(null);
@@ -193,7 +206,7 @@ export default function DriverInspection() {
   }
 
   async function completeInspection() {
-    if (Object.keys(photos).length < 4) {
+    if (Object.keys(photos).length < DIRECTIONS.length) {
       addToast(t('inspection.photos_missing_error'), 'error');
       return;
     }
@@ -236,6 +249,7 @@ export default function DriverInspection() {
               checks,
               directionalPhotos,
               issuePhotos: issuePhotoPayload,
+              optionalPhotos: optionalPhotos.map((photo) => photo.file),
               createIdempotencyKey,
               completeIdempotencyKey,
             },
@@ -281,6 +295,14 @@ export default function DriverInspection() {
           badItemPhotos[checkKey] = issue.direction;
         }
 
+        for (const optionalPhoto of optionalPhotos) {
+          if (!optionalPhoto?.file) continue;
+          const formData = new FormData();
+          formData.append('photo', optionalPhoto.file);
+          formData.append('direction', 'extra');
+          await api.uploadInspectionPhoto(createdInspectionId, 'extra', formData);
+        }
+
         await api.completeInspection(createdInspectionId, {
           checklistData: {
             checks,
@@ -309,7 +331,9 @@ export default function DriverInspection() {
         <AlertCircle size={56} style={{ color: 'var(--color-warning)', margin: '0 auto var(--space-md)' }} />
         <h2 style={{ marginBottom: 'var(--space-sm)' }}>{t('inspection.no_shift_title')}</h2>
         <p className="text-muted" style={{ marginBottom: 'var(--space-md)' }}>{t('inspection.no_shift_desc')}</p>
-        <a href="/driver/shift" className="btn btn-primary">{t('inspection.go_shifts')}</a>
+        <button type="button" className="btn btn-primary" onClick={() => navigate('/driver/shift')}>
+          {t('inspection.go_shifts')}
+        </button>
       </div>
     );
   }
@@ -325,6 +349,14 @@ export default function DriverInspection() {
             <AlertCircle size={16} /> {t('common.offline.sync_auto_when_online')}
           </div>
         )}
+        <button
+          type="button"
+          className="btn btn-primary"
+          style={{ marginTop: 'var(--space-lg)' }}
+          onClick={() => navigate('/driver/shift')}
+        >
+          {t('inspection.back_to_shift')}
+        </button>
       </div>
     );
   }
@@ -510,10 +542,38 @@ export default function DriverInspection() {
             ))}
           </div>
 
+          <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
+            <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-sm)' }}>
+              <h3 className="card-title" style={{ marginBottom: 0 }}>Optional photos</h3>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setPhotoTarget({ type: 'optional', key: 'optional' });
+                  fileRef.current?.click();
+                }}
+                disabled={isInspectionLocked}
+              >
+                <Upload size={14} /> Add
+              </button>
+            </div>
+            {optionalPhotos.length === 0 ? (
+              <div className="text-sm text-muted">No optional photos uploaded.</div>
+            ) : (
+              <div className="grid grid-3" style={{ gap: 'var(--space-sm)' }}>
+                {optionalPhotos.map((photo) => (
+                  <div key={photo.id} className="card" style={{ padding: 'var(--space-xs)' }}>
+                    <img src={photo.preview} alt="Optional" style={{ width: '100%', height: '110px', objectFit: 'cover', borderRadius: 'var(--radius-sm)' }} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             className="btn btn-primary"
             onClick={() => setStep('review')}
-            disabled={Object.keys(photos).length < 4 || isInspectionLocked}
+            disabled={Object.keys(photos).length < DIRECTIONS.length || isInspectionLocked}
             style={{ width: '100%' }}
           >
             <ChevronRight size={18} className="mirror-rtl" /> {t('inspection.review_complete')}
@@ -552,6 +612,9 @@ export default function DriverInspection() {
                   </span>
                 </div>
               ))}
+            </div>
+            <div className="text-sm text-muted" style={{ marginTop: 'var(--space-sm)' }}>
+              Optional photos: {optionalPhotos.length}
             </div>
           </div>
 

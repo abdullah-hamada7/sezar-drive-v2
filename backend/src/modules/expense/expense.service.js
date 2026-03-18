@@ -9,6 +9,7 @@ const { notifyAdmins, notifyDriver } = require('../tracking/tracking.ws');
  */
 async function createExpense(data, driverId, ipAddress) {
   const shiftId = data.shiftId;
+  const tripId = data.tripId || null;
   const categoryId = data.categoryId || data.category;
   const amount = data.amount;
   const description = data.description;
@@ -24,6 +25,21 @@ async function createExpense(data, driverId, ipAddress) {
     throw new ConflictError('INVALID_SHIFT', 'Invalid or inactive shift');
   }
 
+  // Verify linked trip (optional)
+  if (tripId) {
+    const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+    if (!trip || trip.driverId !== driverId) {
+      throw new ConflictError('INVALID_TRIP', 'Invalid trip selection');
+    }
+    if (trip.shiftId && trip.shiftId !== shiftId) {
+      throw new ConflictError('TRIP_SHIFT_MISMATCH', 'Trip does not belong to selected shift');
+    }
+    const allowedExpenseTripStates = new Set(['ACCEPTED', 'IN_PROGRESS', 'COMPLETED']);
+    if (!allowedExpenseTripStates.has(trip.status)) {
+      throw new ConflictError('INVALID_TRIP_STATE', 'Expenses can only be linked to active or completed trips');
+    }
+  }
+
   // Verify category
   const category = await prisma.expenseCategory.findUnique({ where: { id: categoryId } });
   if (!category || !category.isActive) throw new NotFoundError('Expense category');
@@ -33,6 +49,7 @@ async function createExpense(data, driverId, ipAddress) {
   const expense = await prisma.expense.create({
     data: {
       shiftId,
+      tripId,
       driverId,
       categoryId,
       amount,
@@ -47,7 +64,7 @@ async function createExpense(data, driverId, ipAddress) {
     actionType: 'expense.created',
     entityType: 'expense',
     entityId: expense.id,
-    newState: { amount, category: category.name, status },
+    newState: { amount, category: category.name, status, tripId },
     expenseId: expense.id,
     ipAddress,
   });
@@ -56,6 +73,7 @@ async function createExpense(data, driverId, ipAddress) {
     notifyAdmins('expense_pending', 'New Expense Approval', `Driver ${shift.driver.name} submitted a EGP${amount} expense for ${category.name}.`, {
       expenseId: expense.id,
       status,
+      tripId,
       driverId,
       categoryId,
     });
@@ -63,6 +81,7 @@ async function createExpense(data, driverId, ipAddress) {
     notifyAdmins('expense_update', 'Expense Submitted', `Driver ${shift.driver.name} submitted an expense for ${category.name}.`, {
       expenseId: expense.id,
       status,
+      tripId,
       driverId,
       categoryId,
     });
@@ -82,14 +101,32 @@ async function createExpense(data, driverId, ipAddress) {
 /**
  * Get expenses with filters.
  */
-async function getExpenses({ page = 1, limit = 20, driverId, shiftId, status }) {
+async function getExpenses({ page = 1, limit = 20, driverId, shiftId, tripId, status, tripSearch }) {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
+
+  const isTripSearchUuid = typeof tripSearch === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(tripSearch);
+
+  const tripSearchFilters = tripSearch
+    ? [
+      { pickupLocation: { contains: tripSearch, mode: 'insensitive' } },
+      { dropoffLocation: { contains: tripSearch, mode: 'insensitive' } },
+      ...(isTripSearchUuid ? [{ id: { equals: tripSearch } }] : []),
+    ]
+    : [];
+
   const where = {
     ...(driverId && { driverId }),
     ...(shiftId && { shiftId }),
+    ...(tripId && { tripId }),
     ...(status && { status }),
+    ...(tripSearch && {
+      trip: {
+        OR: tripSearchFilters,
+      },
+    }),
   };
 
   const [expenses, total] = await Promise.all([
@@ -97,6 +134,7 @@ async function getExpenses({ page = 1, limit = 20, driverId, shiftId, status }) 
       where, skip, take: limitNum,
       include: {
         category: { select: { id: true, name: true } },
+        trip: { select: { id: true, pickupLocation: true, dropoffLocation: true, status: true, passengers: true } },
         driver: { select: { id: true, name: true } },
         reviewer: { select: { id: true, name: true } },
       },

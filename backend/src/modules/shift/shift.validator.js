@@ -35,7 +35,7 @@ class ShiftValidator {
       throw new ConflictError('NO_VEHICLE_ASSIGNED', 'Vehicle QR must be scanned and assigned before activating shift');
     }
 
-    // Check inspection completed with 4 photos
+    // Check inspection completed with required directional photos
     const inspection = await prisma.inspection.findFirst({
       where: { shiftId, driverId, status: 'completed' },
       include: { photos: true },
@@ -43,8 +43,11 @@ class ShiftValidator {
     if (!inspection) {
       throw new ConflictError('INSPECTION_REQUIRED', 'Vehicle inspection must be completed before activating shift');
     }
-    if (inspection.photos.length < 4) {
-      throw new ConflictError('INSPECTION_PHOTOS_REQUIRED', 'All 4 sides of the vehicle must be photographed');
+    const requiredDirections = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
+    const availableDirections = new Set((inspection.photos || []).map((photo) => photo.direction));
+    const missingDirections = requiredDirections.filter((direction) => !availableDirections.has(direction));
+    if (missingDirections.length > 0) {
+      throw new ConflictError('INSPECTION_PHOTOS_REQUIRED', 'Required vehicle photos are missing');
     }
 
     return { shift, assignment, inspection };
@@ -73,8 +76,11 @@ class ShiftValidator {
     if (!endInspection) {
       throw new ConflictError('INSPECTION_REQUIRED', 'End-of-shift inspection required');
     }
-    if (endInspection.photos.length < 4) {
-      throw new ConflictError('INSPECTION_PHOTOS_REQUIRED', 'All 4 sides of the vehicle must be photographed for end-shift inspection');
+    const requiredDirections = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
+    const availableDirections = new Set((endInspection.photos || []).map((photo) => photo.direction));
+    const missingDirections = requiredDirections.filter((direction) => !availableDirections.has(direction));
+    if (missingDirections.length > 0) {
+      throw new ConflictError('INSPECTION_PHOTOS_REQUIRED', 'Required vehicle photos are missing for end-shift inspection');
     }
 
     // Check no in-progress trip

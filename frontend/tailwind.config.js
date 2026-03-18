@@ -72,7 +72,7 @@ export default {
       boxShadow: {
         soft: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         highlight: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
-        glow: '0 0 15px rgba(59, 130, 246, 0.5)',
+        glow: '0 0 15px rgba(17, 17, 17, 0.35)',
       },
       backdropBlur: {
         xs: '2px',
