@@ -14,6 +14,16 @@ export default function QRScanner({ onScan, onCancel }) {
   const scannedRef = useRef(false); // prevent duplicate scans
   const onScanRef = useRef(onScan);
 
+  const safeStopScanner = (scanner) => {
+    if (!scanner) return;
+    try {
+      const p = scanner.stop();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch {
+      // html5-qrcode can throw synchronously on double-stop; ignore
+    }
+  };
+
   useEffect(() => {
     onScanRef.current = onScan;
   }, [onScan]);
@@ -46,8 +56,10 @@ export default function QRScanner({ onScan, onCancel }) {
 
             setScannedValue(decodedText);
             // Stop scanner then notify parent
-            html5QrCode.stop().catch(() => { });
-            onScanRef.current(decodedText);
+            safeStopScanner(html5QrCode);
+            Promise.resolve(onScanRef.current(decodedText)).catch((scanErr) => {
+              console.error('QR scan handler error:', scanErr);
+            });
           },
           () => {
             // Ignore scan failures (no QR in frame) — this is normal
@@ -71,7 +83,7 @@ export default function QRScanner({ onScan, onCancel }) {
 
     return () => {
       if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => { });
+        safeStopScanner(scannerRef.current);
         scannerRef.current = null;
       }
     };
@@ -80,14 +92,16 @@ export default function QRScanner({ onScan, onCancel }) {
   const handleManualSubmit = (e) => {
     e.preventDefault();
     if (!manualCode.trim()) return;
-    onScan(manualCode.trim());
+    Promise.resolve(onScan(manualCode.trim())).catch((scanErr) => {
+      console.error('QR scan handler error:', scanErr);
+    });
   };
 
   const switchMode = (mode) => {
     if (mode === scanMode) return;
     // Stop camera if switching away
     if (scannerRef.current) {
-      scannerRef.current.stop().catch(() => { });
+      safeStopScanner(scannerRef.current);
       scannerRef.current = null;
     }
     setError(null);
