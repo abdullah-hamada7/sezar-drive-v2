@@ -6,10 +6,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap");
 :root {
   /* ── Industrial Precision Tokens ── */
-  --color-primary: #111111;
-  /* Carbon Black */
-  --color-primary-dark: #000000;
-  --color-primary-light: #2a2a2a;
+  /* Primary needs to stay high-contrast in dark mode */
+  --color-primary: #3b82f6;
+  --color-primary-dark: #2563eb;
+  --color-primary-light: #60a5fa;
   --color-success: #10b981;
   --color-danger: #ef4444;
   --color-warning: #f59e0b;

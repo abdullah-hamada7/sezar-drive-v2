@@ -6,6 +6,7 @@ import { offlineQueue } from '../../services/offline-queue.service';
 import { Camera, CheckCircle, Upload, ChevronRight, AlertCircle } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const DIRECTIONS = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
 const CHECKLIST_KEYS = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
@@ -41,6 +42,7 @@ export default function DriverInspection() {
   const [existingInspections, setExistingInspections] = useState([]);
   const [loadingExisting, setLoadingExisting] = useState(false);
   const [queuedOfflineSubmit, setQueuedOfflineSubmit] = useState(false);
+  const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const fileRef = useRef(null);
@@ -639,12 +641,23 @@ export default function DriverInspection() {
             </div>
           )}
 
-          <button className="btn btn-success" onClick={completeInspection} disabled={loading || isInspectionLocked} style={{ width: '100%' }}>
+          <button className="btn btn-success" onClick={() => setConfirmCompleteOpen(true)} disabled={loading || isInspectionLocked} style={{ width: '100%' }}>
             {loading ? <span className="spinner"></span> : <CheckCircle size={18} />}
             {t('inspection.submit')}
           </button>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmCompleteOpen}
+        onClose={() => setConfirmCompleteOpen(false)}
+        onConfirm={completeInspection}
+        title={t('inspection.submit')}
+        message={t('inspection.confirm_submit_message')}
+        confirmText={t('inspection.submit')}
+        cancelText={t('common.cancel')}
+        variant="success"
+      />
       <style>{`
         [data-theme="dark"] .inspection-page .text-muted {
           color: var(--color-text-secondary);

@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { tripService as api } from '../../services/trip.service';
 import { driverService } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Eye, XCircle, MapPin, DollarSign, Save } from 'lucide-react';
+import { Eye, XCircle, MapPin, DollarSign, Save, X } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import { EGYPT_PHONE_REGEX } from '../../utils/validation';
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, TileLayer, Polyline, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -16,6 +17,36 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
+
+function createDotMarkerIcon(color) {
+  return L.divIcon({
+    className: 'trip-dot-marker',
+    html: `
+      <div style="
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: ${color};
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+      "></div>
+    `,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -8],
+  });
+}
+
+const TRIP_MARKER_ICONS = {
+  pickup: createDotMarkerIcon('#22c55e'),
+  dropoff: createDotMarkerIcon('#ef4444'),
+};
+
+function toCoord(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 async function reverseGeocode(lat, lng, language = 'en') {
   try {
@@ -92,6 +123,9 @@ export default function TripsPage() {
   const [, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
   const [promptData, setPromptData] = useState({ isOpen: false, tripId: null });
+  const [mapDetails, setMapDetails] = useState({ isOpen: false, trip: null });
+  const [confirmSaveChargeOpen, setConfirmSaveChargeOpen] = useState(false);
+  const [confirmAssignOpen, setConfirmAssignOpen] = useState(false);
   const filterLabel = statusFilter ? t(`common.status.${statusFilter.toLowerCase()}`) : t('trips.filter_all');
 
   useEffect(() => {
@@ -180,7 +214,7 @@ export default function TripsPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${sign}${offsetHours}:${offsetMins}`;
   }
 
-  async function handleCreate(e) {
+  function handleCreate(e) {
     e.preventDefault();
     if (!form.driverId) {
       addToast(t('trips.modal.select_driver'), 'error');
@@ -209,7 +243,18 @@ export default function TripsPage() {
       addToast(t('drivers.modal.phone_invalid'), 'error');
       return;
     }
+
+    setConfirmAssignOpen(true);
+  }
+
+  async function submitAssignTrip() {
     try {
+      const parsedPrice = parseFloat(form.price);
+      if (Number.isNaN(parsedPrice)) {
+        addToast(t('trips.modal.price_label', { unit: t('common.currency') }), 'error');
+        return;
+      }
+
       let scheduledTime = form.scheduledTime;
       if (scheduledTime) {
         const scheduledDate = new Date(scheduledTime);
@@ -236,6 +281,23 @@ export default function TripsPage() {
     } catch (err) {
       const driverName = selectedDriverName || drivers.find(d => String(d.id) === String(form.driverId))?.name || '';
       addToast(err.code ? t(`errors.${err.code}`, { name: driverName }) : err.message, 'error');
+    }
+  }
+
+  async function saveAssignmentCharge() {
+    setSavingCharge(true);
+    try {
+      const parsed = Number(chargeDraft);
+      await api.updateAssignmentCharge({ charge: Number.isFinite(parsed) ? parsed : 0 });
+      const response = await api.getAssignmentCharge();
+      const charge = Number(response.data?.charge ?? 0);
+      const normalized = Number.isFinite(charge) ? charge : 0;
+      setAssignmentCharge(normalized);
+      setChargeDraft(String(normalized));
+    } catch (err) {
+      addToast(err.message || t('common.error'), 'error');
+    } finally {
+      setSavingCharge(false);
     }
   }
 
@@ -373,29 +435,14 @@ export default function TripsPage() {
                         <span className="text-xs text-muted" style={{ marginInlineStart: '0.5rem' }}>(deducted from trip price)</span>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      disabled={savingCharge}
-                      onClick={async () => {
-                        setSavingCharge(true);
-                        try {
-                          const parsed = Number(chargeDraft);
-                          await api.updateAssignmentCharge({ charge: Number.isFinite(parsed) ? parsed : 0 });
-                          const response = await api.getAssignmentCharge();
-                          const charge = Number(response.data?.charge ?? 0);
-                          const normalized = Number.isFinite(charge) ? charge : 0;
-                          setAssignmentCharge(normalized);
-                          setChargeDraft(String(normalized));
-                        } catch (err) {
-                          addToast(err.message || t('common.error'), 'error');
-                        } finally {
-                          setSavingCharge(false);
-                        }
-                      }}
-                    >
-                      <Save size={16} /> {t('common.save')}
-                    </button>
+                     <button
+                       type="button"
+                       className="btn btn-secondary btn-sm"
+                       disabled={savingCharge}
+                       onClick={() => setConfirmSaveChargeOpen(true)}
+                     >
+                       <Save size={16} /> {t('common.save')}
+                     </button>
                   </div>
 
                   <div className="grid grid-3 gap-md">
@@ -666,6 +713,16 @@ export default function TripsPage() {
                       <span className="text-muted text-sm">{t('trips.details.dropoff')}</span>
                       <span className="font-medium">{selectedTrip.dropoffLocation}</span>
                     </div>
+
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setMapDetails({ isOpen: true, trip: selectedTrip })}
+                      >
+                        <MapPin size={16} /> {t('trip.map_details')}
+                      </button>
+                    </div>
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.details.price')}</span>
                       <span className="font-medium text-primary">{selectedTrip.price} {t('common.currency')}</span>
@@ -736,6 +793,123 @@ export default function TripsPage() {
         message={t('trips.messages.cancel_prompt')}
         placeholder={t('trips.modal.reason_placeholder')}
       />
+
+      <ConfirmModal
+        isOpen={confirmSaveChargeOpen}
+        onClose={() => setConfirmSaveChargeOpen(false)}
+        onConfirm={saveAssignmentCharge}
+        title={t('trips.messages.save_charge_confirm_title')}
+        message={t('trips.messages.save_charge_confirm_message')}
+        confirmText={t('common.save')}
+        variant="primary"
+      />
+
+      <ConfirmModal
+        isOpen={confirmAssignOpen}
+        onClose={() => setConfirmAssignOpen(false)}
+        onConfirm={submitAssignTrip}
+        title={t('trips.assign_btn')}
+        message={t('trips.messages.assign_confirm_message')}
+        confirmText={t('trips.assign_btn')}
+        variant="primary"
+      />
+
+      {mapDetails.isOpen && mapDetails.trip && (() => {
+        const pickupLat = toCoord(mapDetails.trip.pickupLat);
+        const pickupLng = toCoord(mapDetails.trip.pickupLng);
+        const dropoffLat = toCoord(mapDetails.trip.dropoffLat);
+        const dropoffLng = toCoord(mapDetails.trip.dropoffLng);
+
+        const pickup = pickupLat != null && pickupLng != null ? [pickupLat, pickupLng] : null;
+        const dropoff = dropoffLat != null && dropoffLng != null ? [dropoffLat, dropoffLng] : null;
+
+        if (!pickup && !dropoff) {
+          return (
+            <div className="modal-overlay" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+              <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h2 className="modal-title">{t('trip.map_details')}</h2>
+                  <button className="btn-icon" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="modal-body">
+                  <p className="text-sm" style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+                    {t('trip.location_not_available')}
+                  </p>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn btn-secondary" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+                    {t('common.close')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const center = pickup || dropoff;
+        const polyline = [pickup, dropoff].filter(Boolean);
+
+        return (
+          <div className="modal-overlay" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+            <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="modal-title">{t('trip.map_details')}</h2>
+                <button className="btn-icon" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="modal-body">
+                <div style={{ height: 520, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+                  <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {polyline.length >= 2 && (
+                      <Polyline positions={polyline} pathOptions={{ color: '#64748b', weight: 4, opacity: 0.9 }} />
+                    )}
+                    {pickup && (
+                      <Marker position={pickup} icon={TRIP_MARKER_ICONS.pickup}>
+                        <Popup>
+                          <div style={{ fontWeight: 650, marginBottom: 4 }}>{t('trips.details.pickup')}</div>
+                          <div style={{ fontSize: 12, opacity: 0.85 }}>{mapDetails.trip.pickupLocation || '—'}</div>
+                        </Popup>
+                      </Marker>
+                    )}
+                    {dropoff && (
+                      <Marker position={dropoff} icon={TRIP_MARKER_ICONS.dropoff}>
+                        <Popup>
+                          <div style={{ fontWeight: 650, marginBottom: 4 }}>{t('trips.details.dropoff')}</div>
+                          <div style={{ fontSize: 12, opacity: 0.85 }}>{mapDetails.trip.dropoffLocation || '—'}</div>
+                        </Popup>
+                      </Marker>
+                    )}
+                  </MapContainer>
+                </div>
+
+                <div className="grid grid-2 gap-md" style={{ marginTop: 'var(--space-md)' }}>
+                  <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                    <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trips.details.pickup')}</div>
+                    <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{mapDetails.trip.pickupLocation || '—'}</div>
+                  </div>
+                  <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                    <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trips.details.dropoff')}</div>
+                    <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{mapDetails.trip.dropoffLocation || '—'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button className="btn btn-secondary" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+                  {t('common.close')}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

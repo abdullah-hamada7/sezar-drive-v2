@@ -6,6 +6,7 @@ import { offlineQueue } from '../../services/offline-queue.service';
 import { AlertTriangle, Camera, CheckCircle, X } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 export default function DriverDamage() {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ export default function DriverDamage() {
   const { activeShift } = useShift();
   const [activeTrip, setActiveTrip] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
   const fileRef = useRef(null);
 
@@ -52,8 +54,24 @@ export default function DriverDamage() {
     } catch { /* ignore */ }
   }
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
+    if (!activeShift) {
+      addToast(t('damage.error_shift'), 'error');
+      return;
+    }
+
+    const vehicleId = activeShift.vehicleId || activeShift.assignments?.[0]?.vehicleId;
+
+    if (!vehicleId) {
+      addToast(t('damage.error_vehicle'), 'error');
+      return;
+    }
+
+    setConfirmSubmitOpen(true);
+  }
+
+  async function submitDamageReport() {
     if (!activeShift) {
       addToast(t('damage.error_shift'), 'error');
       return;
@@ -217,6 +235,17 @@ export default function DriverDamage() {
           {t('damage.submit')}
         </button>
       </form>
+
+      <ConfirmModal
+        isOpen={confirmSubmitOpen}
+        onClose={() => setConfirmSubmitOpen(false)}
+        onConfirm={submitDamageReport}
+        title={t('damage.submit')}
+        message={t('damage.confirm_submit_message')}
+        confirmText={t('damage.submit')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   Sun, Moon
 } from 'lucide-react';
 import BrandIcon from '../../components/BrandIcon';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
@@ -32,6 +33,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const wsRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   const displayedCounts = useMemo(() => {
     return {
@@ -299,7 +301,7 @@ export default function AdminLayout() {
             >
               <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{language === 'ar' ? 'EN' : 'AR'}</span>
             </button>
-            <button className="btn-icon" onClick={logout} title={t('nav.logout')}>
+            <button className="btn-icon" onClick={() => setLogoutConfirmOpen(true)} title={t('nav.logout')}>
               <LogOut size={18} className="mirror-rtl" />
             </button>
           </div>
@@ -310,6 +312,15 @@ export default function AdminLayout() {
       <main className="admin-main">
         <Outlet />
       </main>
+
+      <ConfirmModal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={logout}
+        title={t('nav.logout')}
+        message={t('common.logout_confirm')}
+        variant="danger"
+      />
     </div>
   );
 }

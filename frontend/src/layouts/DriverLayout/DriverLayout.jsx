@@ -103,6 +103,7 @@ export default function DriverLayout() {
         onConfirm={logout}
         title={t('nav.logout')}
         message={t('common.logout_confirm')}
+        confirmText={t('nav.logout')}
         variant="danger"
       />
     </div>

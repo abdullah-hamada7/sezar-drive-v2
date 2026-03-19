@@ -212,6 +212,7 @@
     "bad_photo_required": "Please upload a photo proof for every item marked Bad.",
     "flag_alert": "Items marked as 'Bad' will be flagged for admin review.",
     "submit": "Submit Inspection",
+    "confirm_submit_message": "Submit this inspection for admin review?",
     "done_title": "Success",
     "done_desc": "Your inspection has been submitted successfully.",
     "no_shift_title": "No Active Shift",
@@ -445,6 +446,7 @@
     "photos": "Photos",
     "no_photos": "No photos added yet",
     "submit": "Submit Damage Report",
+    "confirm_submit_message": "Submit this damage report for admin review?",
     "success_title": "Damage Report Submitted",
     "success_desc": "Admin will review your report shortly.",
     "submit_another": "Submit Another Report",
@@ -457,6 +459,7 @@
     "new": "New",
     "no_expenses": "No expenses submitted",
     "submit_title": "Submit Expense",
+    "confirm_submit_message": "Submit this expense for admin review?",
     "error_shift": "You must have an active shift to submit an expense.",
     "category_label": "Category *",
     "select_category": "Select category",
@@ -679,7 +682,10 @@
       "cancel_reason": "Cancel Reason"
     },
     "messages": {
-      "cancel_prompt": "Cancel reason:"
+      "cancel_prompt": "Cancel reason:",
+      "save_charge_confirm_title": "Save assignment charge",
+      "save_charge_confirm_message": "Save this assignment charge?",
+      "assign_confirm_message": "Assign this trip to the selected driver?"
     }
   },
   "audit": {

@@ -6,6 +6,7 @@ import { offlineQueue } from '../../services/offline-queue.service';
 import { Receipt, Plus, X, Upload, CheckCircle } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const STATUS_BADGES = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger' };
 
@@ -19,6 +20,7 @@ export default function DriverExpenses() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ tripId: '', categoryId: '', amount: '', description: '', receipt: null });
+  const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
   useEffect(() => { load(); loadCategories(); loadAcceptedTrips(); }, []);
 
@@ -70,7 +72,7 @@ export default function DriverExpenses() {
     }
   }
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault();
     if (!activeShift) {
       addToast(t('expenses.error_shift'), 'error');
@@ -80,7 +82,21 @@ export default function DriverExpenses() {
       addToast(t('expenses.trip_required'), 'error');
       return;
     }
+
+    setConfirmSubmitOpen(true);
+  }
+
+  async function submitExpense() {
     try {
+      if (!activeShift) {
+        addToast(t('expenses.error_shift'), 'error');
+        return;
+      }
+      if (!form.tripId) {
+        addToast(t('expenses.trip_required'), 'error');
+        return;
+      }
+
       const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
 
       if (!isOnline) {
@@ -237,6 +253,17 @@ export default function DriverExpenses() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmSubmitOpen}
+        onClose={() => setConfirmSubmitOpen(false)}
+        onConfirm={submitExpense}
+        title={t('expenses.submit_title')}
+        message={t('expenses.confirm_submit_message')}
+        confirmText={t('expenses.submit_title')}
+        cancelText={t('common.cancel')}
+        variant="primary"
+      />
     </div>
   );
 }

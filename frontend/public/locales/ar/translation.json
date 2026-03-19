@@ -83,12 +83,16 @@
     "my_trips": "رحلاتي",
     "no_trips": "لا توجد رحلات معينة بعد",
     "start_trip": "بدء الرحلة",
+    "start_trip_confirm": "هل تريد بدء هذه الرحلة الآن؟",
     "accept_trip": "قبول الرحلة",
+    "accept_trip_confirm": "هل تريد قبول تعيين هذه الرحلة؟",
     "reject_trip": "رفض الرحلة",
     "reject_prompt": "يرجى إدخال سبب الرفض:",
     "reject_reason_placeholder": "أدخل سبب الرفض",
     "reject_success": "تم رفض الرحلة بنجاح",
     "complete_trip": "إنهاء الرحلة",
+    "complete_trip_confirm": "هل تريد إنهاء هذه الرحلة؟",
+    "map_details": "تفاصيل الخريطة",
     "cancel_trip": "إلغاء الرحلة",
     "status": "حالة الرحلة",
     "pickup": "موقع الاستلام",
@@ -207,6 +211,7 @@
     "bad_photo_required": "يرجى رفع صورة إثبات لكل عنصر تم تحديده كسيئ.",
     "flag_alert": "العناصر التي تم تحديدها كـ 'سيئ' سيتم تنبيه المسؤول لمراجعتها.",
     "submit": "ارسال الفحص",
+    "confirm_submit_message": "هل تريد إرسال هذا الفحص لمراجعة المسؤول؟",
     "done_title": "تم بنجاح",
     "done_desc": "تم إرسال فحصك بنجاح.",
     "no_shift_title": "لا توجد مناوبة نشطة",
@@ -270,6 +275,7 @@
     "hi": "مرحباً",
     "brand": "سيزار درايف",
     "confirm": "تأكيد",
+    "refresh": "تحديث",
     "prompt": "تنبيه",
     "submit": "إرسال",
     "search": "بحث",
@@ -278,6 +284,7 @@
     "yes": "نعم",
     "no": "لا",
     "confirm_action_prompt": "هل تريد المتابعة بهذه العملية؟",
+    "logout_confirm": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
     "operation_cancelled": "تم إلغاء العملية",
     "or": "أو",
     "currency": "ج.م",
@@ -303,6 +310,7 @@
       "dark_mode": "الوضع الداكن"
     },
     "offline": {
+      "offline": "غير متصل",
       "saved_will_sync": "تم الحفظ دون اتصال - ستتم المزامنة عند عودة الاتصال",
       "action_requires_connection": "هذا الإجراء يتطلب اتصالاً بالإنترنت",
       "offline_mode": "أنت غير متصل. ستتم مزامنة التغييرات عند استعادة الاتصال.",
@@ -431,6 +439,7 @@
     "photos": "الصور",
     "no_photos": "لم يتم إضافة صور بعد",
     "submit": "إرسال تقرير الضرر",
+    "confirm_submit_message": "هل تريد إرسال تقرير الضرر هذا لمراجعة المسؤول؟",
     "success_title": "تم إرسال تقرير الضرر",
     "success_desc": "سيقوم المسؤول بمراجعة تقريرك قريباً.",
     "submit_another": "إرسال تقرير آخر",
@@ -443,6 +452,7 @@
     "new": "جديد",
     "no_expenses": "لم يتم تقديم أي مصاريف",
     "submit_title": "تقديم مصروف",
+    "confirm_submit_message": "هل تريد إرسال هذا المصروف لمراجعة المسؤول؟",
     "error_shift": "يجب أن يكون لديك مناوبة نشطة لتقديم مصروف.",
     "category_label": "الفئة *",
     "select_category": "اختر الفئة",
@@ -665,7 +675,10 @@
       "cancel_reason": "سبب الإلغاء"
     },
     "messages": {
-      "cancel_prompt": "سبب الإلغاء:"
+      "cancel_prompt": "سبب الإلغاء:",
+      "save_charge_confirm_title": "حفظ رسوم التعيين",
+      "save_charge_confirm_message": "هل تريد حفظ رسوم التعيين؟",
+      "assign_confirm_message": "هل تريد تعيين هذه الرحلة للسائق المحدد؟"
     }
   },
   "audit": {

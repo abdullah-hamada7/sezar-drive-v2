@@ -96,65 +96,6 @@ function MapAutoFollow({ position }) {
   return null;
 }
 
-function TripMiniMap({ trip, currentLat, currentLng, currentLabel, pickupLabel, dropoffLabel, labels }) {
-  const pickupLat = toCoord(trip?.pickupLat);
-  const pickupLng = toCoord(trip?.pickupLng);
-  const dropoffLat = toCoord(trip?.dropoffLat);
-  const dropoffLng = toCoord(trip?.dropoffLng);
-  const curLat = toCoord(currentLat);
-  const curLng = toCoord(currentLng);
-
-  const pickup = pickupLat != null && pickupLng != null ? [pickupLat, pickupLng] : null;
-  const dropoff = dropoffLat != null && dropoffLng != null ? [dropoffLat, dropoffLng] : null;
-  const current = curLat != null && curLng != null ? [curLat, curLng] : null;
-
-  if (!pickup && !dropoff && !current) return null;
-
-  const center = pickup || current || dropoff || [30.0444, 31.2357];
-  const polyline = [current, pickup, dropoff].filter(Boolean);
-
-  return (
-    <div className="card" style={{ padding: '0.6rem', border: '1px solid var(--color-border)', marginTop: 'var(--space-md)' }}>
-      <div style={{ height: 220, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-        <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {current && <MapAutoFollow position={current} />}
-          {polyline.length >= 2 && (
-            <Polyline positions={polyline} pathOptions={{ color: '#64748b', weight: 4, opacity: 0.9 }} />
-          )}
-          {current && (
-            <Marker position={current} icon={MARKER_ICONS.current}>
-              <Popup>
-                <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.current || 'Current location'}</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>{currentLabel || '—'}</div>
-              </Popup>
-            </Marker>
-          )}
-          {pickup && (
-            <Marker position={pickup} icon={MARKER_ICONS.pickup}>
-              <Popup>
-                <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.pickup || 'Pickup'}</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>{pickupLabel || trip?.pickupLocation || '—'}</div>
-              </Popup>
-            </Marker>
-          )}
-          {dropoff && (
-            <Marker position={dropoff} icon={MARKER_ICONS.dropoff}>
-              <Popup>
-                <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.dropoff || 'Dropoff'}</div>
-                <div style={{ fontSize: 12, opacity: 0.85 }}>{dropoffLabel || trip?.dropoffLocation || '—'}</div>
-              </Popup>
-            </Marker>
-          )}
-        </MapContainer>
-      </div>
-    </div>
-  );
-}
-
 function TripDetailsMap({ trip, currentLat, currentLng, currentLabel, pickupLabel, dropoffLabel, labels, height = 520 }) {
   const pickupLat = toCoord(trip?.pickupLat);
   const pickupLng = toCoord(trip?.pickupLng);
@@ -424,13 +365,13 @@ export default function DriverTrips() {
   function getConfirmCopy(actionType) {
     switch (actionType) {
       case 'accept':
-        return { title: t('trip.accept_trip'), message: t('trip.accept_trip_confirm'), variant: 'primary' };
+        return { title: t('trip.accept_trip'), message: t('trip.accept_trip_confirm'), confirmText: t('trip.accept_trip'), variant: 'primary' };
       case 'start':
-        return { title: t('trip.start_trip'), message: t('trip.start_trip_confirm'), variant: 'primary' };
+        return { title: t('trip.start_trip'), message: t('trip.start_trip_confirm'), confirmText: t('trip.start_trip'), variant: 'primary' };
       case 'complete':
-        return { title: t('trip.complete_trip'), message: t('trip.complete_trip_confirm'), variant: 'success' };
+        return { title: t('trip.complete_trip'), message: t('trip.complete_trip_confirm'), confirmText: t('trip.complete_trip'), variant: 'success' };
       default:
-        return { title: t('common.confirm'), message: t('common.confirm_action_prompt'), variant: 'primary' };
+        return { title: t('common.confirm'), message: '', confirmText: t('common.confirm'), variant: 'primary' };
     }
   }
 
@@ -441,6 +382,8 @@ export default function DriverTrips() {
     if (type === 'start') return handleStart(tripId);
     if (type === 'complete') return handleComplete(tripId);
   }
+
+  const confirmCopy = getConfirmCopy(confirmAction.type);
 
   if (loading) return <div className="loading-page"><div className="spinner"></div></div>;
 
@@ -520,20 +463,6 @@ export default function DriverTrips() {
                 )}
               </div>
 
-              <TripMiniMap
-                trip={trip}
-                currentLat={livePosition?.[0] ?? user?.lastKnownLat}
-                currentLng={livePosition?.[1] ?? user?.lastKnownLng}
-                currentLabel={liveAddress}
-                pickupLabel={addressOverrides[`${trip.id}:pickup`]}
-                dropoffLabel={addressOverrides[`${trip.id}:dropoff`]}
-                labels={{
-                  current: t('trip.current_location'),
-                  pickup: t('trip.pickup'),
-                  dropoff: t('trip.dropoff'),
-                }}
-              />
-
               <div style={{ marginTop: 'var(--space-sm)' }}>
                 <button
                   className="btn btn-secondary btn-sm"
@@ -595,9 +524,10 @@ export default function DriverTrips() {
         isOpen={confirmAction.isOpen}
         onClose={() => setConfirmAction({ isOpen: false, type: null, tripId: null })}
         onConfirm={onConfirmAction}
-        title={getConfirmCopy(confirmAction.type).title}
-        message={getConfirmCopy(confirmAction.type).message}
-        variant={getConfirmCopy(confirmAction.type).variant}
+        title={confirmCopy.title}
+        message={confirmCopy.message}
+        confirmText={confirmCopy.confirmText}
+        variant={confirmCopy.variant}
         size="sm"
       />
 
