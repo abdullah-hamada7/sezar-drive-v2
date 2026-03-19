@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import { useState, useEffect, useRef, useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Radio } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -25,14 +25,100 @@ function MapRecenter({ center }) {
   return null;
 }
 
+const DRIVER_MARKER_COLORS = [
+  '#3b82f6', // blue
+  '#22c55e', // green
+  '#ef4444', // red
+  '#f59e0b', // amber
+  '#a855f7', // purple
+  '#14b8a6', // teal
+  '#ec4899', // pink
+  '#6366f1', // indigo
+  '#84cc16', // lime
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#0ea5e9', // sky
+];
+
+function createDriverMarkerIcon({ color, label }) {
+  const safeLabel = (label || '').slice(0, 2).toUpperCase();
+  return L.divIcon({
+    className: 'driver-dot-marker',
+    html: `
+      <div style="
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: ${color};
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      ">
+        ${safeLabel}
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
+  });
+}
+
+async function reverseGeocode(lat, lng, language = 'en') {
+  try {
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      lat: String(lat),
+      lon: String(lng),
+      zoom: '18',
+      addressdetails: '1',
+    });
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+      headers: {
+        Accept: 'application/json',
+        'Accept-Language': language,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.display_name ? String(data.display_name) : null;
+  } catch {
+    return null;
+  }
+}
+
+function shortLabel(name, id) {
+  const n = String(name || '').trim();
+  if (n) {
+    const parts = n.split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] || '';
+    const second = parts.length > 1 ? (parts[1]?.[0] || '') : (parts[0]?.[1] || '');
+    const label = `${first}${second}`.trim();
+    if (label) return label;
+  }
+  const fallback = String(id || '').trim();
+  return fallback ? fallback.slice(0, 2).toUpperCase() : 'D';
+}
+
 export default function TrackingPage() {
   const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [wsStatus, setWsStatus] = useState('disconnected');
+  const [driverAddresses, setDriverAddresses] = useState({});
   const wsRef = useRef(null);
   const wsHadConnectionRef = useRef(false);
+
+  const geocodeCacheRef = useRef(new Map());
+  const geocodeInFlightRef = useRef(new Set());
+  const geocodeRunIdRef = useRef(0);
 
   const reconnectTimerRef = useRef(null);
   const fallbackPollTimerRef = useRef(null);
@@ -168,6 +254,82 @@ export default function TrackingPage() {
     return new Date(d).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' });
   }
 
+  const driverColorMap = useMemo(() => {
+    const sorted = [...drivers].sort((a, b) => String(a.id).localeCompare(String(b.id)));
+    const map = {};
+    for (let i = 0; i < sorted.length; i += 1) {
+      map[sorted[i].id] = DRIVER_MARKER_COLORS[i % DRIVER_MARKER_COLORS.length];
+    }
+    return map;
+  }, [drivers]);
+
+  const driverIconCacheRef = useRef(new Map());
+  const getDriverIcon = useCallback((driver) => {
+    const driverId = driver?.id;
+    if (!driverId) return undefined;
+    const color = driverColorMap[driverId] || DRIVER_MARKER_COLORS[0];
+    const label = shortLabel(driver?.name, driverId);
+    const cacheKey = `${driverId}:${color}:${label}`;
+    const existing = driverIconCacheRef.current.get(cacheKey);
+    if (existing) return existing;
+    const icon = createDriverMarkerIcon({ color, label });
+    driverIconCacheRef.current.set(cacheKey, icon);
+    return icon;
+  }, [driverColorMap]);
+
+  const resolveDriverAddresses = useCallback(async (list, runId) => {
+    const language = i18n.language || 'en';
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    const candidates = (list || [])
+      .filter((d) => d?.lat != null && d?.lng != null)
+      .map((d) => {
+        const key = `${Number(d.lat).toFixed(4)},${Number(d.lng).toFixed(4)}`;
+        return { driverId: d.id, lat: d.lat, lng: d.lng, key };
+      });
+
+    for (const c of candidates) {
+      if (runId !== geocodeRunIdRef.current) return;
+      if (geocodeCacheRef.current.has(c.key)) {
+        const cached = geocodeCacheRef.current.get(c.key);
+        const value = cached || `${Number(c.lat).toFixed(5)}, ${Number(c.lng).toFixed(5)}`;
+        setDriverAddresses((prev) => (prev[c.driverId] === value ? prev : { ...prev, [c.driverId]: value }));
+        continue;
+      }
+      if (geocodeInFlightRef.current.has(c.key)) continue;
+
+      geocodeInFlightRef.current.add(c.key);
+      try {
+        const addr = await reverseGeocode(c.lat, c.lng, language);
+        geocodeCacheRef.current.set(c.key, addr);
+        const value = addr || `${Number(c.lat).toFixed(5)}, ${Number(c.lng).toFixed(5)}`;
+        setDriverAddresses((prev) => ({ ...prev, [c.driverId]: value }));
+      } finally {
+        geocodeInFlightRef.current.delete(c.key);
+      }
+
+      // Nominatim usage: throttle requests
+      await sleep(900);
+    }
+  }, [i18n.language]);
+
+  useEffect(() => {
+    // Resolve addresses in the background (throttled).
+    geocodeRunIdRef.current += 1;
+    const runId = geocodeRunIdRef.current;
+
+    // Prioritize most recently updated drivers first.
+    const prioritized = [...drivers]
+      .sort((a, b) => {
+        const ta = a?.lastUpdate ? new Date(a.lastUpdate).getTime() : 0;
+        const tb = b?.lastUpdate ? new Date(b.lastUpdate).getTime() : 0;
+        return tb - ta;
+      })
+      .slice(0, 25);
+
+    resolveDriverAddresses(prioritized, runId);
+  }, [drivers, resolveDriverAddresses]);
+
   function isDriverLive(lastUpdate) {
     if (!lastUpdate) return false;
     const ageMs = Date.now() - new Date(lastUpdate).getTime();
@@ -223,10 +385,13 @@ export default function TrackingPage() {
             <MapRecenter center={activeCenter} />
             {drivers.map(d => (
               d.lat != null && d.lng != null && (
-                <Marker key={d.id} position={[d.lat, d.lng]}>
+                <Marker key={d.id} position={[d.lat, d.lng]} icon={getDriverIcon(d)}>
                   <Popup>
-                    <div style={{ color: 'var(--color-bg)' }}>
+                    <div style={{ color: 'var(--color-text)' }}>
                       <strong>{d.name || t('verification.card.unknown')}</strong><br />
+                      <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}>
+                        {driverAddresses[d.id] || `${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}`}
+                      </div>
                       {t('tracking.popup.last_seen', { time: formatTime(d.lastUpdate) })}
                     </div>
                   </Popup>
@@ -254,13 +419,13 @@ export default function TrackingPage() {
                 {drivers.map(d => (
                   <div key={d.id} className="flex items-center gap-sm" style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-tertiary)' }}>
                     <span className={`status-led ${isDriverLive(d.lastUpdate) ? 'status-led-online' : 'status-led-offline'}`} />
-                    <MapPin size={16} style={{ color: 'var(--color-success)' }} />
+                    <MapPin size={16} style={{ color: driverColorMap[d.id] || 'var(--color-success)' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="text-sm" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {d.name || d.id.slice(0, 8)}
                       </div>
                       <div className="text-sm text-muted">
-                        {d.lat?.toFixed(5)}, {d.lng?.toFixed(5)}
+                        {driverAddresses[d.id] || (d.lat != null && d.lng != null ? `${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}` : t('common.loading'))}
                       </div>
                     </div>
                   </div>

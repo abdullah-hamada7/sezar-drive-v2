@@ -371,13 +371,21 @@ export default function DriverShift() {
       ) : (
         <div className="card">
           <div className="flex items-center gap-md" style={{ marginBottom: 'var(--space-lg)' }}>
-            <div className="stat-icon" style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem',
-              padding: '1.5rem', borderRadius: '0.5rem',
-              background: 'var(--color-success-bg)',
-              color: 'var(--color-success)'
-            }}>
-              <ShieldCheck size={24} />
+            <div
+              className="stat-icon"
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--color-success-bg)',
+                color: 'var(--color-success)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <ShieldCheck size={26} />
             </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>
