@@ -1,12 +1,13 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tripService as api } from '../../services/trip.service';
-import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle } from 'lucide-react';
+import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle, X } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
 import { useAuth } from '../../hooks/useAuth';
 import PromptModal from '../../components/common/PromptModal';
-import { MapContainer, Marker, TileLayer, Polyline } from 'react-leaflet';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { MapContainer, Marker, TileLayer, Polyline, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -17,7 +18,39 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+function createDotMarkerIcon(color) {
+  return L.divIcon({
+    className: 'trip-dot-marker',
+    html: `
+      <div style="
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: ${color};
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+      "></div>
+    `,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -8],
+  });
+}
+
+const MARKER_ICONS = {
+  current: createDotMarkerIcon('#3b82f6'),
+  pickup: createDotMarkerIcon('#22c55e'),
+  dropoff: createDotMarkerIcon('#ef4444'),
+};
+
 const STATUS_BADGES = { ASSIGNED: 'badge-info', IN_PROGRESS: 'badge-warning', COMPLETED: 'badge-success', CANCELLED: 'badge-danger' };
+
+function looksLikeCoordinateLabel(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(trimmed);
+}
 
 function toCoord(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -25,7 +58,45 @@ function toCoord(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function TripMiniMap({ trip, currentLat, currentLng }) {
+async function reverseGeocode(lat, lng, language = 'en') {
+  try {
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      lat: String(lat),
+      lon: String(lng),
+      zoom: '18',
+      addressdetails: '1',
+    });
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': language,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.display_name ? String(data.display_name) : null;
+  } catch {
+    return null;
+  }
+}
+
+function MapAutoFollow({ position }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!position) return;
+    try {
+      map.setView(position, map.getZoom(), { animate: true, duration: 0.5 });
+    } catch {
+      // ignore map errors
+    }
+  }, [map, position]);
+
+  return null;
+}
+
+function TripMiniMap({ trip, currentLat, currentLng, currentLabel, pickupLabel, dropoffLabel, labels }) {
   const pickupLat = toCoord(trip?.pickupLat);
   const pickupLng = toCoord(trip?.pickupLng);
   const dropoffLat = toCoord(trip?.dropoffLat);
@@ -50,27 +121,117 @@ function TripMiniMap({ trip, currentLat, currentLng }) {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          {current && <MapAutoFollow position={current} />}
           {polyline.length >= 2 && (
             <Polyline positions={polyline} pathOptions={{ color: '#64748b', weight: 4, opacity: 0.9 }} />
           )}
-          {current && <Marker position={current} />}
-          {pickup && <Marker position={pickup} />}
-          {dropoff && <Marker position={dropoff} />}
+          {current && (
+            <Marker position={current} icon={MARKER_ICONS.current}>
+              <Popup>
+                <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.current || 'Current location'}</div>
+                <div style={{ fontSize: 12, opacity: 0.85 }}>{currentLabel || '—'}</div>
+              </Popup>
+            </Marker>
+          )}
+          {pickup && (
+            <Marker position={pickup} icon={MARKER_ICONS.pickup}>
+              <Popup>
+                <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.pickup || 'Pickup'}</div>
+                <div style={{ fontSize: 12, opacity: 0.85 }}>{pickupLabel || trip?.pickupLocation || '—'}</div>
+              </Popup>
+            </Marker>
+          )}
+          {dropoff && (
+            <Marker position={dropoff} icon={MARKER_ICONS.dropoff}>
+              <Popup>
+                <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.dropoff || 'Dropoff'}</div>
+                <div style={{ fontSize: 12, opacity: 0.85 }}>{dropoffLabel || trip?.dropoffLocation || '—'}</div>
+              </Popup>
+            </Marker>
+          )}
         </MapContainer>
       </div>
     </div>
   );
 }
 
+function TripDetailsMap({ trip, currentLat, currentLng, currentLabel, pickupLabel, dropoffLabel, labels, height = 520 }) {
+  const pickupLat = toCoord(trip?.pickupLat);
+  const pickupLng = toCoord(trip?.pickupLng);
+  const dropoffLat = toCoord(trip?.dropoffLat);
+  const dropoffLng = toCoord(trip?.dropoffLng);
+  const curLat = toCoord(currentLat);
+  const curLng = toCoord(currentLng);
+
+  const pickup = pickupLat != null && pickupLng != null ? [pickupLat, pickupLng] : null;
+  const dropoff = dropoffLat != null && dropoffLng != null ? [dropoffLat, dropoffLng] : null;
+  const current = curLat != null && curLng != null ? [curLat, curLng] : null;
+
+  if (!pickup && !dropoff && !current) return null;
+
+  const center = pickup || current || dropoff || [30.0444, 31.2357];
+  const polyline = [current, pickup, dropoff].filter(Boolean);
+
+  return (
+    <div style={{ height, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--color-border)' }}>
+      <MapContainer center={center} zoom={13} style={{ height: '100%', width: '100%' }}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        {current && <MapAutoFollow position={current} />}
+        {polyline.length >= 2 && (
+          <Polyline positions={polyline} pathOptions={{ color: '#64748b', weight: 4, opacity: 0.9 }} />
+        )}
+        {current && (
+          <Marker position={current} icon={MARKER_ICONS.current}>
+            <Popup>
+              <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.current || 'Current location'}</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>{currentLabel || '—'}</div>
+            </Popup>
+          </Marker>
+        )}
+        {pickup && (
+          <Marker position={pickup} icon={MARKER_ICONS.pickup}>
+            <Popup>
+              <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.pickup || 'Pickup'}</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>{pickupLabel || trip?.pickupLocation || '—'}</div>
+            </Popup>
+          </Marker>
+        )}
+        {dropoff && (
+          <Marker position={dropoff} icon={MARKER_ICONS.dropoff}>
+            <Popup>
+              <div style={{ fontWeight: 650, marginBottom: 4 }}>{labels?.dropoff || 'Dropoff'}</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>{dropoffLabel || trip?.dropoffLocation || '—'}</div>
+            </Popup>
+          </Marker>
+        )}
+      </MapContainer>
+    </div>
+  );
+}
+
 export default function DriverTrips() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [rejectPrompt, setRejectPrompt] = useState({ isOpen: false, tripId: null });
+  const [confirmAction, setConfirmAction] = useState({ isOpen: false, type: null, tripId: null });
+  const [mapDetails, setMapDetails] = useState({ isOpen: false, trip: null });
+  const [livePosition, setLivePosition] = useState(null);
+  const [liveAddress, setLiveAddress] = useState('');
+  const [addressOverrides, setAddressOverrides] = useState({});
   const { addToast } = useContext(ToastContext);
   const { activeShift } = useShift();
   const { user } = useAuth();
+  const lastReverseRef = useRef({ at: 0, lat: null, lng: null });
+  const addressOverridesRef = useRef({});
+
+  useEffect(() => {
+    addressOverridesRef.current = addressOverrides;
+  }, [addressOverrides]);
 
   useEffect(() => { load(); }, []);
 
@@ -98,6 +259,108 @@ export default function DriverTrips() {
       window.clearInterval(poll);
     };
   }, []);
+
+  useEffect(() => {
+    const hasInProgress = trips.some((trip) => trip.status === 'IN_PROGRESS');
+    if (!hasInProgress) return;
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        setLivePosition([lat, lng]);
+
+        const now = Date.now();
+        const last = lastReverseRef.current;
+        const movedEnough = last.lat == null || last.lng == null
+          ? true
+          : (Math.abs(lat - last.lat) + Math.abs(lng - last.lng)) > 0.0006; // ~70m-ish
+        const timeEnough = now - last.at > 30000;
+
+        if (movedEnough && timeEnough) {
+          lastReverseRef.current = { at: now, lat, lng };
+          const addr = await reverseGeocode(lat, lng, i18n.language || 'en');
+          if (addr) setLiveAddress(addr);
+        }
+      },
+      () => {
+        // ignore GPS errors; fallback to lastKnown
+      },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+
+    return () => {
+      try {
+        navigator.geolocation.clearWatch(watchId);
+      } catch {
+        // ignore
+      }
+    };
+  }, [trips, i18n.language]);
+
+  useEffect(() => {
+    if (!trips.length) return;
+    let cancelled = false;
+
+    (async () => {
+      for (const trip of trips) {
+        if (!trip?.id) continue;
+
+        const pickupLat = toCoord(trip.pickupLat);
+        const pickupLng = toCoord(trip.pickupLng);
+        const dropoffLat = toCoord(trip.dropoffLat);
+        const dropoffLng = toCoord(trip.dropoffLng);
+
+        if (pickupLat != null && pickupLng != null) {
+          const key = `${trip.id}:pickup`;
+          const already = addressOverridesRef.current[key];
+          if (!already && looksLikeCoordinateLabel(trip.pickupLocation || '')) {
+            const addr = await reverseGeocode(pickupLat, pickupLng, i18n.language || 'en');
+            if (!cancelled && addr) {
+              setAddressOverrides((prev) => ({ ...prev, [key]: addr }));
+            }
+          }
+        }
+
+        if (dropoffLat != null && dropoffLng != null) {
+          const key = `${trip.id}:dropoff`;
+          const already = addressOverridesRef.current[key];
+          if (!already && looksLikeCoordinateLabel(trip.dropoffLocation || '')) {
+            const addr = await reverseGeocode(dropoffLat, dropoffLng, i18n.language || 'en');
+            if (!cancelled && addr) {
+              setAddressOverrides((prev) => ({ ...prev, [key]: addr }));
+            }
+          }
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [trips, i18n.language]);
+
+  useEffect(() => {
+    if (liveAddress) return;
+    const lat = toCoord(user?.lastKnownLat);
+    const lng = toCoord(user?.lastKnownLng);
+    if (lat == null || lng == null) return;
+
+    if (!livePosition) {
+      setLivePosition([lat, lng]);
+    }
+
+    let cancelled = false;
+    (async () => {
+      const addr = await reverseGeocode(lat, lng, i18n.language || 'en');
+      if (!cancelled && addr) setLiveAddress(addr);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.lastKnownLat, user?.lastKnownLng, i18n.language, liveAddress, livePosition]);
 
   async function load() {
     setLoading(true);
@@ -158,22 +421,32 @@ export default function DriverTrips() {
     }
   }
 
+  function getConfirmCopy(actionType) {
+    switch (actionType) {
+      case 'accept':
+        return { title: t('trip.accept_trip'), message: t('trip.accept_trip_confirm'), variant: 'primary' };
+      case 'start':
+        return { title: t('trip.start_trip'), message: t('trip.start_trip_confirm'), variant: 'primary' };
+      case 'complete':
+        return { title: t('trip.complete_trip'), message: t('trip.complete_trip_confirm'), variant: 'success' };
+      default:
+        return { title: t('common.confirm'), message: t('common.confirm_action_prompt'), variant: 'primary' };
+    }
+  }
+
+  async function onConfirmAction() {
+    const { type, tripId } = confirmAction;
+    if (!type || !tripId) return;
+    if (type === 'accept') return handleAccept(tripId);
+    if (type === 'start') return handleStart(tripId);
+    if (type === 'complete') return handleComplete(tripId);
+  }
+
   if (loading) return <div className="loading-page"><div className="spinner"></div></div>;
 
   return (
     <div>
       <h2 className="page-title" style={{ marginBottom: 'var(--space-lg)' }}>{t('trip.my_trips')}</h2>
-
-      <div className="card mb-md" style={{ padding: 'var(--space-md)' }}>
-        <div className="text-xs text-muted" style={{ marginBottom: '0.4rem' }}>{t('trip.current_location')}</div>
-        {user?.lastKnownLat && user?.lastKnownLng ? (
-          <div className="text-sm" style={{ fontWeight: 600 }}>
-            {Number(user.lastKnownLat).toFixed(5)}, {Number(user.lastKnownLng).toFixed(5)}
-          </div>
-        ) : (
-          <div className="text-sm text-muted">{t('trip.location_not_available')}</div>
-        )}
-      </div>
 
       {!activeShift && (
         <div className="alert alert-warning mb-md">
@@ -199,12 +472,18 @@ export default function DriverTrips() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 'var(--space-md)' }}>
                   <div className="flex items-center gap-sm">
                     <MapPin size={14} style={{ color: 'var(--color-success)', flexShrink: 0 }} />
-                     <span className="text-sm">{t('trip.source_pickup_label')}: {trip.pickupLocation}</span>
-                   </div>
-                   <div className="flex items-center gap-sm">
-                     <MapPin size={14} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
-                     <span className="text-sm">{t('trip.destination_label')}: {trip.dropoffLocation}</span>
-                   </div>
+                    <span className="text-sm">
+                      {t('trip.pickup')}:{' '}
+                      {addressOverrides[`${trip.id}:pickup`] || trip.pickupLocation}
+                    </span>
+                    </div>
+                    <div className="flex items-center gap-sm">
+                      <MapPin size={14} style={{ color: 'var(--color-danger)', flexShrink: 0 }} />
+                    <span className="text-sm">
+                      {t('trip.dropoff')}:{' '}
+                      {addressOverrides[`${trip.id}:dropoff`] || trip.dropoffLocation}
+                    </span>
+                    </div>
                 {trip.scheduledTime && (
                   <div className="flex items-center gap-sm">
                     <Clock size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
@@ -243,18 +522,37 @@ export default function DriverTrips() {
 
               <TripMiniMap
                 trip={trip}
-                currentLat={user?.lastKnownLat}
-                currentLng={user?.lastKnownLng}
+                currentLat={livePosition?.[0] ?? user?.lastKnownLat}
+                currentLng={livePosition?.[1] ?? user?.lastKnownLng}
+                currentLabel={liveAddress}
+                pickupLabel={addressOverrides[`${trip.id}:pickup`]}
+                dropoffLabel={addressOverrides[`${trip.id}:dropoff`]}
+                labels={{
+                  current: t('trip.current_location'),
+                  pickup: t('trip.pickup'),
+                  dropoff: t('trip.dropoff'),
+                }}
               />
+
+              <div style={{ marginTop: 'var(--space-sm)' }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  type="button"
+                  onClick={() => setMapDetails({ isOpen: true, trip })}
+                  style={{ width: '100%' }}
+                >
+                  {t('trip.map_details')}
+                </button>
+              </div>
 
               {trip.status === 'ASSIGNED' && (
                 <div className="flex gap-sm" style={{ width: '100%' }}>
                   {trip.scheduledTime && new Date(trip.scheduledTime) > new Date() ? (
-                    <button className="btn btn-primary" onClick={() => handleAccept(trip.id)} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
+                    <button className="btn btn-primary" onClick={() => setConfirmAction({ isOpen: true, type: 'accept', tripId: trip.id })} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
                       <CheckCircle size={16} /> {t('trip.accept_trip')}
                     </button>
                   ) : (
-                    <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
+                    <button className="btn btn-primary" onClick={() => setConfirmAction({ isOpen: true, type: 'start', tripId: trip.id })} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
                       <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
                     </button>
                   )}
@@ -270,7 +568,7 @@ export default function DriverTrips() {
               )}
               {trip.status === 'ACCEPTED' && (
                 <div className="flex gap-sm" style={{ width: '100%' }}>
-                  <button className="btn btn-primary" onClick={() => handleStart(trip.id)} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
+                  <button className="btn btn-primary" onClick={() => setConfirmAction({ isOpen: true, type: 'start', tripId: trip.id })} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
                     <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
                   </button>
                   <button
@@ -284,12 +582,72 @@ export default function DriverTrips() {
                 </div>
               )}
               {trip.status === 'IN_PROGRESS' && (
-                <button className="btn btn-success" onClick={() => handleComplete(trip.id)} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
+                <button className="btn btn-success" onClick={() => setConfirmAction({ isOpen: true, type: 'complete', tripId: trip.id })} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
                   <CheckCircle size={16} /> {t('trip.complete_trip')}
                 </button>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={confirmAction.isOpen}
+        onClose={() => setConfirmAction({ isOpen: false, type: null, tripId: null })}
+        onConfirm={onConfirmAction}
+        title={getConfirmCopy(confirmAction.type).title}
+        message={getConfirmCopy(confirmAction.type).message}
+        variant={getConfirmCopy(confirmAction.type).variant}
+        size="sm"
+      />
+
+      {mapDetails.isOpen && mapDetails.trip && (
+        <div className="modal-overlay" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+          <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">{t('trip.map_details')}</h2>
+              <button className="btn-icon" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <TripDetailsMap
+                trip={mapDetails.trip}
+                currentLat={livePosition?.[0] ?? user?.lastKnownLat}
+                currentLng={livePosition?.[1] ?? user?.lastKnownLng}
+                currentLabel={liveAddress}
+                pickupLabel={addressOverrides[`${mapDetails.trip.id}:pickup`]}
+                dropoffLabel={addressOverrides[`${mapDetails.trip.id}:dropoff`]}
+                labels={{
+                  current: t('trip.current_location'),
+                  pickup: t('trip.pickup'),
+                  dropoff: t('trip.dropoff'),
+                }}
+                height={520}
+              />
+
+              <div className="grid grid-3 gap-md" style={{ marginTop: 'var(--space-md)' }}>
+                <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                  <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.current_location')}</div>
+                  <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{liveAddress || t('trip.location_not_available')}</div>
+                </div>
+                <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                  <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.pickup')}</div>
+                  <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{addressOverrides[`${mapDetails.trip.id}:pickup`] || mapDetails.trip.pickupLocation}</div>
+                </div>
+                <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                  <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.dropoff')}</div>
+                  <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{addressOverrides[`${mapDetails.trip.id}:dropoff`] || mapDetails.trip.dropoffLocation}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="btn btn-secondary" onClick={() => setMapDetails({ isOpen: false, trip: null })}>
+                {t('common.close')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

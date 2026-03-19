@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { statsService } from '../../services/stats.service';
 import { ThemeContext } from '../../contexts/theme';
+import { readCache } from '../../services/read-cache.service';
 
 export default function RecentActivityList() {
   const { t, i18n } = useTranslation();
@@ -9,17 +10,39 @@ export default function RecentActivityList() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isStale, setIsStale] = useState(false);
 
   const loadActivity = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setIsStale(false);
       const res = await statsService.getDriverActivity();
       const result = res.data || res;
       setData(Array.isArray(result) ? result : []);
     } catch (err) {
       console.error('Failed to load activity:', err);
-      setError(t('errors.fetch_failed'));
+
+      // Prefer cached data when available.
+      try {
+        const cached = await readCache.get('/stats/my-activity');
+        if (cached?.data && Array.isArray(cached.data)) {
+          setData(cached.data);
+          setIsStale(true);
+          return;
+        }
+      } catch {
+        // ignore cache failures
+      }
+
+      const code = err?.code || err?.errorCode;
+      if (code) {
+        setError(t(`errors.${code}`, err?.message || t('common.error')));
+      } else if (err?.isNetworkError) {
+        setError(t('errors.NETWORK_ERROR'));
+      } else {
+        setError(t('errors.fetch_failed'));
+      }
     } finally {
       setLoading(false);
     }
@@ -129,12 +152,24 @@ export default function RecentActivityList() {
     <div className="card" style={cardStyle}>
       <div className="flex items-center justify-between mb-sm">
         <h3 className="text-lg font-bold" style={headerStyle}>{t('driver_home.recent_activity')}</h3>
-        <span className="text-xs" style={mutedStyle}>{t('common.last_updated')}</span>
+        <div className="flex items-center gap-sm">
+          {isStale && (
+            <span className="badge badge-neutral" title={t('common.offline.saved_will_sync')}>
+              {t('common.offline.offline')}
+            </span>
+          )}
+          <span className="text-xs" style={mutedStyle}>{t('common.last_updated')}</span>
+        </div>
       </div>
       <div className="flex flex-col gap-sm">
         {error ? (
           <div className="text-danger text-center py-md bg-danger-bg rounded border border-danger">
             <div className="text-sm font-bold">{error}</div>
+            <div style={{ marginTop: '0.75rem' }}>
+              <button className="btn btn-secondary btn-sm" type="button" onClick={loadActivity}>
+                {t('common.refresh')}
+              </button>
+            </div>
           </div>
         ) : data.length === 0 ? (
           <div className="text-muted text-center py-md rounded border border-dashed" style={isLight ? { background: '#f8fafc', borderColor: '#e2e8f0' } : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.12)' }}>

@@ -47,6 +47,16 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  if (err.code === 'P2022') {
+    // Column does not exist (usually means migrations not applied)
+    return res.status(500).json({
+      error: {
+        code: 'DB_SCHEMA_OUT_OF_DATE',
+        message: 'Database schema is out of date. Apply backend Prisma migrations and redeploy.',
+      },
+    });
+  }
+
   // Handle multer file size errors
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(413).json({

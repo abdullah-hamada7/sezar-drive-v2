@@ -17,7 +17,30 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-const toCoordinateLabel = (lat, lng) => `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+async function reverseGeocode(lat, lng, language = 'en') {
+  try {
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      lat: String(lat),
+      lon: String(lng),
+      zoom: '18',
+      addressdetails: '1',
+    });
+
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': language,
+      },
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.display_name ? String(data.display_name) : null;
+  } catch {
+    return null;
+  }
+}
 
 function TripMapClickHandler({ selectionMode, onSelect }) {
   useMapEvents({
@@ -165,6 +188,11 @@ export default function TripsPage() {
     }
     if (!String(form.pickupLocation || '').trim() || !String(form.dropoffLocation || '').trim()) {
       addToast(t('common.errors.check_fields'), 'error');
+      return;
+    }
+
+    if (form.pickupLat == null || form.pickupLng == null || form.dropoffLat == null || form.dropoffLng == null) {
+      addToast('Please pin pickup and dropoff on the map', 'error');
       return;
     }
     const parsedPrice = parseFloat(form.price);
@@ -335,16 +363,19 @@ export default function TripsPage() {
               <button className="btn-icon" onClick={() => setShowCreateModal(false)}><XCircle size={18} /></button>
             </div>
             <form onSubmit={handleCreate} className="modal-body">
-              <div className="form-section mb-md">
+                <div className="form-section mb-md">
                 <div className="card p-md mb-md" style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
-                  <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
+                  <div className="flex items-start justify-between" style={{ gap: 'var(--space-md)', marginBottom: '0.75rem' }}>
                     <div>
-                      <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.confirm_assignment')}</div>
-                      <div className="text-sm" style={{ fontWeight: 600 }}>{t('common.currency')}: {assignmentCharge.toFixed(2)}</div>
+                      <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>Assignment charge</div>
+                      <div className="text-sm" style={{ fontWeight: 650 }}>
+                        {assignmentCharge.toFixed(2)} {t('common.currency')}
+                        <span className="text-xs text-muted" style={{ marginInlineStart: '0.5rem' }}>(deducted from trip price)</span>
+                      </div>
                     </div>
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="btn btn-secondary btn-sm"
                       disabled={savingCharge}
                       onClick={async () => {
                         setSavingCharge(true);
@@ -366,9 +397,10 @@ export default function TripsPage() {
                       <Save size={16} /> {t('common.save')}
                     </button>
                   </div>
-                  <div className="grid grid-2 gap-md">
-                    <div className="form-group">
-                      <label className="form-label">{t('expenses.amount_label')}</label>
+
+                  <div className="grid grid-3 gap-md">
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Charge (EGP)</label>
                       <input
                         className="form-input"
                         type="number"
@@ -378,14 +410,40 @@ export default function TripsPage() {
                         onChange={(e) => setChargeDraft(e.target.value)}
                       />
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">{t('trips.modal.price_label', { unit: t('common.currency') })}</label>
-                      <div className="text-sm text-muted">
-                        Price: {form.price || '—'} {t('common.currency')} | Net after charge: {(() => {
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Trip price (EGP)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="form-input"
+                        value={form.price}
+                        onChange={e => { setForm({ ...form, price: e.target.value }); setError(''); }}
+                        required
+                        placeholder={t('common.amount_placeholder')}
+                        min="0"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Net to driver (EGP)</label>
+                      <div className="form-input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.95 }}>
+                        <span style={{ fontWeight: 650 }}>
+                          {(() => {
+                            const parsed = Number(form.price);
+                            if (!Number.isFinite(parsed)) return '—';
+                            return (parsed - assignmentCharge).toFixed(2);
+                          })()}
+                        </span>
+                        {(() => {
                           const parsed = Number(form.price);
-                          if (!Number.isFinite(parsed)) return '—';
-                          return (parsed - assignmentCharge).toFixed(2);
-                        })()} {t('common.currency')}
+                          if (!Number.isFinite(parsed)) return null;
+                          return parsed - assignmentCharge < 0 ? (
+                            <span className="text-xs text-danger" style={{ fontWeight: 650 }}>Price &lt; charge</span>
+                          ) : (
+                            <span className="text-xs text-muted">after charge</span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -432,10 +490,9 @@ export default function TripsPage() {
                         {t('trips.table.dropoff')}
                       </button>
                     </div>
-                    <div className="text-xs text-muted">
-                      {form.pickupLat != null && form.pickupLng != null ? `${t('trips.table.pickup')}: ${toCoordinateLabel(form.pickupLat, form.pickupLng)}` : `${t('trips.table.pickup')}: —`}
-                      {' | '}
-                      {form.dropoffLat != null && form.dropoffLng != null ? `${t('trips.table.dropoff')}: ${toCoordinateLabel(form.dropoffLat, form.dropoffLng)}` : `${t('trips.table.dropoff')}: —`}
+                    <div className="text-xs text-muted" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span className="badge badge-neutral">{form.pickupLat != null && form.pickupLng != null ? `${t('trips.table.pickup')} pinned` : `${t('trips.table.pickup')}: not pinned`}</span>
+                      <span className="badge badge-neutral">{form.dropoffLat != null && form.dropoffLng != null ? `${t('trips.table.dropoff')} pinned` : `${t('trips.table.dropoff')}: not pinned`}</span>
                     </div>
                   </div>
                   <div style={{ height: 260, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
@@ -444,26 +501,27 @@ export default function TripsPage() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
-                      <TripMapClickHandler
-                        selectionMode={mapSelectionMode}
-                        onSelect={(mode, lat, lng) => {
+                        <TripMapClickHandler
+                          selectionMode={mapSelectionMode}
+                        onSelect={async (mode, lat, lng) => {
+                          const address = await reverseGeocode(lat, lng, i18n.language);
                           if (mode === 'pickup') {
                             setForm((prev) => ({
                               ...prev,
                               pickupLat: lat,
                               pickupLng: lng,
-                              pickupLocation: prev.pickupLocation?.trim() ? prev.pickupLocation : toCoordinateLabel(lat, lng),
+                              pickupLocation: address || (prev.pickupLocation?.trim() ? prev.pickupLocation : 'Pinned pickup location'),
                             }));
                           } else {
                             setForm((prev) => ({
                               ...prev,
                               dropoffLat: lat,
                               dropoffLng: lng,
-                              dropoffLocation: prev.dropoffLocation?.trim() ? prev.dropoffLocation : toCoordinateLabel(lat, lng),
+                              dropoffLocation: address || (prev.dropoffLocation?.trim() ? prev.dropoffLocation : 'Pinned dropoff location'),
                             }));
                           }
                         }}
-                      />
+                        />
                       {form.pickupLat != null && form.pickupLng != null && (
                         <Marker position={[form.pickupLat, form.pickupLng]} />
                       )}
@@ -474,21 +532,15 @@ export default function TripsPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-2 gap-md">
-                  <div className="form-group">
-                    <label className="form-label">{t('trips.modal.price_label', { unit: t('common.currency') })}</label>
-                    <input type="number" step="0.01" className="form-input" value={form.price} onChange={e => { setForm({ ...form, price: e.target.value }); setError(''); }} required placeholder={t('common.amount_placeholder')} min="0" />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">{t('trips.modal.time_label')}</label>
-                    <input
-                      type="datetime-local"
-                      className="form-input"
-                      value={form.scheduledTime}
-                      onChange={e => { setForm({ ...form, scheduledTime: e.target.value }); setError(''); }}
-                      min={toLocalInputValue(new Date())}
-                    />
-                  </div>
+                <div className="form-group">
+                  <label className="form-label">{t('trips.modal.time_label')}</label>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={form.scheduledTime}
+                    onChange={e => { setForm({ ...form, scheduledTime: e.target.value }); setError(''); }}
+                    min={toLocalInputValue(new Date())}
+                  />
                 </div>
               </div>
 

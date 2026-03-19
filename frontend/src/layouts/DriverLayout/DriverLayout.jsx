@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverTracking } from '../../hooks/useDriverTracking';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { ThemeContext } from '../../contexts/theme';
 import {
   ClipboardCheck, Route, Receipt, AlertTriangle,
@@ -11,6 +11,7 @@ import {
 import BrandIcon from '../../components/BrandIcon';
 import { useLanguage } from '../../hooks/useLanguage';
 import { usePushPermission } from '../../hooks/usePushPermission';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import './DriverLayout.css';
 
 export default function DriverLayout() {
@@ -18,6 +19,7 @@ export default function DriverLayout() {
   const { logout } = useAuth();
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { isSyncing, pendingCount } = useOfflineSync();
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   usePushPermission();
   useDriverTracking();
   const syncChipLabel = isSyncing
@@ -65,7 +67,13 @@ export default function DriverLayout() {
           >
             <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{language === 'ar' ? 'EN' : 'AR'}</span>
           </button>
-          <button className="btn-icon" onClick={logout} title={t('nav.logout')}><LogOut size={18} className="mirror-rtl" /></button>
+          <button
+            className="btn-icon"
+            onClick={() => setLogoutConfirmOpen(true)}
+            title={t('nav.logout')}
+          >
+            <LogOut size={18} className="mirror-rtl" />
+          </button>
         </div>
       </header>
 
@@ -88,6 +96,15 @@ export default function DriverLayout() {
           </NavLink>
         ))}
       </nav>
+
+      <ConfirmModal
+        isOpen={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={logout}
+        title={t('nav.logout')}
+        message={t('common.logout_confirm')}
+        variant="danger"
+      />
     </div>
   );
 }
