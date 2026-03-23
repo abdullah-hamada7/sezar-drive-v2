@@ -6,25 +6,43 @@
   position: relative;
   overflow: hidden;
   background-color: var(--color-bg);
-  /* Technical grid background */
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
+  --auth-bg-overlay: linear-gradient(180deg, rgba(0, 0, 0, 0.70), rgba(0, 0, 0, 0.45));
 }
 
 [data-theme="light"] .login-page {
-  /* Dark grid for light mode */
-  background-image: 
-    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  --auth-bg-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.50));
+}
+
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url('/auth-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transform: scale(1.02);
+}
+
+.login-page::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    var(--auth-bg-overlay),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: auto, 40px 40px, 40px 40px;
+  background-position: center, center, center;
 }
 
 /* ── Animated Background (Subtle Tech Glow) ── */
 .login-bg {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 1;
   pointer-events: none;
 }
 
@@ -61,7 +79,7 @@
 /* ── Login Card (Panel) ── */
 .login-card {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md); /* Sharp corners */
