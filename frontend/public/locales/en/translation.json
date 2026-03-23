@@ -113,16 +113,16 @@
     "status_cancelled": "Cancelled",
     "no_active_shift_warning": "You must start and activate a shift before trips.",
     "new_assignment_notif": "You have been assigned a new trip!",
-    "cancellation_notif": "A trip has been cancelled."
-    ,"payment": {
-      "method": "Payment",
+    "cancellation_notif": "A trip has been cancelled.",
+    "payment": {
+      "method": "Payment method",
       "collect": "Collect",
       "paid": "Paid",
       "cash": "Cash",
-      "ewallet": "E-Wallet",
-      "epayment": "E-Payment"
-    }
-    ,"contact_whatsapp": "Contact on WhatsApp"
+      "ewallet": "E-wallet",
+      "epayment": "Online payment"
+    },
+    "contact_whatsapp": "Contact on WhatsApp"
   },
   "shift": {
     "management": "Shift Management",
@@ -229,12 +229,12 @@
     "go_shifts": "Go to Shifts",
     "photos_missing_error": "Please upload all required vehicle photos before completing.",
     "camera_error": "Could not access camera",
-    "mileage": "Current Mileage (KM)"
-    ,"progress": "Progress"
-    ,"step_checklist": "Checklist"
-    ,"step_photos": "Photos"
-    ,"step_review": "Review"
-    ,"back_to_shift": "Back to Shift"
+    "mileage": "Current Mileage (KM)",
+    "progress": "Progress",
+    "step_checklist": "Checklist",
+    "step_photos": "Photos",
+    "step_review": "Review",
+    "back_to_shift": "Back to Shift"
   },
   "driver_home": {
     "identity_pending": "Identity verification pending",
@@ -661,6 +661,13 @@
       "details_title": "Trip Details",
       "driver_label": "Driver *",
       "select_driver": "Select Driver",
+      "assignment_charge_title": "Assignment charge",
+      "assignment_charge_deducted_hint": "(deducted from trip price)",
+      "assignment_charge_input_label": "Charge ({{unit}})",
+      "trip_price_input_label": "Trip price ({{unit}})",
+      "net_to_driver_label": "Net to driver ({{unit}})",
+      "price_lt_charge": "Price < charge",
+      "after_charge_hint": "after charge",
       "pickup_label": "Pickup Location *",
       "dropoff_label": "Dropoff Location *",
       "source_pickup_label": "Passenger source / pickup",
@@ -680,11 +687,11 @@
       "bags_ph": "Number of bags",
       "reason_placeholder": "Reason for cancellation",
       "pickup_placeholder": "Type pickup location",
-      "dropoff_placeholder": "Type dropoff location"
-      ,"payment_method_label": "Payment Method *"
-      ,"payment_method_cash": "Cash"
-      ,"payment_method_ewallet": "E-Wallet"
-      ,"payment_method_epayment": "E-Payment"
+      "dropoff_placeholder": "Type dropoff location",
+      "payment_method_label": "Payment method *",
+      "payment_method_cash": "Cash",
+      "payment_method_ewallet": "E-wallet",
+      "payment_method_epayment": "Online payment"
     },
     "details": {
       "status": "Status",

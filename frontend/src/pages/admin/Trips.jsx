@@ -573,12 +573,12 @@ export default function TripsPage() {
             <form onSubmit={handleCreate} className="modal-body">
                 <div className="form-section mb-md">
                 <div className="card p-md mb-md" style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)' }}>
-                  <div className="flex items-start justify-between" style={{ gap: 'var(--space-md)', marginBottom: '0.75rem' }}>
-                    <div>
-                      <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>Assignment charge</div>
+                    <div className="flex items-start justify-between" style={{ gap: 'var(--space-md)', marginBottom: '0.75rem' }}>
+                      <div>
+                      <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trips.modal.assignment_charge_title')}</div>
                       <div className="text-sm" style={{ fontWeight: 650 }}>
                         {assignmentCharge.toFixed(2)} {t('common.currency')}
-                        <span className="text-xs text-muted" style={{ marginInlineStart: '0.5rem' }}>(deducted from trip price)</span>
+                        <span className="text-xs text-muted" style={{ marginInlineStart: '0.5rem' }}>{t('trips.modal.assignment_charge_deducted_hint')}</span>
                       </div>
                     </div>
                      <button
@@ -593,7 +593,7 @@ export default function TripsPage() {
 
                   <div className="grid grid-3 gap-md">
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Charge (EGP)</label>
+                      <label className="form-label">{t('trips.modal.assignment_charge_input_label', { unit: t('common.currency') })}</label>
                       <input
                         className="form-input"
                         type="number"
@@ -605,7 +605,7 @@ export default function TripsPage() {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Trip price (EGP)</label>
+                      <label className="form-label">{t('trips.modal.trip_price_input_label', { unit: t('common.currency') })}</label>
                       <input
                         type="number"
                         step="0.01"
@@ -619,7 +619,7 @@ export default function TripsPage() {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Net to driver (EGP)</label>
+                      <label className="form-label">{t('trips.modal.net_to_driver_label', { unit: t('common.currency') })}</label>
                       <div className="form-input" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.95 }}>
                         <span style={{ fontWeight: 650 }}>
                           {(() => {
@@ -632,9 +632,9 @@ export default function TripsPage() {
                           const parsed = Number(form.price);
                           if (!Number.isFinite(parsed)) return null;
                           return parsed - assignmentCharge < 0 ? (
-                            <span className="text-xs text-danger" style={{ fontWeight: 650 }}>Price &lt; charge</span>
+                            <span className="text-xs text-danger" style={{ fontWeight: 650 }}>{t('trips.modal.price_lt_charge')}</span>
                           ) : (
-                            <span className="text-xs text-muted">after charge</span>
+                            <span className="text-xs text-muted">{t('trips.modal.after_charge_hint')}</span>
                           );
                         })()}
                       </div>
@@ -686,6 +686,8 @@ export default function TripsPage() {
                       <input
                         className="form-input"
                         value={form.pickupLocation}
+                        dir={i18n.dir()}
+                        lang={i18n.language}
                         onChange={e => {
                           const value = e.target.value;
                           setForm((prev) => ({
@@ -714,10 +716,12 @@ export default function TripsPage() {
                         required
                         placeholder={t('trips.modal.pickup_placeholder')}
                         autoComplete="off"
+                        style={{ padding: '0.85rem 0.9rem', fontSize: '1rem', lineHeight: 1.35, minHeight: 46 }}
                       />
 
                       {pickupSuggestOpen && (pickupSuggestLoading || pickupSuggestions.length > 0) && (
                         <div
+                          dir={i18n.dir()}
                           style={{
                             position: 'absolute',
                             insetInlineStart: 0,
@@ -772,6 +776,8 @@ export default function TripsPage() {
                       <input
                         className="form-input"
                         value={form.dropoffLocation}
+                        dir={i18n.dir()}
+                        lang={i18n.language}
                         onChange={e => {
                           const value = e.target.value;
                           setForm((prev) => ({
@@ -800,10 +806,12 @@ export default function TripsPage() {
                         required
                         placeholder={t('trips.modal.dropoff_placeholder')}
                         autoComplete="off"
+                        style={{ padding: '0.85rem 0.9rem', fontSize: '1rem', lineHeight: 1.35, minHeight: 46 }}
                       />
 
                       {dropoffSuggestOpen && (dropoffSuggestLoading || dropoffSuggestions.length > 0) && (
                         <div
+                          dir={i18n.dir()}
                           style={{
                             position: 'absolute',
                             insetInlineStart: 0,
@@ -1069,7 +1077,15 @@ export default function TripsPage() {
                     </div>
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trip.payment.method')}</span>
-                      <span className="font-medium">{String(selectedTrip.paymentMethod || 'CASH').toUpperCase()}</span>
+                      <span className="font-medium">
+                        {(() => {
+                          const method = String(selectedTrip.paymentMethod || 'CASH').toUpperCase();
+                          if (method === 'CASH') return t('trip.payment.cash');
+                          if (method === 'E_WALLET') return t('trip.payment.ewallet');
+                          if (method === 'E_PAYMENT') return t('trip.payment.epayment');
+                          return method;
+                        })()}
+                      </span>
                     </div>
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.details.scheduled')}</span>

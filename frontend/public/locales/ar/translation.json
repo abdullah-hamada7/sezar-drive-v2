@@ -113,16 +113,16 @@
     "status_cancelled": "ملغاة",
     "no_active_shift_warning": "يجب أن تبدأ وتفعل مناوبتك قبل الرحلات.",
     "new_assignment_notif": "تم تعيين رحلة جديدة لك!",
-    "cancellation_notif": "تم إلغاء رحلة."
-    ,"payment": {
+    "cancellation_notif": "تم إلغاء رحلة.",
+    "payment": {
       "method": "طريقة الدفع",
       "collect": "تحصيل",
       "paid": "تم الدفع",
-      "cash": "كاش",
+      "cash": "نقداً",
       "ewallet": "محفظة إلكترونية",
       "epayment": "دفع إلكتروني"
-    }
-    ,"contact_whatsapp": "التواصل عبر واتساب"
+    },
+    "contact_whatsapp": "التواصل عبر واتساب"
   },
   "shift": {
     "management": "إدارة المناوبات",
@@ -650,6 +650,13 @@
       "details_title": "تفاصيل الرحلة",
       "driver_label": "السائق *",
       "select_driver": "اختر السائق",
+      "assignment_charge_title": "رسوم التعيين",
+      "assignment_charge_deducted_hint": "(تُخصم من سعر الرحلة)",
+      "assignment_charge_input_label": "الرسوم ({{unit}})",
+      "trip_price_input_label": "سعر الرحلة ({{unit}})",
+      "net_to_driver_label": "صافي السائق ({{unit}})",
+      "price_lt_charge": "السعر أقل من الرسوم",
+      "after_charge_hint": "بعد خصم الرسوم",
       "pickup_label": "موقع الاستلام *",
       "dropoff_label": "موقع التوصيل *",
       "source_pickup_label": "مصدر الراكب / موقع الاستلام",
@@ -669,11 +676,11 @@
       "bags_ph": "عدد الحقائب",
       "reason_placeholder": "سبب الإلغاء",
       "pickup_placeholder": "اكتب موقع الاستلام",
-      "dropoff_placeholder": "اكتب موقع التوصيل"
-      ,"payment_method_label": "طريقة الدفع *"
-      ,"payment_method_cash": "كاش"
-      ,"payment_method_ewallet": "محفظة إلكترونية"
-      ,"payment_method_epayment": "دفع إلكتروني"
+      "dropoff_placeholder": "اكتب موقع التوصيل",
+      "payment_method_label": "طريقة الدفع *",
+      "payment_method_cash": "نقداً",
+      "payment_method_ewallet": "محفظة إلكترونية",
+      "payment_method_epayment": "دفع إلكتروني"
     },
     "details": {
       "status": "الحالة",
