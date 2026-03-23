@@ -1,0 +1,49 @@
+ => CANCELED [frontend build 7/7] RUN npm run build                                                                                             30.8s
+ => ERROR [backend builder 8/8] RUN DATABASE_URL="postgresql://dummy:5432/mydb" npx prisma generate                                              6.3s
+------
+ > [backend builder 8/8] RUN DATABASE_URL="postgresql://dummy:5432/mydb" npx prisma generate:
+5.367 Prisma schema loaded from prisma/schema.prisma
+5.850 Error: Prisma schema validation - (get-dmmf wasm)
+5.850 Error code: P1012
+5.850 error: Error validating field `driver` in model `TrafficViolation`: The relation field `driver` on model `TrafficViolation` is missing an opposite relation field on the model `User`. Either run `prisma format` or add it manually.
+5.850   -->  prisma/schema.prisma:407
+5.850    | 
+5.850 406 |   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+5.850 407 |   driver          User     @relation(fields: [driverId], references: [id])
+5.850 408 |   vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+5.850    | 
+5.850 error: Error validating field `vehicle` in model `TrafficViolation`: The relation field `vehicle` on model `TrafficViolation` is missing an opposite relation field on the model `Vehicle`. Either run `prisma format` or add it manually.
+5.850   -->  prisma/schema.prisma:408
+5.850    | 
+5.850 407 |   driver          User     @relation(fields: [driverId], references: [id])
+5.850 408 |   vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+5.850 409 | 
+5.850    | 
+5.850 
+5.850 Validation Error Count: 2
+5.850 [Context: getDmmf]
+5.850 
+5.850 Prisma CLI Version : 5.18.0
+------
+[+] up 0/2
+ ⠙ Image sezar-drive-v2-frontend Building                                                                                                        31.7s
+ ⠙ Image sezar-drive-v2-backend  Building                                                                                                        31.7s
+Dockerfile:22
+
+--------------------
+
+  20 |     
+
+  21 |     # Generate Prisma client
+
+  22 | >>> RUN DATABASE_URL="postgresql://dummy:5432/mydb" npx prisma generate
+
+  23 |     
+
+  24 |     # --- Stage 2: Runtime ---
+
+--------------------
+
+target backend: failed to solve: process "/bin/sh -c DATABASE_URL=\"postgresql://dummy:5432/mydb\" npx prisma generate" did not complete successfully: exit code: 1
+
+ubuntu@ip-10-0-1-151:~/sezar-drive-v2$ ^C

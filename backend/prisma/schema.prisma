@@ -50,6 +50,7 @@ model User {
   vehicleAssignments      VehicleAssignment[]
   devices                 UserDevice[]
   rescueRequests          RescueRequest[]
+  trafficViolations       TrafficViolation[]      @relation("TrafficViolationDriver")
 
   @@map("users")
 }
@@ -117,6 +118,7 @@ model Vehicle {
   shifts        Shift[]
   trips         Trip[]
   assignments   VehicleAssignment[]
+  trafficViolations TrafficViolation[]            @relation("TrafficViolationVehicle")
 
   @@map("vehicles")
 }
@@ -404,8 +406,8 @@ model TrafficViolation {
   fineAmount      Decimal  @map("fine_amount") @db.Decimal(10, 2)
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  driver          User     @relation(fields: [driverId], references: [id])
-  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  driver          User     @relation("TrafficViolationDriver", fields: [driverId], references: [id])
+  vehicle         Vehicle  @relation("TrafficViolationVehicle", fields: [vehicleId], references: [id])
 
   @@index([driverId])
   @@index([vehicleId])
