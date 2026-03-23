@@ -713,12 +713,19 @@ tr:hover td:last-child {
   flex-shrink: 0;
 }
 
+.stat-content {
+  min-width: 0;
+}
+
 .stat-value {
   font-family: var(--font-family-display);
-  font-size: 1.5rem;
+  font-size: clamp(1.15rem, 2.6vw, 1.5rem);
   font-weight: 800;
   color: var(--color-text);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-label {

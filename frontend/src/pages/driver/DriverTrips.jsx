@@ -572,19 +572,28 @@ export default function DriverTrips() {
                   const total = Number(trip.price);
                   const totalText = Number.isFinite(total) ? total.toFixed(2) : String(trip.price);
                   return (
-                    <div className="flex items-center gap-sm">
-                      <CheckCircle size={14} style={{ color: isCash ? 'var(--color-danger)' : 'var(--color-success)', flexShrink: 0 }} />
-                      <span className="text-sm">{t('trip.payment.method')}: {paymentLabel(method)}</span>
-                      {isCash ? (
-                        <span className={trip.cashCollectedAt ? 'badge badge-success' : 'badge badge-danger'} style={{ marginInlineStart: 'auto', fontWeight: 750 }}>
-                          {trip.cashCollectedAt
-                            ? t('trip.payment.cash_collected')
-                            : `${t('trip.payment.collect')}: ${totalText} ${t('trip.price_unit')}`}
-                        </span>
-                      ) : (
-                        <span className="badge badge-success" style={{ marginInlineStart: 'auto' }}>{t('trip.payment.paid')}</span>
+                    <>
+                      <div className="flex items-center gap-sm">
+                        <CheckCircle size={14} style={{ color: isCash ? 'var(--color-danger)' : 'var(--color-success)', flexShrink: 0 }} />
+                        <span className="text-sm">{t('trip.payment.method')}: {paymentLabel(method)}</span>
+                        {isCash ? (
+                          <span className={trip.cashCollectedAt ? 'badge badge-success' : 'badge badge-danger'} style={{ marginInlineStart: 'auto', fontWeight: 750 }}>
+                            {trip.cashCollectedAt
+                              ? t('trip.payment.cash_collected')
+                              : `${t('trip.payment.collect')}: ${totalText} ${t('trip.price_unit')}`}
+                          </span>
+                        ) : (
+                          <span className="badge badge-success" style={{ marginInlineStart: 'auto' }}>{t('trip.payment.paid')}</span>
+                        )}
+                      </div>
+
+                      {isCash && trip.cashCollectedAt && (
+                        <div className="text-sm text-muted" style={{ marginTop: 6 }}>
+                          {t('trip.payment.cash_collected_at')}: {formatWhen(trip.cashCollectedAt) || '—'}
+                          {trip.cashCollectedNote ? ` | ${t('trip.payment.cash_collected_note')}: ${trip.cashCollectedNote}` : ''}
+                        </div>
                       )}
-                    </div>
+                    </>
                   );
                 })()}
 
@@ -802,6 +811,7 @@ export default function DriverTrips() {
         message={t('trip.payment.cash_collect_note_message')}
         placeholder={t('trip.payment.cash_collect_note_placeholder')}
         confirmText={t('trip.payment.mark_cash_collected')}
+        maxLength={250}
         required={false}
       />
     </div>

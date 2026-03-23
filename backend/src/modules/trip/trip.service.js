@@ -385,7 +385,7 @@ async function markCashCollected(tripId, driverId, note, ipAddress) {
     data: {
       cashCollectedAt: new Date(),
       cashCollectedBy: driverId,
-      cashCollectedNote: trimmedNote ? trimmedNote.slice(0, 500) : null,
+      cashCollectedNote: trimmedNote ? trimmedNote.slice(0, 250) : null,
       version: { increment: 1 },
     },
   });

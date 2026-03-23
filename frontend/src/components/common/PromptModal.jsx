@@ -2,27 +2,27 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export default function PromptModal({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title, 
-  message, 
+export default function PromptModal(props) {
+  if (!props.isOpen) return null;
+  return <PromptModalContent {...props} />;
+}
+
+function PromptModalContent({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
   placeholder,
-  confirmText, 
+  confirmText,
   cancelText,
   initialValue = '',
   required = true,
-  size = 'sm'
+  maxLength,
+  size = 'sm',
 }) {
   const { t } = useTranslation();
   const [value, setValue] = useState(initialValue);
-  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
-
-  if (isOpen !== prevIsOpen) {
-    setPrevIsOpen(isOpen);
-    if (isOpen) setValue(initialValue);
-  }
 
   if (!isOpen) return null;
 
@@ -35,7 +35,7 @@ export default function PromptModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className={`modal modal-${size}`} onClick={e => e.stopPropagation()}>
+      <div className={`modal modal-${size}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2 className="modal-title">{title || t('common.prompt')}</h2>
           <button className="btn-icon" onClick={onClose}><X size={18} /></button>
@@ -44,13 +44,14 @@ export default function PromptModal({
           <div className="modal-body">
             {message && <p className="text-sm mb-md" style={{ color: 'var(--color-text-secondary)' }}>{message}</p>}
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <input 
+              <input
                 autoFocus
-                type="text" 
-                className="form-input" 
-                value={value} 
-                onChange={e => setValue(e.target.value)}
+                type="text"
+                className="form-input"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
                 placeholder={placeholder}
+                maxLength={typeof maxLength === 'number' ? maxLength : undefined}
                 required={required}
                 style={{ width: '100%' }}
               />

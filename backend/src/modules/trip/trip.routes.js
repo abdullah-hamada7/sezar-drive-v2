@@ -270,7 +270,12 @@ router.put(
   authenticate, enforcePasswordChanged, authorize('driver'), requireIdempotencyKey,
   [
     param('id').isUUID(),
-    body('note').optional().isString().isLength({ max: 500 }).trim().escape(),
+    body('note')
+      .optional({ checkFalsy: true })
+      .isString().withMessage('note must be a string')
+      .trim()
+      .isLength({ max: 250 }).withMessage('note must be 250 characters or less')
+      .escape(),
   ],
   async (req, res, next) => {
     try {

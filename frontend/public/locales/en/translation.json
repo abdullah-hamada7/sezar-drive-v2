@@ -130,8 +130,10 @@
       "mark_cash_collected": "Mark cash collected",
       "cash_collected_success": "Cash collection marked",
       "cash_collect_note_title": "Cash collected",
-      "cash_collect_note_message": "Optional: add a note about the cash collection.",
+      "cash_collect_note_message": "Optional: add a note about the cash collection (max 250 characters).",
       "cash_collect_note_placeholder": "Optional note",
+      "cash_collected_at": "Collected at",
+      "cash_collected_note": "Note",
       "ewallet": "E-wallet",
       "epayment": "Online payment"
     },
