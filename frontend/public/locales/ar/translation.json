@@ -129,6 +129,9 @@
       "cash_collected": "تم تحصيل النقد",
       "mark_cash_collected": "تأكيد تحصيل النقد",
       "cash_collected_success": "تم تأكيد تحصيل النقد",
+      "cash_collect_note_title": "تأكيد تحصيل النقد",
+      "cash_collect_note_message": "اختياري: أضف ملاحظة حول تحصيل النقد.",
+      "cash_collect_note_placeholder": "ملاحظة (اختياري)",
       "ewallet": "محفظة إلكترونية",
       "epayment": "دفع إلكتروني"
     },

@@ -123,7 +123,6 @@ class HttpService {
           const blocked = new Error(i18n.t('common.offline.action_requires_connection'));
           blocked.isNetworkError = true;
           blocked.code = 'BLOCKED_OFFLINE';
-          dispatchToast(blocked.message, 'warning', 'BLOCKED_OFFLINE');
           throw blocked;
         }
 

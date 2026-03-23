@@ -129,6 +129,9 @@
       "cash_collected": "Cash collected",
       "mark_cash_collected": "Mark cash collected",
       "cash_collected_success": "Cash collection marked",
+      "cash_collect_note_title": "Cash collected",
+      "cash_collect_note_message": "Optional: add a note about the cash collection.",
+      "cash_collect_note_placeholder": "Optional note",
       "ewallet": "E-wallet",
       "epayment": "Online payment"
     },

@@ -162,6 +162,7 @@ export default function DriverTrips() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [rejectPrompt, setRejectPrompt] = useState({ isOpen: false, tripId: null });
+  const [cashCollectPrompt, setCashCollectPrompt] = useState({ isOpen: false, tripId: null });
   const [confirmAction, setConfirmAction] = useState({ isOpen: false, type: null, tripId: null });
   const [mapDetails, setMapDetails] = useState({ isOpen: false, trip: null });
   const [livePosition, setLivePosition] = useState(null);
@@ -407,10 +408,10 @@ export default function DriverTrips() {
     }
   }
 
-  async function handleMarkCashCollected(id) {
+  async function handleMarkCashCollected(id, note) {
     setActionLoading(id);
     try {
-      await api.markCashCollected(id);
+      await api.markCashCollected(id, note);
       addToast(t('trip.payment.cash_collected_success'), 'success');
       notifyTripUiUpdate();
     } catch (err) {
@@ -423,6 +424,12 @@ export default function DriverTrips() {
       await load({ silent: true });
       setActionLoading(null);
     }
+  }
+
+  async function onConfirmCashCollected(note) {
+    const tripId = cashCollectPrompt.tripId;
+    if (!tripId) return;
+    await handleMarkCashCollected(tripId, note);
   }
 
   async function onConfirmReject(reason) {
@@ -700,7 +707,7 @@ export default function DriverTrips() {
               {String(trip.paymentMethod || '').toUpperCase() === 'CASH' && trip.status === 'COMPLETED' && !trip.cashCollectedAt && (
                 <button
                   className="btn btn-danger"
-                  onClick={() => handleMarkCashCollected(trip.id)}
+                  onClick={() => setCashCollectPrompt({ isOpen: true, tripId: trip.id })}
                   disabled={actionLoading === trip.id}
                   style={{ width: '100%', marginTop: 'var(--space-sm)' }}
                 >
@@ -785,6 +792,17 @@ export default function DriverTrips() {
         message={t('trip.reject_prompt')}
         placeholder={t('trip.reject_reason_placeholder')}
         confirmText={t('common.reject')}
+      />
+
+      <PromptModal
+        isOpen={cashCollectPrompt.isOpen}
+        onClose={() => setCashCollectPrompt({ isOpen: false, tripId: null })}
+        onConfirm={onConfirmCashCollected}
+        title={t('trip.payment.cash_collect_note_title')}
+        message={t('trip.payment.cash_collect_note_message')}
+        placeholder={t('trip.payment.cash_collect_note_placeholder')}
+        confirmText={t('trip.payment.mark_cash_collected')}
+        required={false}
       />
     </div>
   );
