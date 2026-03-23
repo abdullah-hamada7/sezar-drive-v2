@@ -659,8 +659,8 @@
       "passenger_destination_placeholder": "وجهة الراكب",
       "bags_ph": "عدد الحقائب",
       "reason_placeholder": "سبب الإلغاء",
-      "pickup_placeholder": "حدد موقع الاستلام على الخريطة",
-      "dropoff_placeholder": "حدد موقع التوصيل على الخريطة"
+      "pickup_placeholder": "اكتب موقع الاستلام",
+      "dropoff_placeholder": "اكتب موقع التوصيل"
     },
     "details": {
       "status": "الحالة",

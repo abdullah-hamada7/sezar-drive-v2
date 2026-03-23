@@ -670,8 +670,8 @@
       "passenger_destination_placeholder": "Passenger destination",
       "bags_ph": "Number of bags",
       "reason_placeholder": "Reason for cancellation",
-      "pickup_placeholder": "Pin pickup on the map",
-      "dropoff_placeholder": "Pin dropoff on the map"
+      "pickup_placeholder": "Type pickup location",
+      "dropoff_placeholder": "Type dropoff location"
     },
     "details": {
       "status": "Status",

@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tripService as api } from '../../services/trip.service';
 import { driverService } from '../../services/driver.service';
@@ -7,7 +7,7 @@ import { Eye, XCircle, MapPin, DollarSign, Save, X } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { EGYPT_PHONE_REGEX } from '../../utils/validation';
-import { MapContainer, Marker, TileLayer, Polyline, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, Marker, TileLayer, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -73,6 +73,44 @@ async function reverseGeocode(lat, lng, language = 'en') {
   }
 }
 
+async function searchPlaces(query, language = 'en', limit = 6, signal) {
+  try {
+    const q = String(query || '').trim();
+    if (!q) return [];
+
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      q,
+      limit: String(limit),
+      addressdetails: '1',
+    });
+
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      signal,
+      headers: {
+        'Accept': 'application/json',
+        'Accept-Language': language,
+      },
+    });
+
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+
+    return data
+      .map((p) => {
+        const lat = Number(p?.lat);
+        const lng = Number(p?.lon);
+        const label = p?.display_name ? String(p.display_name) : '';
+        if (!label || !Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { label, lat, lng };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 function TripMapClickHandler({ selectionMode, onSelect }) {
   useMapEvents({
     click(event) {
@@ -80,6 +118,15 @@ function TripMapClickHandler({ selectionMode, onSelect }) {
       onSelect(selectionMode, lat, lng);
     },
   });
+  return null;
+}
+
+function MapViewUpdater({ center, zoom = 14 }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!center) return;
+    map.setView(center, zoom, { animate: true });
+  }, [map, zoom, center?.[0], center?.[1]]);
   return null;
 }
 
@@ -116,6 +163,17 @@ export default function TripsPage() {
     passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
   });
   const [mapSelectionMode, setMapSelectionMode] = useState('pickup');
+  const [mapFocus, setMapFocus] = useState('pickup');
+  const [pickupSuggestions, setPickupSuggestions] = useState([]);
+  const [dropoffSuggestions, setDropoffSuggestions] = useState([]);
+  const [pickupSuggestOpen, setPickupSuggestOpen] = useState(false);
+  const [dropoffSuggestOpen, setDropoffSuggestOpen] = useState(false);
+  const [pickupSuggestLoading, setPickupSuggestLoading] = useState(false);
+  const [dropoffSuggestLoading, setDropoffSuggestLoading] = useState(false);
+  const pickupSuggestAbortRef = useRef(null);
+  const dropoffSuggestAbortRef = useRef(null);
+  const pickupBlurTimerRef = useRef(null);
+  const dropoffBlurTimerRef = useRef(null);
   const [assignmentCharge, setAssignmentCharge] = useState(0);
   const [chargeDraft, setChargeDraft] = useState('0');
   const [savingCharge, setSavingCharge] = useState(false);
@@ -127,6 +185,91 @@ export default function TripsPage() {
   const [confirmSaveChargeOpen, setConfirmSaveChargeOpen] = useState(false);
   const [confirmAssignOpen, setConfirmAssignOpen] = useState(false);
   const filterLabel = statusFilter ? t(`common.status.${statusFilter.toLowerCase()}`) : t('trips.filter_all');
+
+  const mapCenter = useMemo(() => {
+    const pickup = form.pickupLat != null && form.pickupLng != null ? [form.pickupLat, form.pickupLng] : null;
+    const dropoff = form.dropoffLat != null && form.dropoffLng != null ? [form.dropoffLat, form.dropoffLng] : null;
+    if (mapFocus === 'pickup') return pickup || dropoff || [30.0444, 31.2357];
+    return dropoff || pickup || [30.0444, 31.2357];
+  }, [form.pickupLat, form.pickupLng, form.dropoffLat, form.dropoffLng, mapFocus]);
+
+  function applyPlace(mode, place, { setLabel = true } = {}) {
+    if (!place) return;
+    const lat = Number(place.lat);
+    const lng = Number(place.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    if (mode === 'pickup') {
+      setForm((prev) => ({
+        ...prev,
+        pickupLat: lat,
+        pickupLng: lng,
+        pickupLocation: setLabel ? place.label : prev.pickupLocation,
+      }));
+      setMapFocus('pickup');
+      setMapSelectionMode('pickup');
+    } else {
+      setForm((prev) => ({
+        ...prev,
+        dropoffLat: lat,
+        dropoffLng: lng,
+        dropoffLocation: setLabel ? place.label : prev.dropoffLocation,
+      }));
+      setMapFocus('dropoff');
+      setMapSelectionMode('dropoff');
+    }
+  }
+
+  useEffect(() => {
+    if (!showCreateModal) return;
+    const q = String(form.pickupLocation || '').trim();
+    if (q.length < 3) {
+      setPickupSuggestions([]);
+      setPickupSuggestLoading(false);
+      return;
+    }
+
+    if (pickupSuggestAbortRef.current) pickupSuggestAbortRef.current.abort();
+    const controller = new AbortController();
+    pickupSuggestAbortRef.current = controller;
+
+    setPickupSuggestLoading(true);
+    const tId = window.setTimeout(async () => {
+      const results = await searchPlaces(q, i18n.language || 'en', 6, controller.signal);
+      setPickupSuggestions(results);
+      setPickupSuggestLoading(false);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(tId);
+      controller.abort();
+    };
+  }, [form.pickupLocation, showCreateModal, i18n.language]);
+
+  useEffect(() => {
+    if (!showCreateModal) return;
+    const q = String(form.dropoffLocation || '').trim();
+    if (q.length < 3) {
+      setDropoffSuggestions([]);
+      setDropoffSuggestLoading(false);
+      return;
+    }
+
+    if (dropoffSuggestAbortRef.current) dropoffSuggestAbortRef.current.abort();
+    const controller = new AbortController();
+    dropoffSuggestAbortRef.current = controller;
+
+    setDropoffSuggestLoading(true);
+    const tId = window.setTimeout(async () => {
+      const results = await searchPlaces(q, i18n.language || 'en', 6, controller.signal);
+      setDropoffSuggestions(results);
+      setDropoffSuggestLoading(false);
+    }, 250);
+
+    return () => {
+      window.clearTimeout(tId);
+      controller.abort();
+    };
+  }, [form.dropoffLocation, showCreateModal, i18n.language]);
 
   useEffect(() => {
     async function load() {
@@ -225,10 +368,6 @@ export default function TripsPage() {
       return;
     }
 
-    if (form.pickupLat == null || form.pickupLng == null || form.dropoffLat == null || form.dropoffLng == null) {
-      addToast('Please pin pickup and dropoff on the map', 'error');
-      return;
-    }
     const parsedPrice = parseFloat(form.price);
     if (Number.isNaN(parsedPrice)) {
       addToast(t('trips.modal.price_label', { unit: t('common.currency') }), 'error');
@@ -276,6 +415,10 @@ export default function TripsPage() {
         scheduledTime: '',
         passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
       });
+      setPickupSuggestions([]);
+      setDropoffSuggestions([]);
+      setPickupSuggestOpen(false);
+      setDropoffSuggestOpen(false);
       setSelectedDriverName('');
       setRefresh(r => r + 1);
     } catch (err) {
@@ -519,27 +662,179 @@ export default function TripsPage() {
                 <div className="grid grid-2 gap-md mb-md">
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.pickup_label')}</label>
-                    <input
-                      className="form-input"
-                      value={form.pickupLocation}
-                      readOnly
-                      required
-                      placeholder={t('trips.modal.pickup_placeholder')}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="form-input"
+                        value={form.pickupLocation}
+                        onChange={e => {
+                          const value = e.target.value;
+                          setForm((prev) => ({
+                            ...prev,
+                            pickupLocation: value,
+                            pickupLat: null,
+                            pickupLng: null,
+                          }));
+                          setPickupSuggestOpen(true);
+                          setError('');
+                        }}
+                        onFocus={() => {
+                          setMapFocus('pickup');
+                          setPickupSuggestOpen(true);
+                        }}
+                        onBlur={() => {
+                          if (pickupBlurTimerRef.current) window.clearTimeout(pickupBlurTimerRef.current);
+                          pickupBlurTimerRef.current = window.setTimeout(async () => {
+                            setPickupSuggestOpen(false);
+                            const q = String(form.pickupLocation || '').trim();
+                            if (q.length < 3) return;
+                            const results = await searchPlaces(q, i18n.language || 'en', 1);
+                            if (results[0]) applyPlace('pickup', results[0], { setLabel: true });
+                          }, 150);
+                        }}
+                        required
+                        placeholder={t('trips.modal.pickup_placeholder')}
+                        autoComplete="off"
+                      />
+
+                      {pickupSuggestOpen && (pickupSuggestLoading || pickupSuggestions.length > 0) && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            insetInlineStart: 0,
+                            insetInlineEnd: 0,
+                            top: 'calc(100% + 6px)',
+                            zIndex: 50,
+                            background: 'var(--color-bg)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            overflow: 'hidden',
+                            maxHeight: 220,
+                            boxShadow: '0 12px 30px rgba(0,0,0,0.18)'
+                          }}
+                        >
+                          {pickupSuggestLoading && (
+                            <div className="text-sm text-muted" style={{ padding: '0.6rem 0.75rem' }}>
+                              {t('common.loading')}
+                            </div>
+                          )}
+                          {!pickupSuggestLoading && pickupSuggestions.map((s, idx) => (
+                            <button
+                              key={`${s.lat}:${s.lng}:${idx}`}
+                              type="button"
+                              className="btn"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                if (pickupBlurTimerRef.current) window.clearTimeout(pickupBlurTimerRef.current);
+                                applyPlace('pickup', s, { setLabel: true });
+                                setPickupSuggestOpen(false);
+                              }}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                textAlign: 'start',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: 0,
+                                background: 'transparent',
+                                border: 'none',
+                              }}
+                            >
+                              <div className="text-sm" style={{ fontWeight: 650 }}>{t('trips.table.pickup')}</div>
+                              <div className="text-xs text-muted" style={{ marginTop: 4, lineHeight: 1.35 }}>{s.label}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.dropoff_label')}</label>
-                    <input
-                      className="form-input"
-                      value={form.dropoffLocation}
-                      readOnly
-                      required
-                      placeholder={t('trips.modal.dropoff_placeholder')}
-                    />
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        className="form-input"
+                        value={form.dropoffLocation}
+                        onChange={e => {
+                          const value = e.target.value;
+                          setForm((prev) => ({
+                            ...prev,
+                            dropoffLocation: value,
+                            dropoffLat: null,
+                            dropoffLng: null,
+                          }));
+                          setDropoffSuggestOpen(true);
+                          setError('');
+                        }}
+                        onFocus={() => {
+                          setMapFocus('dropoff');
+                          setDropoffSuggestOpen(true);
+                        }}
+                        onBlur={() => {
+                          if (dropoffBlurTimerRef.current) window.clearTimeout(dropoffBlurTimerRef.current);
+                          dropoffBlurTimerRef.current = window.setTimeout(async () => {
+                            setDropoffSuggestOpen(false);
+                            const q = String(form.dropoffLocation || '').trim();
+                            if (q.length < 3) return;
+                            const results = await searchPlaces(q, i18n.language || 'en', 1);
+                            if (results[0]) applyPlace('dropoff', results[0], { setLabel: true });
+                          }, 150);
+                        }}
+                        required
+                        placeholder={t('trips.modal.dropoff_placeholder')}
+                        autoComplete="off"
+                      />
+
+                      {dropoffSuggestOpen && (dropoffSuggestLoading || dropoffSuggestions.length > 0) && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            insetInlineStart: 0,
+                            insetInlineEnd: 0,
+                            top: 'calc(100% + 6px)',
+                            zIndex: 50,
+                            background: 'var(--color-bg)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            overflow: 'hidden',
+                            maxHeight: 220,
+                            boxShadow: '0 12px 30px rgba(0,0,0,0.18)'
+                          }}
+                        >
+                          {dropoffSuggestLoading && (
+                            <div className="text-sm text-muted" style={{ padding: '0.6rem 0.75rem' }}>
+                              {t('common.loading')}
+                            </div>
+                          )}
+                          {!dropoffSuggestLoading && dropoffSuggestions.map((s, idx) => (
+                            <button
+                              key={`${s.lat}:${s.lng}:${idx}`}
+                              type="button"
+                              className="btn"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                if (dropoffBlurTimerRef.current) window.clearTimeout(dropoffBlurTimerRef.current);
+                                applyPlace('dropoff', s, { setLabel: true });
+                                setDropoffSuggestOpen(false);
+                              }}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                textAlign: 'start',
+                                padding: '0.6rem 0.75rem',
+                                borderRadius: 0,
+                                background: 'transparent',
+                                border: 'none',
+                              }}
+                            >
+                              <div className="text-sm" style={{ fontWeight: 650 }}>{t('trips.table.dropoff')}</div>
+                              <div className="text-xs text-muted" style={{ marginTop: 4, lineHeight: 1.35 }}>{s.label}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="card mb-md" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                 <div className="card mb-md" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
                   <div className="flex items-center justify-between" style={{ marginBottom: '0.5rem' }}>
                     <div className="flex gap-sm">
                       <button type="button" className={`btn btn-sm ${mapSelectionMode === 'pickup' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setMapSelectionMode('pickup')}>
@@ -555,37 +850,50 @@ export default function TripsPage() {
                     </div>
                   </div>
                   <div style={{ height: 260, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-                    <MapContainer center={[30.0444, 31.2357]} zoom={12} style={{ height: '100%', width: '100%' }}>
+                    <MapContainer center={mapCenter} zoom={12} style={{ height: '100%', width: '100%' }}>
                       <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
+                      <MapViewUpdater center={mapCenter} zoom={14} />
                         <TripMapClickHandler
-                          selectionMode={mapSelectionMode}
-                        onSelect={async (mode, lat, lng) => {
-                          const address = await reverseGeocode(lat, lng, i18n.language);
-                          if (mode === 'pickup') {
-                            setForm((prev) => ({
-                              ...prev,
-                              pickupLat: lat,
-                              pickupLng: lng,
-                              pickupLocation: address || (prev.pickupLocation?.trim() ? prev.pickupLocation : 'Pinned pickup location'),
-                            }));
-                          } else {
-                            setForm((prev) => ({
-                              ...prev,
-                              dropoffLat: lat,
-                              dropoffLng: lng,
-                              dropoffLocation: address || (prev.dropoffLocation?.trim() ? prev.dropoffLocation : 'Pinned dropoff location'),
-                            }));
-                          }
-                        }}
-                        />
+                           selectionMode={mapSelectionMode}
+                         onSelect={async (mode, lat, lng) => {
+                           const address = await reverseGeocode(lat, lng, i18n.language);
+                           if (mode === 'pickup') {
+                             setForm((prev) => ({
+                               ...prev,
+                               pickupLat: lat,
+                               pickupLng: lng,
+                               pickupLocation: prev.pickupLocation?.trim() ? prev.pickupLocation : (address || 'Pinned pickup location'),
+                             }));
+                             setMapFocus('pickup');
+                           } else {
+                             setForm((prev) => ({
+                               ...prev,
+                               dropoffLat: lat,
+                               dropoffLng: lng,
+                               dropoffLocation: prev.dropoffLocation?.trim() ? prev.dropoffLocation : (address || 'Pinned dropoff location'),
+                             }));
+                             setMapFocus('dropoff');
+                           }
+                         }}
+                         />
                       {form.pickupLat != null && form.pickupLng != null && (
-                        <Marker position={[form.pickupLat, form.pickupLng]} />
+                        <Marker position={[form.pickupLat, form.pickupLng]} icon={TRIP_MARKER_ICONS.pickup}>
+                          <Popup>
+                            <div style={{ fontWeight: 650, marginBottom: 4 }}>{t('trips.table.pickup')}</div>
+                            <div style={{ fontSize: 12, opacity: 0.85 }}>{form.pickupLocation || '—'}</div>
+                          </Popup>
+                        </Marker>
                       )}
                       {form.dropoffLat != null && form.dropoffLng != null && (
-                        <Marker position={[form.dropoffLat, form.dropoffLng]} />
+                        <Marker position={[form.dropoffLat, form.dropoffLng]} icon={TRIP_MARKER_ICONS.dropoff}>
+                          <Popup>
+                            <div style={{ fontWeight: 650, marginBottom: 4 }}>{t('trips.table.dropoff')}</div>
+                            <div style={{ fontSize: 12, opacity: 0.85 }}>{form.dropoffLocation || '—'}</div>
+                          </Popup>
+                        </Marker>
                       )}
                     </MapContainer>
                   </div>
