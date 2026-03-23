@@ -22,6 +22,7 @@ export default function DriverShift() {
   const [actionLoading, setActionLoading] = useState(false);
   const [activeStep, setActiveStep] = useState(null); // 'face' | 'qr'
   const [showConfirm, setShowConfirm] = useState(false);
+  const [redirectOnActive, setRedirectOnActive] = useState(false);
   const navigate = useNavigate();
   const requiredInspectionDirections = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
 
@@ -42,6 +43,21 @@ export default function DriverShift() {
       window.removeEventListener('online', handleRealtimeUpdate);
     };
   }, [refreshShift]);
+
+  useEffect(() => {
+    if (!redirectOnActive) return;
+    if (shift?.status !== 'Active') return;
+    setRedirectOnActive(false);
+    navigate('/driver/trips');
+  }, [redirectOnActive, shift?.status, navigate]);
+
+  function notifyUiUpdate() {
+    try {
+      window.dispatchEvent(new Event('ws:update'));
+    } catch {
+      // ignore
+    }
+  }
 
   function normalizeScannedQrValue(rawValue) {
     if (typeof rawValue !== 'string') return String(rawValue || '').trim();
@@ -120,6 +136,7 @@ export default function DriverShift() {
     try {
       await shiftService.createShift();
       await refreshShift();
+      notifyUiUpdate();
       // Force face verification for every shift start
       setActiveStep('face');
     } catch (err) {
@@ -127,6 +144,7 @@ export default function DriverShift() {
       addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
     } finally {
       setActionLoading(false);
+      await refreshShift();
     }
   }
 
@@ -143,10 +161,12 @@ export default function DriverShift() {
         addToast(t('common.success'), 'success');
         setActiveStep(null);
         await refreshShift();
+        notifyUiUpdate();
       } else if (result.data.status === 'MANUAL_REVIEW') {
         addToast(t('shift.manual_review_alert'), 'info');
         setActiveStep(null);
         await refreshShift();
+        notifyUiUpdate();
       } else {
         addToast(t('shift.failed_alert'), 'error');
       }
@@ -159,19 +179,19 @@ export default function DriverShift() {
   }
 
   async function handleQRScan(qrCode) {
+    const normalizedQrCode = normalizeScannedQrValue(qrCode);
+    if (!normalizedQrCode) {
+      addToast(t('shift.enter_vehicle_code'), 'warning');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      const normalizedQrCode = normalizeScannedQrValue(qrCode);
-      if (!normalizedQrCode) {
-        addToast(t('shift.enter_vehicle_code'), 'warning');
-        return;
-      }
-
       await vehicleService.assignSelfVehicle(normalizedQrCode);
       addToast(t('common.success'), 'success');
       setActiveStep(null);
       await refreshShift();
-      navigate('/driver/shift');
+      notifyUiUpdate();
     } catch (err) {
       const code = err?.code;
       addToast(getQrScanErrorMessage(err), code === 'NETWORK_ERROR' ? 'warning' : 'error');
@@ -181,6 +201,7 @@ export default function DriverShift() {
       }
     } finally {
       setActionLoading(false);
+      await refreshShift();
     }
   }
 
@@ -200,14 +221,19 @@ export default function DriverShift() {
       }
       await shiftService.activateShift(shift.id);
       addToast(t('common.success'), 'success');
+      setRedirectOnActive(true);
       await refreshShift();
+      notifyUiUpdate();
     } catch (err) {
       const code = err?.code;
       addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
       if (code === 'INSPECTION_REQUIRED' || code === 'INSPECTION_PHOTOS_REQUIRED') {
         navigate('/driver/inspection');
       }
-    } finally { setActionLoading(false); }
+    } finally {
+      setActionLoading(false);
+      await refreshShift();
+    }
   }
 
   async function onConfirmClose() {
@@ -239,13 +265,17 @@ export default function DriverShift() {
       await shiftService.closeShift(shift.id);
       addToast(t('common.success'), 'success');
       await refreshShift();
+      notifyUiUpdate();
     } catch (err) {
       const code = err?.code;
       addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
       if (code === 'INSPECTION_REQUIRED' || code === 'INSPECTION_PHOTOS_REQUIRED') {
         navigate('/driver/inspection');
       }
-    } finally { setActionLoading(false); }
+    } finally {
+      setActionLoading(false);
+      await refreshShift();
+    }
   }
 
   if (loading || shiftLoading) return <div className="loading-page"><div className="spinner"></div></div>;

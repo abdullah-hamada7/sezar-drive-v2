@@ -199,7 +199,7 @@ export default function DriverTrips() {
 
   useEffect(() => {
     const handleUpdate = () => {
-      load();
+      load({ silent: true });
     };
 
     window.addEventListener('ws:trip_assigned', handleUpdate);
@@ -324,13 +324,23 @@ export default function DriverTrips() {
     };
   }, [user?.lastKnownLat, user?.lastKnownLng, i18n.language, liveAddress, livePosition]);
 
-  async function load() {
-    setLoading(true);
+  function notifyTripUiUpdate() {
+    try {
+      window.dispatchEvent(new Event('ws:update'));
+    } catch {
+      // ignore
+    }
+  }
+
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const res = await api.getTrips('limit=20');
       setTrips(res.data.trips || []);
     } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    finally {
+      if (!silent) setLoading(false);
+    }
   }
 
   async function handleStart(id) {
@@ -343,7 +353,7 @@ export default function DriverTrips() {
     setActionLoading(id);
     try {
       await api.startTrip(id);
-      load();
+      notifyTripUiUpdate();
     } catch (err) {
       const code = err.errorCode || err.code;
       if (code === 'NO_ACTIVE_SHIFT' || code === 'INVALID_SHIFT' || code === 'TRIP_SHIFT_MISMATCH') {
@@ -354,11 +364,11 @@ export default function DriverTrips() {
       }
 
       if (shouldRefreshTripsOnError(code)) {
-        load();
         setConfirmAction({ isOpen: false, type: null, tripId: null });
       }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
+      await load({ silent: true });
       setActionLoading(null);
     }
   }
@@ -367,15 +377,15 @@ export default function DriverTrips() {
     setActionLoading(id);
     try {
       await api.acceptTrip(id);
-      load();
+      notifyTripUiUpdate();
     } catch (err) {
       const code = err.errorCode || err.code;
       if (shouldRefreshTripsOnError(code)) {
-        load();
         setConfirmAction({ isOpen: false, type: null, tripId: null });
       }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
+      await load({ silent: true });
       setActionLoading(null);
     }
   }
@@ -384,15 +394,15 @@ export default function DriverTrips() {
     setActionLoading(id);
     try {
       await api.completeTrip(id);
-      load();
+      notifyTripUiUpdate();
     } catch (err) {
       const code = err.errorCode || err.code;
       if (shouldRefreshTripsOnError(code)) {
-        load();
         setConfirmAction({ isOpen: false, type: null, tripId: null });
       }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
+      await load({ silent: true });
       setActionLoading(null);
     }
   }
@@ -402,14 +412,15 @@ export default function DriverTrips() {
     try {
       await api.markCashCollected(id);
       addToast(t('trip.payment.cash_collected_success'), 'success');
-      load();
+      notifyTripUiUpdate();
     } catch (err) {
       const code = err.errorCode || err.code;
       if (shouldRefreshTripsOnError(code)) {
-        load();
+        // fall through; always reload in finally
       }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
+      await load({ silent: true });
       setActionLoading(null);
     }
   }
@@ -418,14 +429,16 @@ export default function DriverTrips() {
     try {
       await api.rejectTrip(rejectPrompt.tripId, { reason });
       addToast(t('trip.reject_success'), 'success');
-      load();
+      setRejectPrompt({ isOpen: false, tripId: null });
+      notifyTripUiUpdate();
     } catch (err) {
       const code = err.errorCode || err.code;
       if (shouldRefreshTripsOnError(code)) {
-        load();
         setRejectPrompt({ isOpen: false, tripId: null });
       }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    } finally {
+      await load({ silent: true });
     }
   }
 
