@@ -300,7 +300,7 @@ async function getDriverDailyReport(driverId, date) {
   const nextDate = new Date(targetDate);
   nextDate.setDate(nextDate.getDate() + 1);
 
-  const [tripsAgg, violationsAgg] = await Promise.all([
+  const [tripsAgg, violationsAgg, cashAgg, uncollectedCashAgg] = await Promise.all([
     prisma.trip.aggregate({
       where: {
         driverId,
@@ -316,12 +316,40 @@ async function getDriverDailyReport(driverId, date) {
         date: { gte: targetDate, lt: nextDate }
       },
       _sum: { fineAmount: true }
-    })
+    }),
+    prisma.trip.aggregate({
+      where: {
+        driverId,
+        status: 'COMPLETED',
+        paymentMethod: 'CASH',
+        actualEndTime: { gte: targetDate, lt: nextDate },
+      },
+      _sum: { price: true },
+      _count: { id: true },
+    }),
+    prisma.trip.aggregate({
+      where: {
+        driverId,
+        status: 'COMPLETED',
+        paymentMethod: 'CASH',
+        cashCollectedAt: null,
+        actualEndTime: { gte: targetDate, lt: nextDate },
+      },
+      _sum: { price: true },
+      _count: { id: true },
+    }),
   ]);
 
   const tripRevenue = tripsAgg._sum.price ? Number(tripsAgg._sum.price) : 0;
   const tripCount = tripsAgg._count.id || 0;
   const totalFines = violationsAgg._sum.fineAmount ? Number(violationsAgg._sum.fineAmount) : 0;
+
+  const cashToCollectTotal = cashAgg._sum.price ? Number(cashAgg._sum.price) : 0;
+  const cashTripsCount = cashAgg._count.id || 0;
+  const uncollectedCashTotal = uncollectedCashAgg._sum.price ? Number(uncollectedCashAgg._sum.price) : 0;
+  const uncollectedCashTripsCount = uncollectedCashAgg._count.id || 0;
+  const cashCollectedTotal = Math.max(0, cashToCollectTotal - uncollectedCashTotal);
+  const cashCollectedTripsCount = Math.max(0, cashTripsCount - uncollectedCashTripsCount);
 
   return {
     driverId,
@@ -329,7 +357,13 @@ async function getDriverDailyReport(driverId, date) {
     tripsCompleted: tripCount,
     tripRevenue,
     totalFines,
-    netRevenue: tripRevenue - totalFines
+    netRevenue: tripRevenue - totalFines,
+    cashTripsCount,
+    cashToCollectTotal,
+    cashCollectedTripsCount,
+    cashCollectedTotal,
+    uncollectedCashTripsCount,
+    uncollectedCashTotal
   };
 }
 
@@ -347,7 +381,7 @@ async function getAllDriversDailyReport(date) {
     select: { id: true, name: true }
   });
 
-  const [tripsAggByDriver, violationsAggByDriver] = await Promise.all([
+  const [tripsAggByDriver, violationsAggByDriver, cashAggByDriver, uncollectedCashAggByDriver] = await Promise.all([
     prisma.trip.groupBy({
       by: ['driverId'],
       where: {
@@ -363,11 +397,34 @@ async function getAllDriversDailyReport(date) {
         date: { gte: targetDate, lt: nextDate }
       },
       _sum: { fineAmount: true }
+    }),
+    prisma.trip.groupBy({
+      by: ['driverId'],
+      where: {
+        status: 'COMPLETED',
+        paymentMethod: 'CASH',
+        actualEndTime: { gte: targetDate, lt: nextDate }
+      },
+      _sum: { price: true },
+      _count: { id: true }
+    }),
+    prisma.trip.groupBy({
+      by: ['driverId'],
+      where: {
+        status: 'COMPLETED',
+        paymentMethod: 'CASH',
+        cashCollectedAt: null,
+        actualEndTime: { gte: targetDate, lt: nextDate }
+      },
+      _sum: { price: true },
+      _count: { id: true }
     })
   ]);
 
   const tripMap = Object.fromEntries(tripsAggByDriver.map(t => [t.driverId, { revenue: Number(t._sum.price) || 0, count: t._count.id || 0 }]));
   const violationMap = Object.fromEntries(violationsAggByDriver.map(v => [v.driverId, Number(v._sum.fineAmount) || 0]));
+  const cashMap = Object.fromEntries(cashAggByDriver.map(t => [t.driverId, { total: Number(t._sum.price) || 0, count: t._count.id || 0 }]));
+  const uncollectedCashMap = Object.fromEntries(uncollectedCashAggByDriver.map(t => [t.driverId, { total: Number(t._sum.price) || 0, count: t._count.id || 0 }]));
 
   return drivers.map(driver => ({
     driverId: driver.id,
@@ -376,7 +433,13 @@ async function getAllDriversDailyReport(date) {
     tripsCompleted: tripMap[driver.id]?.count || 0,
     tripRevenue: tripMap[driver.id]?.revenue || 0,
     totalFines: violationMap[driver.id] || 0,
-    netRevenue: (tripMap[driver.id]?.revenue || 0) - (violationMap[driver.id] || 0)
+    netRevenue: (tripMap[driver.id]?.revenue || 0) - (violationMap[driver.id] || 0),
+    cashTripsCount: cashMap[driver.id]?.count || 0,
+    cashToCollectTotal: cashMap[driver.id]?.total || 0,
+    uncollectedCashTripsCount: uncollectedCashMap[driver.id]?.count || 0,
+    uncollectedCashTotal: uncollectedCashMap[driver.id]?.total || 0,
+    cashCollectedTripsCount: Math.max(0, (cashMap[driver.id]?.count || 0) - (uncollectedCashMap[driver.id]?.count || 0)),
+    cashCollectedTotal: Math.max(0, (cashMap[driver.id]?.total || 0) - (uncollectedCashMap[driver.id]?.total || 0)),
   }));
 }
 

@@ -1,9 +1,11 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useShift } from '../../contexts/ShiftContext';
 import { authService } from '../../services/auth.service';
 import { http } from '../../services/http.service';
+import { statsService } from '../../services/stats.service';
 import { ClipboardCheck, User } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 
@@ -13,10 +15,13 @@ import RecentActivityList from '../../components/driver/RecentActivityList';
 
 export default function DriverHome() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const { addToast } = useContext(ToastContext);
   const { activeShift, loading: shiftLoading } = useShift();
   const [showDetails, setShowDetails] = useState(false);
+  const [dailyReport, setDailyReport] = useState(null);
+  const [dailyReportLoading, setDailyReportLoading] = useState(true);
 
   const refreshStatus = useCallback(async (silent = false) => {
     try {
@@ -38,6 +43,18 @@ export default function DriverHome() {
     }
   }, [t, updateUser, addToast]);
 
+  const loadDailyReport = useCallback(async () => {
+    setDailyReportLoading(true);
+    try {
+      const res = await statsService.getMyDailyReport();
+      setDailyReport(res.data || null);
+    } catch {
+      setDailyReport(null);
+    } finally {
+      setDailyReportLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const handleIdentityUpdate = (e) => {
       const { status, reason } = e.detail;
@@ -50,7 +67,10 @@ export default function DriverHome() {
     };
 
     window.addEventListener('ws:identity_update', handleIdentityUpdate);
-    const handleSilentRefresh = () => refreshStatus(true);
+    const handleSilentRefresh = () => {
+      refreshStatus(true);
+      loadDailyReport();
+    };
     window.addEventListener('ws:trip_assigned', handleSilentRefresh);
     window.addEventListener('ws:trip_cancelled', handleSilentRefresh);
     window.addEventListener('ws:trip_completed', handleSilentRefresh);
@@ -59,6 +79,7 @@ export default function DriverHome() {
     const poll = window.setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
       refreshStatus(true);
+      loadDailyReport();
     }, 30000);
 
     return () => {
@@ -70,13 +91,28 @@ export default function DriverHome() {
       window.removeEventListener('online', handleSilentRefresh);
       window.clearInterval(poll);
     };
-  }, [t, addToast, refreshStatus]);
+  }, [t, addToast, refreshStatus, loadDailyReport]);
+
+  useEffect(() => {
+    loadDailyReport();
+  }, [loadDailyReport]);
 
 
   if (shiftLoading) return <div className="loading-page"><div className="spinner"></div></div>;
 
   const isShiftActive = activeShift?.status === 'Active';
   const isShiftPending = activeShift?.status === 'PendingVerification';
+
+  const money = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '0.00';
+    return num.toFixed(2);
+  };
+
+  const uncollectedCashTotal = dailyReport?.uncollectedCashTotal ?? 0;
+  const uncollectedCashTripsCount = dailyReport?.uncollectedCashTripsCount ?? 0;
+  const cashCollectedTotal = dailyReport?.cashCollectedTotal ?? 0;
+  const cashCollectedTripsCount = dailyReport?.cashCollectedTripsCount ?? 0;
 
   return (
     <div>
@@ -132,6 +168,32 @@ export default function DriverHome() {
               <div style={{ fontWeight: 600, color: 'var(--color-warning)' }}>{t('shift.pending')}</div>
               <div className="text-sm text-muted">{t('shift.awaiting_verification')}</div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {!dailyReportLoading && dailyReport && (
+        <div
+          className="card mb-md"
+          style={uncollectedCashTotal > 0
+            ? { borderColor: 'var(--color-danger)', background: 'rgba(239, 68, 68, 0.08)' }
+            : { borderColor: 'var(--color-border)', background: 'var(--color-bg-tertiary)' }}
+        >
+          <div className="flex items-center justify-between" style={{ gap: 'var(--space-md)' }}>
+            <div>
+              <div style={{ fontWeight: 800 }}>{t('driver_home.cash_summary_title')}</div>
+              <div className="text-sm text-muted" style={{ marginTop: 4 }}>
+                {uncollectedCashTotal > 0
+                  ? t('driver_home.uncollected_cash_line', { count: uncollectedCashTripsCount, amount: money(uncollectedCashTotal), currency: t('common.currency') })
+                  : t('driver_home.no_uncollected_cash')}
+              </div>
+              <div className="text-sm text-muted" style={{ marginTop: 4 }}>
+                {t('driver_home.collected_cash_line', { count: cashCollectedTripsCount, amount: money(cashCollectedTotal), currency: t('common.currency') })}
+              </div>
+            </div>
+            <button className="btn btn-primary" onClick={() => navigate('/driver/trips')}>
+              {t('driver_home.go_to_trips')}
+            </button>
           </div>
         </div>
       )}

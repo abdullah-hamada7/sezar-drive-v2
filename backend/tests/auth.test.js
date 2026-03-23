@@ -107,6 +107,7 @@ describe('RBAC Enforcement', () => {
     const driverEndpoints = [
       ['GET', '/api/v1/violations/my'],
       ['GET', '/api/v1/stats/my-daily-report'],
+      ['PUT', '/api/v1/trips/00000000-0000-0000-0000-000000000000/cash-collected'],
     ];
 
     test.each(driverEndpoints)('%s %s should return 401 without token', async (method, path) => {

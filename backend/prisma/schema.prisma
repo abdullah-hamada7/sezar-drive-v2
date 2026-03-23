@@ -176,6 +176,9 @@ model Trip {
   pickupLocation     String         @map("pickup_location") @db.VarChar(500)
   dropoffLocation    String         @map("dropoff_location") @db.VarChar(500)
   paymentMethod      String         @default("CASH") @map("payment_method") @db.VarChar(20)
+  cashCollectedAt    DateTime?      @map("cash_collected_at") @db.Timestamptz(6)
+  cashCollectedBy    String?        @map("cash_collected_by") @db.Uuid
+  cashCollectedNote  String?        @map("cash_collected_note") @db.VarChar(500)
   pickupLat          Decimal?       @map("pickup_lat") @db.Decimal(10, 7)
   pickupLng          Decimal?       @map("pickup_lng") @db.Decimal(10, 7)
   dropoffLat         Decimal?       @map("dropoff_lat") @db.Decimal(10, 7)

@@ -358,6 +358,52 @@ async function completeTrip(tripId, driverId, ipAddress) {
 }
 
 /**
+ * Driver marks a CASH trip as cash collected.
+ * Used for cash reconciliation; idempotent if already collected.
+ */
+async function markCashCollected(tripId, driverId, note, ipAddress) {
+  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
+  if (!trip) throw new NotFoundError('Trip');
+  if (trip.driverId !== driverId) throw new ForbiddenError('FORBIDDEN', 'Not your trip');
+
+  const method = String(trip.paymentMethod || 'CASH').toUpperCase();
+  if (method !== 'CASH') {
+    throw new ConflictError('PAYMENT_NOT_CASH', 'Cash collection is only available for CASH trips');
+  }
+
+  if (!['IN_PROGRESS', 'COMPLETED'].includes(trip.status)) {
+    throw new ConflictError('CASH_COLLECTION_NOT_ALLOWED', 'Cash collection is only allowed for in-progress or completed trips');
+  }
+
+  if (trip.cashCollectedAt) {
+    return trip;
+  }
+
+  const trimmedNote = typeof note === 'string' ? note.trim() : '';
+  const updated = await prisma.trip.update({
+    where: { id: tripId },
+    data: {
+      cashCollectedAt: new Date(),
+      cashCollectedBy: driverId,
+      cashCollectedNote: trimmedNote ? trimmedNote.slice(0, 500) : null,
+      version: { increment: 1 },
+    },
+  });
+
+  await AuditService.log({
+    actorId: driverId,
+    actionType: 'trip.cash_collected',
+    entityType: 'trip',
+    entityId: tripId,
+    previousState: { cashCollectedAt: null },
+    newState: { cashCollectedAt: updated.cashCollectedAt },
+    ipAddress,
+  });
+
+  return updated;
+}
+
+/**
  * Cancel trip. Driver can cancel in Assigned state; admin can cancel with override.
  */
 async function cancelTrip(tripId, userId, role, reason, ipAddress) {
@@ -607,5 +653,6 @@ async function getTripById(id, requestingUser = null) {
 
 module.exports = {
   assignTrip, acceptTrip, rejectAssignedTrip, startTrip, completeTrip, cancelTrip, overrideTrip,
+  markCashCollected,
   getActiveTrip, getTrips, getTripById, getTripAssignmentCharge, updateTripAssignmentCharge,
 };

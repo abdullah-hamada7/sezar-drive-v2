@@ -40,6 +40,13 @@ export const tripService = {
       headers: { 'Idempotency-Key': generateIdempotencyKey() }
     });
   },
+  markCashCollected(id, note) {
+    return http.request(`/trips/${id}/cash-collected`, {
+      method: 'PUT',
+      body: note ? { note } : {},
+      headers: { 'Idempotency-Key': generateIdempotencyKey() }
+    });
+  },
   completeTrip(id, data) {
     return http.request(`/trips/${id}/complete`, {
       method: 'PUT',

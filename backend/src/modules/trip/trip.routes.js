@@ -264,6 +264,23 @@ router.put(
   }
 );
 
+// ─── PUT /api/v1/trips/:id/cash-collected ─────────
+router.put(
+  '/:id/cash-collected',
+  authenticate, enforcePasswordChanged, authorize('driver'), requireIdempotencyKey,
+  [
+    param('id').isUUID(),
+    body('note').optional().isString().isLength({ max: 500 }).trim().escape(),
+  ],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const trip = await tripService.markCashCollected(req.params.id, req.user.id, req.body.note, req.clientIp);
+      res.json(trip);
+    } catch (err) { next(err); }
+  }
+);
+
 // ─── PATCH /api/v1/driver/trips/:id/complete ──────
 router.patch(
   '/driver/:id/complete',

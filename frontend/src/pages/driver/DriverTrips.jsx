@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { tripService as api } from '../../services/trip.service';
 import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle, X } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
@@ -156,6 +157,7 @@ function TripDetailsMap({ trip, currentLat, currentLng, currentLabel, pickupLabe
 
 export default function DriverTrips() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
@@ -168,8 +170,26 @@ export default function DriverTrips() {
   const { addToast } = useContext(ToastContext);
   const { activeShift } = useShift();
   const { user } = useAuth();
+  const isShiftActive = String(activeShift?.status || '').toLowerCase() === 'active';
   const lastReverseRef = useRef({ at: 0, lat: null, lng: null });
   const addressOverridesRef = useRef({});
+
+  function getScheduledStartGate(scheduledTime) {
+    if (!scheduledTime) return { canStart: true, scheduledAt: null, availableAt: null, minutesUntil: 0 };
+    const scheduledAt = new Date(scheduledTime);
+    if (Number.isNaN(scheduledAt.getTime())) return { canStart: true, scheduledAt: null, availableAt: null, minutesUntil: 0 };
+    const availableAt = new Date(scheduledAt.getTime() - 60 * 60 * 1000);
+    const now = new Date();
+    if (now < availableAt) {
+      const minutesUntil = Math.max(1, Math.ceil((availableAt.getTime() - now.getTime()) / 60000));
+      return { canStart: false, scheduledAt, availableAt, minutesUntil };
+    }
+    return { canStart: true, scheduledAt, availableAt, minutesUntil: 0 };
+  }
+
+  function shouldRefreshTripsOnError(code) {
+    return ['NOT_FOUND', 'INVALID_TRIP', 'INVALID_STATE_TRANSITION', 'CONCURRENT_MODIFICATION', 'CONFLICT'].includes(String(code || ''));
+  }
 
   useEffect(() => {
     addressOverridesRef.current = addressOverrides;
@@ -314,12 +334,29 @@ export default function DriverTrips() {
   }
 
   async function handleStart(id) {
+    if (!isShiftActive) {
+      addToast(t('trip.no_active_shift_warning'), 'error');
+      setConfirmAction({ isOpen: false, type: null, tripId: null });
+      navigate('/driver/shift');
+      return;
+    }
     setActionLoading(id);
     try {
       await api.startTrip(id);
       load();
     } catch (err) {
       const code = err.errorCode || err.code;
+      if (code === 'NO_ACTIVE_SHIFT' || code === 'INVALID_SHIFT' || code === 'TRIP_SHIFT_MISMATCH') {
+        addToast(t('trip.no_active_shift_warning'), 'error');
+        setConfirmAction({ isOpen: false, type: null, tripId: null });
+        navigate('/driver/shift');
+        return;
+      }
+
+      if (shouldRefreshTripsOnError(code)) {
+        load();
+        setConfirmAction({ isOpen: false, type: null, tripId: null });
+      }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
       setActionLoading(null);
@@ -333,6 +370,10 @@ export default function DriverTrips() {
       load();
     } catch (err) {
       const code = err.errorCode || err.code;
+      if (shouldRefreshTripsOnError(code)) {
+        load();
+        setConfirmAction({ isOpen: false, type: null, tripId: null });
+      }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
       setActionLoading(null);
@@ -346,6 +387,27 @@ export default function DriverTrips() {
       load();
     } catch (err) {
       const code = err.errorCode || err.code;
+      if (shouldRefreshTripsOnError(code)) {
+        load();
+        setConfirmAction({ isOpen: false, type: null, tripId: null });
+      }
+      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleMarkCashCollected(id) {
+    setActionLoading(id);
+    try {
+      await api.markCashCollected(id);
+      addToast(t('trip.payment.cash_collected_success'), 'success');
+      load();
+    } catch (err) {
+      const code = err.errorCode || err.code;
+      if (shouldRefreshTripsOnError(code)) {
+        load();
+      }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     } finally {
       setActionLoading(null);
@@ -359,6 +421,10 @@ export default function DriverTrips() {
       load();
     } catch (err) {
       const code = err.errorCode || err.code;
+      if (shouldRefreshTripsOnError(code)) {
+        load();
+        setRejectPrompt({ isOpen: false, tripId: null });
+      }
       addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
     }
   }
@@ -396,14 +462,31 @@ export default function DriverTrips() {
     return m;
   };
 
+  const formatWhen = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString(i18n.language);
+  };
+
   return (
     <div>
       <h2 className="page-title" style={{ marginBottom: 'var(--space-lg)' }}>{t('trip.my_trips')}</h2>
 
-      {!activeShift && (
-        <div className="alert alert-warning mb-md">
-          <AlertTriangle size={20} />
-          <div>{t('trip.no_active_shift_warning')}</div>
+      {!isShiftActive && (
+        <div className="card mb-md" style={{ borderColor: 'var(--color-warning)', background: 'rgba(245, 158, 11, 0.08)' }}>
+          <div className="flex items-center gap-md" style={{ justifyContent: 'space-between' }}>
+            <div className="flex items-center gap-md">
+              <AlertTriangle size={22} style={{ color: 'var(--color-warning)' }} />
+              <div>
+                <div style={{ fontWeight: 700, color: 'var(--color-warning)' }}>{t('trip.shift_required_title')}</div>
+                <div className="text-sm text-muted">{t('trip.no_active_shift_warning')}</div>
+              </div>
+            </div>
+            <button className="btn btn-primary" onClick={() => navigate('/driver/shift')}>
+              {t('trip.go_to_shift')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -426,8 +509,10 @@ export default function DriverTrips() {
                   return (
                     <span className="text-sm text-muted">
                       {isCash ? (
-                        <span className="badge badge-danger" style={{ fontWeight: 750 }}>
-                          {t('trip.payment.collect')}: {totalText} {t('trip.price_unit')}
+                        <span className={trip.cashCollectedAt ? 'badge badge-success' : 'badge badge-danger'} style={{ fontWeight: 750 }}>
+                          {trip.cashCollectedAt
+                            ? t('trip.payment.cash_collected')
+                            : `${t('trip.payment.collect')}: ${totalText} ${t('trip.price_unit')}`}
                         </span>
                       ) : (
                         <>
@@ -457,7 +542,7 @@ export default function DriverTrips() {
                 {trip.scheduledTime && (
                   <div className="flex items-center gap-sm">
                     <Clock size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-                    <span className="text-sm text-muted">{new Date(trip.scheduledTime).toLocaleString(i18n.language)}</span>
+                    <span className="text-sm text-muted">{t('trip.starts_at')}: {formatWhen(trip.scheduledTime) || '—'}</span>
                   </div>
                 )}
 
@@ -471,8 +556,10 @@ export default function DriverTrips() {
                       <CheckCircle size={14} style={{ color: isCash ? 'var(--color-danger)' : 'var(--color-success)', flexShrink: 0 }} />
                       <span className="text-sm">{t('trip.payment.method')}: {paymentLabel(method)}</span>
                       {isCash ? (
-                        <span className="badge badge-danger" style={{ marginInlineStart: 'auto', fontWeight: 750 }}>
-                          {t('trip.payment.collect')}: {totalText} {t('trip.price_unit')}
+                        <span className={trip.cashCollectedAt ? 'badge badge-success' : 'badge badge-danger'} style={{ marginInlineStart: 'auto', fontWeight: 750 }}>
+                          {trip.cashCollectedAt
+                            ? t('trip.payment.cash_collected')
+                            : `${t('trip.payment.collect')}: ${totalText} ${t('trip.price_unit')}`}
                         </span>
                       ) : (
                         <span className="badge badge-success" style={{ marginInlineStart: 'auto' }}>{t('trip.payment.paid')}</span>
@@ -529,15 +616,32 @@ export default function DriverTrips() {
 
               {trip.status === 'ASSIGNED' && (
                 <div className="flex gap-sm" style={{ width: '100%' }}>
-                  {trip.scheduledTime && new Date(trip.scheduledTime) > new Date() ? (
-                    <button className="btn btn-primary" onClick={() => setConfirmAction({ isOpen: true, type: 'accept', tripId: trip.id })} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
-                      <CheckCircle size={16} /> {t('trip.accept_trip')}
-                    </button>
-                  ) : (
-                    <button className="btn btn-primary" onClick={() => setConfirmAction({ isOpen: true, type: 'start', tripId: trip.id })} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
-                      <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
-                    </button>
-                  )}
+                  {(() => {
+                    const gate = getScheduledStartGate(trip.scheduledTime);
+                    if (trip.scheduledTime && !gate.canStart) {
+                      return (
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => setConfirmAction({ isOpen: true, type: 'accept', tripId: trip.id })}
+                          disabled={actionLoading === trip.id || !isShiftActive}
+                          style={{ flex: 1 }}
+                        >
+                          <CheckCircle size={16} /> {t('trip.accept_trip')}
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => setConfirmAction({ isOpen: true, type: 'start', tripId: trip.id })}
+                        disabled={actionLoading === trip.id || !isShiftActive || !gate.canStart}
+                        style={{ flex: 1 }}
+                        title={!gate.canStart ? t('trip.start_available_in', { minutes: gate.minutesUntil }) : undefined}
+                      >
+                        <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
+                      </button>
+                    );
+                  })()}
                   <button
                     className="btn btn-secondary"
                     onClick={() => setRejectPrompt({ isOpen: true, tripId: trip.id })}
@@ -550,9 +654,20 @@ export default function DriverTrips() {
               )}
               {trip.status === 'ACCEPTED' && (
                 <div className="flex gap-sm" style={{ width: '100%' }}>
-                  <button className="btn btn-primary" onClick={() => setConfirmAction({ isOpen: true, type: 'start', tripId: trip.id })} disabled={actionLoading === trip.id || !activeShift} style={{ flex: 1 }}>
-                    <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
-                  </button>
+                  {(() => {
+                    const gate = getScheduledStartGate(trip.scheduledTime);
+                    return (
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => setConfirmAction({ isOpen: true, type: 'start', tripId: trip.id })}
+                        disabled={actionLoading === trip.id || !isShiftActive || !gate.canStart}
+                        style={{ flex: 1 }}
+                        title={!gate.canStart ? t('trip.start_available_in', { minutes: gate.minutesUntil }) : undefined}
+                      >
+                        <Play size={16} className="mirror-rtl" /> {t('trip.start_trip')}
+                      </button>
+                    );
+                  })()}
                   <button
                     className="btn btn-secondary"
                     onClick={() => setRejectPrompt({ isOpen: true, tripId: trip.id })}
@@ -566,6 +681,17 @@ export default function DriverTrips() {
               {trip.status === 'IN_PROGRESS' && (
                 <button className="btn btn-success" onClick={() => setConfirmAction({ isOpen: true, type: 'complete', tripId: trip.id })} disabled={actionLoading === trip.id} style={{ width: '100%' }}>
                   <CheckCircle size={16} /> {t('trip.complete_trip')}
+                </button>
+              )}
+
+              {String(trip.paymentMethod || '').toUpperCase() === 'CASH' && trip.status === 'COMPLETED' && !trip.cashCollectedAt && (
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleMarkCashCollected(trip.id)}
+                  disabled={actionLoading === trip.id}
+                  style={{ width: '100%', marginTop: 'var(--space-sm)' }}
+                >
+                  {t('trip.payment.mark_cash_collected')}
                 </button>
               )}
             </div>
