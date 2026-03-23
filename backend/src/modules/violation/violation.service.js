@@ -108,10 +108,10 @@ async function getViolations({ page = 1, limit = 15, driverId, vehicleId, startD
 
   if (driverId) where.driverId = driverId;
   if (vehicleId) where.vehicleId = vehicleId;
-  if (startDate && endDate) {
+  if (startDate || endDate) {
     where.date = {
-      gte: new Date(startDate),
-      lte: new Date(endDate),
+      ...(startDate ? { gte: new Date(startDate) } : {}),
+      ...(endDate ? { lte: new Date(endDate) } : {}),
     };
   }
   if (search) {

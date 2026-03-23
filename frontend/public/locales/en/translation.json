@@ -17,7 +17,7 @@
     "admins": "Admins",
     "profile": "My Profile",
     "violations": "Traffic Violations",
-    "driver_stats": "Driver Stats"
+    "driver_stats": "Driver Daily Stats"
   },
   "nav_driver": {
     "home": "Home",
@@ -25,7 +25,8 @@
     "trips": "Trips",
     "inspection": "Inspection",
     "expenses": "Expenses",
-    "damage": "Damage"
+    "damage": "Damage",
+    "violations": "My Violations"
   },
   "auth": {
     "login": "Login",
@@ -1092,5 +1093,11 @@
     "trips_completed": "Trips",
     "fine_deduction": "Fine Deduction",
     "empty": "No data for selected date"
+  },
+  "driver_violations": {
+    "title": "My Violations",
+    "subtitle": "View your recorded traffic violations and fines",
+    "from_date": "From",
+    "to_date": "To"
   }
 }

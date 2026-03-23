@@ -77,6 +77,10 @@ describe('RBAC Enforcement', () => {
       ['GET', '/api/v1/trips'],
       ['GET', '/api/v1/expenses'],
       ['GET', '/api/v1/audit-logs'],
+      ['GET', '/api/v1/violations'],
+      ['POST', '/api/v1/violations'],
+      ['GET', '/api/v1/violations/driver-stats'],
+      ['GET', '/api/v1/stats/daily-report'],
     ];
 
     test.each(adminEndpoints)('%s %s should return 401 without token', async (method, path) => {
@@ -95,6 +99,18 @@ describe('RBAC Enforcement', () => {
       const res = await request(app)[method.toLowerCase()](path)
         .set('Authorization', 'Bearer fake-token-123');
 
+      expect(res.status).toBe(401);
+    });
+  });
+
+  describe('Driver endpoints require authentication', () => {
+    const driverEndpoints = [
+      ['GET', '/api/v1/violations/my'],
+      ['GET', '/api/v1/stats/my-daily-report'],
+    ];
+
+    test.each(driverEndpoints)('%s %s should return 401 without token', async (method, path) => {
+      const res = await request(app)[method.toLowerCase()](path);
       expect(res.status).toBe(401);
     });
   });

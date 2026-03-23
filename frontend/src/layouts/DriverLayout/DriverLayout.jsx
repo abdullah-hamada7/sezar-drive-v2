@@ -6,7 +6,7 @@ import { useContext, useState } from 'react';
 import { ThemeContext } from '../../contexts/theme';
 import {
   ClipboardCheck, Route, Receipt, AlertTriangle,
-  Camera, LogOut, Home, Languages, Sun, Moon
+  Camera, LogOut, Home, Languages, Sun, Moon, AlertCircle
 } from 'lucide-react';
 import BrandIcon from '../../components/BrandIcon';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -33,6 +33,7 @@ export default function DriverLayout() {
     { to: '/driver/inspection', icon: Camera, label: t('nav_driver.inspection') },
     { to: '/driver/expenses', icon: Receipt, label: t('nav_driver.expenses') },
     { to: '/driver/damage', icon: AlertTriangle, label: t('nav_driver.damage') },
+    { to: '/driver/violations', icon: AlertCircle, label: t('nav_driver.violations') },
   ];
 
   return (

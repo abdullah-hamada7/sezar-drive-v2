@@ -14,7 +14,7 @@ import { ToastContext } from '../../contexts/toastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
 export default function DriverShift() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
   const { activeShift: shift, refreshShift, loading: shiftLoading } = useShift();
   const [user, setUser] = useState(null);
@@ -405,7 +405,7 @@ export default function DriverShift() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted text-sm">{t('shift.started_at')}</span>
-              <span className="text-sm">{shift.startedAt ? new Date(shift.startedAt).toLocaleTimeString() : '—'}</span>
+              <span className="text-sm">{shift.startedAt ? new Date(shift.startedAt).toLocaleTimeString(i18n.language) : '—'}</span>
             </div>
           </div>
 

@@ -426,9 +426,9 @@ export default function DriverTrips() {
                   return (
                     <span className="text-sm text-muted">
                       {isCash ? (
-                        <>
+                        <span className="badge badge-danger" style={{ fontWeight: 750 }}>
                           {t('trip.payment.collect')}: {totalText} {t('trip.price_unit')}
-                        </>
+                        </span>
                       ) : (
                         <>
                           {t('trip.payment.method')}: {paymentLabel(method)}
@@ -457,7 +457,7 @@ export default function DriverTrips() {
                 {trip.scheduledTime && (
                   <div className="flex items-center gap-sm">
                     <Clock size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-                    <span className="text-sm text-muted">{new Date(trip.scheduledTime).toLocaleString()}</span>
+                    <span className="text-sm text-muted">{new Date(trip.scheduledTime).toLocaleString(i18n.language)}</span>
                   </div>
                 )}
 
@@ -468,12 +468,13 @@ export default function DriverTrips() {
                   const totalText = Number.isFinite(total) ? total.toFixed(2) : String(trip.price);
                   return (
                     <div className="flex items-center gap-sm">
-                      <CheckCircle size={14} style={{ color: isCash ? 'var(--color-warning)' : 'var(--color-success)', flexShrink: 0 }} />
-                      <span className="text-sm">
-                        {t('trip.payment.method')}: {paymentLabel(method)}
-                        {isCash ? ` • ${t('trip.payment.collect')}: ${totalText} ${t('trip.price_unit')}` : ''}
-                      </span>
-                      {!isCash && (
+                      <CheckCircle size={14} style={{ color: isCash ? 'var(--color-danger)' : 'var(--color-success)', flexShrink: 0 }} />
+                      <span className="text-sm">{t('trip.payment.method')}: {paymentLabel(method)}</span>
+                      {isCash ? (
+                        <span className="badge badge-danger" style={{ marginInlineStart: 'auto', fontWeight: 750 }}>
+                          {t('trip.payment.collect')}: {totalText} {t('trip.price_unit')}
+                        </span>
+                      ) : (
                         <span className="badge badge-success" style={{ marginInlineStart: 'auto' }}>{t('trip.payment.paid')}</span>
                       )}
                     </div>

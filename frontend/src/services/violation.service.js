@@ -34,6 +34,11 @@ export const violationService = {
     const query = date ? `?date=${date}` : '';
     return http.get(`/violations/driver-stats${query}`);
   },
+
+  getMyViolations(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return http.get(`/violations/my?${query}`);
+  },
 };
 
 export default violationService;

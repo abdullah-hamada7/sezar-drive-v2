@@ -8,7 +8,7 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import { Plus, Edit, Trash2, Eye, X } from 'lucide-react';
 
 export default function ViolationsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
   const [violations, setViolations] = useState([]);
   const [pagination, setPagination] = useState({});
@@ -98,7 +98,16 @@ export default function ViolationsPage() {
     }
   }
 
-  function formatDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
+  function formatDate(d) {
+    return d ? new Date(d).toLocaleDateString(i18n.language) : '—';
+  }
+
+  function formatMoney(amount) {
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return '—';
+    const formatted = new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    return `${formatted} ${t('common.currency')}`;
+  }
 
   return (
     <div>
@@ -108,8 +117,8 @@ export default function ViolationsPage() {
           <p className="page-subtitle">{t('violations.subtitle')}</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setIsEditing(true); setSelected(null); setFormData({
-          driverId: drivers[0]?.id || '',
-          vehicleId: vehicles[0]?.id || '',
+          driverId: '',
+          vehicleId: '',
           date: new Date().toISOString().split('T')[0],
           time: '',
           location: '',
@@ -165,7 +174,7 @@ export default function ViolationsPage() {
                     <td>{v.time || '—'}</td>
                     <td className="text-sm">{v.location || '—'}</td>
                     <td>{v.violationNumber || '—'}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--color-danger)' }}>{parseFloat(v.fineAmount).toFixed(2)} EGP</td>
+                    <td style={{ fontWeight: 600, color: 'var(--color-danger)' }}>{formatMoney(v.fineAmount)}</td>
                     <td>
                       <div className="flex gap-sm">
                         <button className="btn-icon" onClick={() => setSelected(v)} title={t('common.view')}><Eye size={16} /></button>
@@ -311,7 +320,7 @@ export default function ViolationsPage() {
                 { label: t('violations.time'), value: selected.time },
                 { label: t('violations.location'), value: selected.location },
                 { label: t('violations.violation_number'), value: selected.violationNumber },
-                { label: t('violations.fine_amount'), value: `${parseFloat(selected.fineAmount).toFixed(2)} EGP`, type: 'badge', badgeClass: 'badge-danger' },
+                { label: t('violations.fine_amount'), value: formatMoney(selected.fineAmount), type: 'badge', badgeClass: 'badge-danger' },
               ]
             }
           ].filter(Boolean)}

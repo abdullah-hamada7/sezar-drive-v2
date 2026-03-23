@@ -48,6 +48,7 @@ const DriverTrips = lazy(() => import("./pages/driver/DriverTrips"));
 const DriverInspection = lazy(() => import("./pages/driver/DriverInspection"));
 const DriverExpenses = lazy(() => import("./pages/driver/DriverExpenses"));
 const DriverDamage = lazy(() => import("./pages/driver/DriverDamage"));
+const DriverViolations = lazy(() => import("./pages/driver/DriverViolations"));
 
 function ProtectedRoute({ children, requireAdmin, requireDriver }) {
   const { isAuthenticated, isAdmin, isDriver, user } = useAuth();
@@ -150,6 +151,7 @@ function AppRoutes() {
         <Route path="inspection" element={<DriverInspection />} />
         <Route path="expenses" element={<DriverExpenses />} />
         <Route path="damage" element={<DriverDamage />} />
+        <Route path="violations" element={<DriverViolations />} />
       </Route>
 
       {/* Catch-all */}

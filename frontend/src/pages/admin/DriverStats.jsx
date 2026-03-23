@@ -4,7 +4,7 @@ import { statsService } from '../../services/stats.service';
 import { Calendar, Users, Car, DollarSign, Route } from 'lucide-react';
 
 export default function DriverStatsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -24,6 +24,13 @@ export default function DriverStatsPage() {
   const totalTrips = stats.reduce((sum, s) => sum + (s.tripsCompleted || 0), 0);
   const totalFines = stats.reduce((sum, s) => sum + (s.totalFines || 0), 0);
   const totalNet = stats.reduce((sum, s) => sum + (s.netRevenue || 0), 0);
+
+  function formatMoney(amount) {
+    const n = Number(amount);
+    if (!Number.isFinite(n)) return '—';
+    const formatted = new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    return `${formatted} ${t('common.currency')}`;
+  }
 
   return (
     <div>
@@ -68,7 +75,7 @@ export default function DriverStatsPage() {
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value" style={{ color: 'var(--color-danger)' }}>{totalFines.toFixed(2)} EGP</div>
+            <div className="stat-value" style={{ color: 'var(--color-danger)' }}>{formatMoney(totalFines)}</div>
             <div className="stat-label">{t('driver_stats.total_fines')}</div>
           </div>
         </div>
@@ -77,7 +84,7 @@ export default function DriverStatsPage() {
             <Car size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{totalNet.toFixed(2)} EGP</div>
+            <div className="stat-value">{formatMoney(totalNet)}</div>
             <div className="stat-label">{t('driver_stats.net_revenue')}</div>
           </div>
         </div>
@@ -112,13 +119,13 @@ export default function DriverStatsPage() {
                         <span className="badge badge-success">{s.tripsCompleted}</span>
                       </td>
                       <td>
-                        {s.tripRevenue != null ? `${Number(s.tripRevenue).toFixed(2)} EGP` : '—'}
+                        {s.tripRevenue != null ? formatMoney(s.tripRevenue) : '—'}
                       </td>
                       <td style={{ fontWeight: 600, color: 'var(--color-danger)' }}>
-                        {s.totalFines > 0 ? `${Number(s.totalFines).toFixed(2)} EGP` : '—'}
+                        {s.totalFines > 0 ? formatMoney(s.totalFines) : '—'}
                       </td>
                       <td style={{ fontWeight: 600, color: 'var(--color-success)' }}>
-                        {s.netRevenue != null ? `${Number(s.netRevenue).toFixed(2)} EGP` : '—'}
+                        {s.netRevenue != null ? formatMoney(s.netRevenue) : '—'}
                       </td>
                     </tr>
                   ))}

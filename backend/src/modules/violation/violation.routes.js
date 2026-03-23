@@ -1,6 +1,5 @@
 const express = require('express');
-const { body, param, query } = require('express-validator');
-const { validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 const violationService = require('./violation.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
@@ -38,6 +37,14 @@ const listValidation = [
   query('limit').optional().isInt({ min: 1, max: 100 }),
   query('driverId').optional().isUUID(),
   query('vehicleId').optional().isUUID(),
+  query('startDate').optional().isISO8601(),
+  query('endDate').optional().isISO8601(),
+  query('search').optional().isString(),
+];
+
+const myListValidation = [
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 100 }),
   query('startDate').optional().isISO8601(),
   query('endDate').optional().isISO8601(),
   query('search').optional().isString(),
@@ -100,6 +107,29 @@ router.get(
         limit,
         driverId: req.query.driverId,
         vehicleId: req.query.vehicleId,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        search: req.query.search,
+      });
+      res.json(data);
+    } catch (err) { next(err); }
+  }
+);
+
+// ─── GET /api/v1/violations/my ─────────────────────
+router.get(
+  '/my',
+  authenticate, enforcePasswordChanged, authorize('driver'),
+  myListValidation,
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 15;
+      const data = await violationService.getViolations({
+        page,
+        limit,
+        driverId: req.user.id,
         startDate: req.query.startDate,
         endDate: req.query.endDate,
         search: req.query.search,
