@@ -519,11 +519,23 @@ export default function TripsPage() {
                 <div className="grid grid-2 gap-md mb-md">
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.pickup_label')}</label>
-                    <input className="form-input" value={form.pickupLocation} onChange={e => { setForm({ ...form, pickupLocation: e.target.value }); setError(''); }} required placeholder={t('trips.modal.pickup_placeholder')} />
+                    <input
+                      className="form-input"
+                      value={form.pickupLocation}
+                      readOnly
+                      required
+                      placeholder={t('trips.modal.pickup_placeholder')}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">{t('trips.modal.dropoff_label')}</label>
-                    <input className="form-input" value={form.dropoffLocation} onChange={e => { setForm({ ...form, dropoffLocation: e.target.value }); setError(''); }} required placeholder={t('trips.modal.dropoff_placeholder')} />
+                    <input
+                      className="form-input"
+                      value={form.dropoffLocation}
+                      readOnly
+                      required
+                      placeholder={t('trips.modal.dropoff_placeholder')}
+                    />
                   </div>
                 </div>
 
