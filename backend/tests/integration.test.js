@@ -4,6 +4,8 @@ const app = require('../src/app');
 const prisma = require('../src/config/database');
 const fs = require('fs');
 
+const generateIdempotencyKey = () => `test-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 const shouldRunIntegration = ['1', 'true', 'yes'].includes(
   String(process.env.RUN_INTEGRATION_TESTS || '').toLowerCase()
 );
@@ -64,7 +66,7 @@ describeIntegration('API Integration Tests (E2E)', () => {
 
   afterAll(async () => {
     try {
-      if (tripId) await prisma.trip.deleteMany({ where: { id: tripId } });
+      if (driverId) await prisma.trip.deleteMany({ where: { driverId } });
       if (driverId) await prisma.vehicleAssignment.deleteMany({ where: { driverId } });
       if (shiftId) await prisma.shift.deleteMany({ where: { id: shiftId } });
       if (vehicleId) await prisma.vehicle.deleteMany({ where: { id: vehicleId } });
@@ -207,7 +209,8 @@ describeIntegration('API Integration Tests (E2E)', () => {
 
     const startRes = await request(app)
       .put(`/api/v1/trips/${tripId}/start`)
-      .set('Authorization', `Bearer ${driverToken}`);
+      .set('Authorization', `Bearer ${driverToken}`)
+      .set('Idempotency-Key', generateIdempotencyKey());
 
     if (startRes.status !== 200) log(`Start Trip Body: ${JSON.stringify(startRes.body)}`);
     expect(startRes.status).toBe(200);
@@ -215,9 +218,61 @@ describeIntegration('API Integration Tests (E2E)', () => {
 
     const completeRes = await request(app)
       .put(`/api/v1/trips/${tripId}/complete`)
-      .set('Authorization', `Bearer ${driverToken}`);
+      .set('Authorization', `Bearer ${driverToken}`)
+      .set('Idempotency-Key', generateIdempotencyKey());
 
     expect(completeRes.status).toBe(200);
     expect(completeRes.body.status).toBe('COMPLETED');
+  });
+
+  test('Cash Collection: validates and trims note', async () => {
+    // Create a fresh trip so we can test note behaviors before collection is recorded.
+    const tripRes = await request(app)
+      .post('/api/v1/trips')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        driverId,
+        vehicleId,
+        shiftId,
+        pickupLocation: 'Test Pickup 2',
+        dropoffLocation: 'Test Dropoff 2',
+        price: 75,
+        scheduledTime: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+      });
+
+    if (tripRes.status !== 201) log(`Create Trip (cash note) Failed: ${JSON.stringify(tripRes.body)}`);
+    expect(tripRes.status).toBe(201);
+    const cashTripId = tripRes.body.id;
+
+    const startRes = await request(app)
+      .put(`/api/v1/trips/${cashTripId}/start`)
+      .set('Authorization', `Bearer ${driverToken}`)
+      .set('Idempotency-Key', generateIdempotencyKey());
+    expect(startRes.status).toBe(200);
+
+    const completeRes = await request(app)
+      .put(`/api/v1/trips/${cashTripId}/complete`)
+      .set('Authorization', `Bearer ${driverToken}`)
+      .set('Idempotency-Key', generateIdempotencyKey());
+    expect(completeRes.status).toBe(200);
+    expect(completeRes.body.status).toBe('COMPLETED');
+
+    const tooLongNote = 'a'.repeat(251);
+    const longNoteRes = await request(app)
+      .put(`/api/v1/trips/${cashTripId}/cash-collected`)
+      .set('Authorization', `Bearer ${driverToken}`)
+      .set('Idempotency-Key', generateIdempotencyKey())
+      .send({ note: tooLongNote });
+    expect(longNoteRes.status).toBe(400);
+
+    const okNoteRes = await request(app)
+      .put(`/api/v1/trips/${cashTripId}/cash-collected`)
+      .set('Authorization', `Bearer ${driverToken}`)
+      .set('Idempotency-Key', generateIdempotencyKey())
+      .send({ note: '  hello  ' });
+
+    expect(okNoteRes.status).toBe(200);
+    expect(okNoteRes.body.cashCollectedAt).toBeTruthy();
+    expect(okNoteRes.body.cashCollectedNote).toBe('hello');
   });
 });

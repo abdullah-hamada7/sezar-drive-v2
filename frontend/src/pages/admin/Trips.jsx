@@ -1,5 +1,6 @@
 import { useState, useEffect, useContext, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { tripService as api } from '../../services/trip.service';
 import { driverService } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
@@ -142,12 +143,35 @@ const STATUS_BADGES = {
 export default function TripsPage() {
   const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [pagination, setPagination] = useState({});
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedTrip, setSelectedTrip] = useState(null);
+
+  const tripIdQuery = useMemo(() => {
+    const id = new URLSearchParams(location.search || '').get('tripId');
+    return id ? String(id).trim() : '';
+  }, [location.search]);
+
+  const clearTripIdQuery = () => {
+    if (!tripIdQuery) return;
+    const params = new URLSearchParams(location.search || '');
+    params.delete('tripId');
+    const nextSearch = params.toString();
+    navigate(
+      { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' },
+      { replace: true }
+    );
+  };
+
+  const closeSelectedTrip = () => {
+    setSelectedTrip(null);
+    clearTripIdQuery();
+  };
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [drivers, setDrivers] = useState([]);
@@ -287,6 +311,35 @@ export default function TripsPage() {
     }
     load();
   }, [page, statusFilter, refresh]);
+
+  useEffect(() => {
+    if (!tripIdQuery) return;
+    if (selectedTrip?.id === tripIdQuery) return;
+
+    const fromList = trips.find((trip) => String(trip?.id || '') === tripIdQuery);
+    if (fromList) {
+      setSelectedTrip(fromList);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.getTrip(tripIdQuery);
+        if (cancelled) return;
+        if (res?.data) setSelectedTrip(res.data);
+      } catch (err) {
+        if (cancelled) return;
+        const code = err?.errorCode || err?.code;
+        const msg = code ? t(`errors.${code}`) : (err?.message || t('common.error'));
+        addToast(msg, 'error');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tripIdQuery, selectedTrip?.id, trips, addToast, t]);
 
   useEffect(() => {
     async function loadCharge() {
@@ -1041,11 +1094,11 @@ export default function TripsPage() {
       )}
 
       {selectedTrip && (
-        <div className="modal-overlay" onClick={() => setSelectedTrip(null)}>
+        <div className="modal-overlay" onClick={closeSelectedTrip}>
           <div className="modal modal-xl" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{t('trips.modal.details_title')}</h2>
-              <button className="btn-icon" onClick={() => setSelectedTrip(null)}>
+              <button className="btn-icon" onClick={closeSelectedTrip}>
                 <XCircle size={18} />
               </button>
             </div>

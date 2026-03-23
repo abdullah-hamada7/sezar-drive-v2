@@ -1,14 +1,28 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { statsService } from '../../services/stats.service';
+import { tripService } from '../../services/trip.service';
 import { Calendar, Users, Car, DollarSign, Route, Wallet, Download } from 'lucide-react';
+import PromptModal from '../../components/common/PromptModal';
+import { ToastContext } from '../../contexts/toastContext';
 
 export default function DriverStatsPage() {
   const { t, i18n } = useTranslation();
+  const { addToast } = useContext(ToastContext);
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [showUncollectedOnly, setShowUncollectedOnly] = useState(false);
+  const [cashExceptions, setCashExceptions] = useState(null);
+  const [cashExceptionsLoading, setCashExceptionsLoading] = useState(false);
+  const [cashExceptionsActionLoading, setCashExceptionsActionLoading] = useState(false);
+  const [cashCollectPrompt, setCashCollectPrompt] = useState({ isOpen: false, tripId: null });
+
+  const [cashDriverQuery, setCashDriverQuery] = useState('');
+  const [cashMinAmount, setCashMinAmount] = useState('');
+  const [cashMinAgeMinutes, setCashMinAgeMinutes] = useState('');
+  const [cashSort, setCashSort] = useState('amount_desc');
 
   useEffect(() => {
     async function load() {
@@ -21,6 +35,39 @@ export default function DriverStatsPage() {
     }
     load();
   }, [date]);
+
+  useEffect(() => {
+    async function loadExceptions() {
+      setCashExceptionsLoading(true);
+      try {
+        const res = await statsService.getCashExceptions(date);
+        setCashExceptions(res.data || null);
+      } catch (err) {
+        console.error(err);
+        const code = err?.errorCode || err?.code;
+        addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+        setCashExceptions(null);
+      } finally {
+        setCashExceptionsLoading(false);
+      }
+    }
+    loadExceptions();
+  }, [date, addToast, t]);
+
+  async function refreshCashExceptions() {
+    setCashExceptionsLoading(true);
+    try {
+      const res = await statsService.getCashExceptions(date);
+      setCashExceptions(res.data || null);
+    } catch (err) {
+      console.error(err);
+      const code = err?.errorCode || err?.code;
+      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+      setCashExceptions(null);
+    } finally {
+      setCashExceptionsLoading(false);
+    }
+  }
 
   const totalTrips = stats.reduce((sum, s) => sum + (s.tripsCompleted || 0), 0);
   const totalFines = stats.reduce((sum, s) => sum + (s.totalFines || 0), 0);
@@ -96,6 +143,173 @@ export default function DriverStatsPage() {
     a.remove();
     URL.revokeObjectURL(url);
   }
+
+  function formatAge(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '—';
+    const diffMs = Date.now() - d.getTime();
+    const minutes = Math.max(0, Math.floor(diffMs / 60000));
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours <= 0) return `${mins}m`;
+    return `${hours}h ${mins}m`;
+  }
+
+  function ageMinutes(value) {
+    if (!value) return 0;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return 0;
+    return Math.max(0, Math.floor((Date.now() - d.getTime()) / 60000));
+  }
+
+  function exportCashExceptionsCsv() {
+    const data = filteredCashExceptionDrivers;
+    const toCell = (value) => {
+      const s = value == null ? '' : String(value);
+      const escaped = s.replace(/"/g, '""');
+      return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
+    };
+
+    const header = [
+      'Driver',
+      'Driver ID',
+      'Trip ID',
+      'Shift ID',
+      'Vehicle',
+      'Completed at',
+      'Age',
+      'Amount',
+      'Pickup',
+      'Dropoff',
+    ];
+
+    const lines = [header.join(',')];
+    for (const driver of data) {
+      for (const trip of driver.trips || []) {
+        lines.push([
+          driver.driverName,
+          driver.driverId,
+          trip.id,
+          trip.shiftId,
+          trip.vehiclePlateNumber || '',
+          trip.actualEndTime,
+          formatAge(trip.actualEndTime),
+          trip.price,
+          trip.pickupLocation,
+          trip.dropoffLocation,
+        ].map(toCell).join(','));
+      }
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cash-exceptions-${date}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportCashExceptionsPdf() {
+    setCashExceptionsActionLoading(true);
+    try {
+      const res = await statsService.getCashExceptionsPdf(date);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cash-exceptions-${date}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      const code = err?.errorCode || err?.code;
+      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+    } finally {
+      setCashExceptionsActionLoading(false);
+    }
+  }
+
+  async function onConfirmCashCollected(note) {
+    const tripId = cashCollectPrompt.tripId;
+    if (!tripId) return;
+
+    setCashExceptionsActionLoading(true);
+    try {
+      await tripService.markCashCollectedAdmin(tripId, note);
+      await refreshCashExceptions();
+      addToast(t('driver_stats.cash_exceptions_mark_collected_success'), 'success');
+    } catch (err) {
+      console.error(err);
+      const code = err?.errorCode || err?.code;
+      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+    } finally {
+      setCashExceptionsActionLoading(false);
+    }
+  }
+
+  const filteredCashExceptionDrivers = useMemo(() => {
+    const drivers = Array.isArray(cashExceptions?.drivers) ? cashExceptions.drivers : [];
+    const q = String(cashDriverQuery || '').trim().toLowerCase();
+    const minAmount = Number(cashMinAmount);
+    const minAge = Number(cashMinAgeMinutes);
+
+    const normalized = drivers
+      .map((d) => {
+        const trips = Array.isArray(d.trips) ? d.trips : [];
+        const filteredTrips = trips.filter((trip) => {
+          if (q && !String(d.driverName || '').toLowerCase().includes(q) && !String(d.driverId || '').toLowerCase().includes(q)) {
+            return false;
+          }
+          const amount = Number(trip.price) || 0;
+          if (Number.isFinite(minAmount) && minAmount > 0 && amount < minAmount) return false;
+          const age = ageMinutes(trip.actualEndTime);
+          if (Number.isFinite(minAge) && minAge > 0 && age < minAge) return false;
+          return true;
+        });
+
+        const uncollectedCashTotal = filteredTrips.reduce((sum, trip) => sum + (Number(trip.price) || 0), 0);
+        return {
+          ...d,
+          trips: filteredTrips,
+          uncollectedCashTripsCount: filteredTrips.length,
+          uncollectedCashTotal,
+        };
+      })
+      .filter((d) => d.uncollectedCashTripsCount > 0);
+
+    const sorted = [...normalized].sort((a, b) => {
+      if (cashSort === 'age_desc') {
+        const aAge = Math.max(...(a.trips || []).map((t) => ageMinutes(t.actualEndTime)), 0);
+        const bAge = Math.max(...(b.trips || []).map((t) => ageMinutes(t.actualEndTime)), 0);
+        if (bAge !== aAge) return bAge - aAge;
+      }
+
+      if (cashSort === 'count_desc') {
+        if (b.uncollectedCashTripsCount !== a.uncollectedCashTripsCount) return b.uncollectedCashTripsCount - a.uncollectedCashTripsCount;
+      }
+
+      // default: amount_desc
+      if (b.uncollectedCashTotal !== a.uncollectedCashTotal) return b.uncollectedCashTotal - a.uncollectedCashTotal;
+      return String(a.driverName || '').localeCompare(String(b.driverName || ''));
+    });
+
+    return sorted;
+  }, [cashExceptions, cashDriverQuery, cashMinAmount, cashMinAgeMinutes, cashSort]);
+
+  const cashExceptionsTotals = useMemo(() => {
+    const drivers = filteredCashExceptionDrivers;
+    const trips = drivers.reduce((sum, d) => sum + (d.uncollectedCashTripsCount || 0), 0);
+    const total = drivers.reduce((sum, d) => sum + (Number(d.uncollectedCashTotal) || 0), 0);
+    return { trips, total };
+  }, [filteredCashExceptionDrivers]);
+
+  const cashTopOffenders = useMemo(() => filteredCashExceptionDrivers.slice(0, 5), [filteredCashExceptionDrivers]);
 
   return (
     <div>
@@ -269,6 +483,209 @@ export default function DriverStatsPage() {
           </div>
         )}
       </div>
+
+      <div className="card" style={{ marginTop: 'var(--space-lg)' }}>
+        <div className="card-header">
+          <h3 className="card-title">{t('driver_stats.cash_exceptions_title')}</h3>
+          <div className="flex gap-sm items-center">
+            <span className="badge badge-danger">
+              {cashExceptionsTotals.trips}
+            </span>
+            <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>{formatMoney(cashExceptionsTotals.total)}</span>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={exportCashExceptionsCsv}
+              disabled={cashExceptionsLoading || cashExceptionsActionLoading || !(cashExceptionsTotals.trips > 0)}
+            >
+              <Download size={16} /> {t('driver_stats.export_cash_exceptions_csv')}
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={exportCashExceptionsPdf}
+              disabled={cashExceptionsLoading || cashExceptionsActionLoading || !(cashExceptionsTotals.trips > 0)}
+            >
+              <Download size={16} /> {t('driver_stats.export_cash_exceptions_pdf')}
+            </button>
+          </div>
+        </div>
+
+        {cashExceptionsLoading ? (
+          <div className="loading-page"><div className="spinner"></div></div>
+        ) : (cashExceptionsTotals.trips || 0) === 0 ? (
+          <div className="empty-state" style={{ padding: '1.25rem' }}>{t('driver_stats.cash_exceptions_empty')}</div>
+        ) : (
+          <div className="table-container">
+            <div style={{ padding: 'var(--space-md)' }}>
+              <div className="grid grid-4 gap-md">
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{t('driver_stats.cash_exceptions_filter_driver')}</label>
+                  <input
+                    className="form-input"
+                    value={cashDriverQuery}
+                    onChange={(e) => setCashDriverQuery(e.target.value)}
+                    placeholder={t('driver_stats.cash_exceptions_filter_driver_ph')}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{t('driver_stats.cash_exceptions_filter_min_amount')}</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={cashMinAmount}
+                    onChange={(e) => setCashMinAmount(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{t('driver_stats.cash_exceptions_filter_min_age')}</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={cashMinAgeMinutes}
+                    onChange={(e) => setCashMinAgeMinutes(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">{t('driver_stats.cash_exceptions_sort')}</label>
+                  <select className="form-input" value={cashSort} onChange={(e) => setCashSort(e.target.value)}>
+                    <option value="amount_desc">{t('driver_stats.cash_exceptions_sort_amount')}</option>
+                    <option value="count_desc">{t('driver_stats.cash_exceptions_sort_count')}</option>
+                    <option value="age_desc">{t('driver_stats.cash_exceptions_sort_age')}</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
+              <div className="text-xs text-muted" style={{ marginBottom: 'var(--space-sm)' }}>
+                {t('driver_stats.cash_exceptions_showing', { drivers: filteredCashExceptionDrivers.length, trips: cashExceptionsTotals.trips })}
+              </div>
+
+              {cashTopOffenders.length > 0 && (
+                <div className="card" style={{ padding: 'var(--space-md)', marginBottom: 'var(--space-md)', border: '1px solid var(--color-border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 'var(--space-sm)' }}>
+                    <div style={{ fontWeight: 700 }}>{t('driver_stats.cash_exceptions_top_offenders')}</div>
+                    <div className="text-xs text-muted">{t('driver_stats.cash_exceptions_top_offenders_hint')}</div>
+                  </div>
+                  <div className="table-responsive" style={{ marginTop: 'var(--space-sm)' }}>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{t('driver_stats.driver')}</th>
+                          <th>{t('driver_stats.uncollected_cash_trips')}</th>
+                          <th>{t('driver_stats.uncollected_cash')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cashTopOffenders.map((d) => (
+                          <tr key={`${d.driverId}-top`}>
+                            <td style={{ fontWeight: 600 }}>{d.driverName}</td>
+                            <td><span className="badge badge-danger">{d.uncollectedCashTripsCount}</span></td>
+                            <td style={{ fontWeight: 700, color: 'var(--color-danger)' }}>{formatMoney(d.uncollectedCashTotal)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t('driver_stats.driver')}</th>
+                    <th>{t('driver_stats.uncollected_cash_trips')}</th>
+                    <th>{t('driver_stats.uncollected_cash')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCashExceptionDrivers.map((d) => (
+                    <tr key={d.driverId}>
+                      <td style={{ fontWeight: 600 }}>{d.driverName}</td>
+                      <td><span className="badge badge-danger">{d.uncollectedCashTripsCount}</span></td>
+                      <td style={{ fontWeight: 700, color: 'var(--color-danger)' }}>{formatMoney(d.uncollectedCashTotal)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div style={{ padding: '0 var(--space-md) var(--space-md)' }}>
+              {filteredCashExceptionDrivers.map((d) => (
+                <details key={`${d.driverId}-details`} style={{ marginTop: 'var(--space-sm)' }}>
+                  <summary className="text-sm" style={{ cursor: 'pointer', fontWeight: 600 }}>
+                    {d.driverName} - {d.uncollectedCashTripsCount} - {formatMoney(d.uncollectedCashTotal)}
+                  </summary>
+                  <div className="table-responsive" style={{ marginTop: 'var(--space-sm)' }}>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>{t('driver_stats.cash_exceptions_trip_id')}</th>
+                          <th>{t('driver_stats.cash_exceptions_completed_at')}</th>
+                          <th>{t('driver_stats.cash_exceptions_age')}</th>
+                          <th>{t('driver_stats.cash_exceptions_amount')}</th>
+                          <th>{t('driver_stats.cash_exceptions_location')}</th>
+                          <th>{t('driver_stats.cash_exceptions_actions')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(d.trips || []).map((trip) => (
+                          <tr key={trip.id}>
+                            <td className="font-mono">{String(trip.id).slice(0, 8)}</td>
+                            <td>{trip.actualEndTime ? new Date(trip.actualEndTime).toLocaleString(i18n.language) : '—'}</td>
+                            <td>{formatAge(trip.actualEndTime)}</td>
+                            <td style={{ fontWeight: 600 }}>{formatMoney(trip.price)}</td>
+                            <td className="text-sm">
+                              {trip.pickupLocation}{' -> '}{trip.dropoffLocation}
+                              {trip.vehiclePlateNumber ? ` | ${trip.vehiclePlateNumber}` : ''}
+                            </td>
+                            <td>
+                              <div className="flex gap-sm items-center">
+                                <Link className="btn btn-secondary btn-sm" to={`/admin/trips?tripId=${encodeURIComponent(trip.id)}`}>
+                                  {t('driver_stats.cash_exceptions_view_trip')}
+                                </Link>
+                                <button
+                                  className="btn btn-primary btn-sm"
+                                  type="button"
+                                  disabled={cashExceptionsActionLoading}
+                                  onClick={() => setCashCollectPrompt({ isOpen: true, tripId: trip.id })}
+                                >
+                                  {t('driver_stats.cash_exceptions_mark_collected')}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <PromptModal
+        isOpen={cashCollectPrompt.isOpen}
+        onClose={() => setCashCollectPrompt({ isOpen: false, tripId: null })}
+        onConfirm={onConfirmCashCollected}
+        title={t('driver_stats.cash_exceptions_mark_collected_title')}
+        message={t('driver_stats.cash_exceptions_mark_collected_message')}
+        placeholder={t('trip.payment.cash_collect_note_placeholder')}
+        confirmText={t('driver_stats.cash_exceptions_mark_collected')}
+        maxLength={250}
+        required={false}
+      />
     </div>
   );
 }

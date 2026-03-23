@@ -47,12 +47,13 @@ export default function DriverLayout() {
         </div>
         <div className="driver-header-right">
           {pendingCount > 0 && (
-            <span
+            <NavLink
+              to="/driver/sync"
               className={`driver-sync-chip ${isSyncing ? 'driver-sync-chip-syncing' : 'driver-sync-chip-pending'}`}
               title={syncChipLabel}
             >
               {syncChipLabel}
-            </span>
+            </NavLink>
           )}
           <button 
             className="btn-icon" 

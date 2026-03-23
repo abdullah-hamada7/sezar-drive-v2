@@ -85,11 +85,25 @@ export const tripService = {
   },
   markCashCollected(id, note) {
     const key = generateIdempotencyKey();
+    const trimmedNote = typeof note === 'string' ? note.trim() : '';
     return requestWithAutoRefreshAndRetry({
       id,
       request: () => http.request(`/trips/${id}/cash-collected`, {
         method: 'PUT',
-        body: note ? { note } : {},
+        body: trimmedNote ? { note: trimmedNote } : {},
+        headers: { 'Idempotency-Key': key },
+      }),
+    });
+  },
+  markCashCollectedAdmin(id, note) {
+    // Same endpoint; backend authorizes admin and records cashCollectedBy as the admin user.
+    const key = generateIdempotencyKey();
+    const trimmedNote = typeof note === 'string' ? note.trim() : '';
+    return requestWithAutoRefreshAndRetry({
+      id,
+      request: () => http.request(`/trips/${id}/cash-collected`, {
+        method: 'PUT',
+        body: trimmedNote ? { note: trimmedNote } : {},
         headers: { 'Idempotency-Key': key },
       }),
     });

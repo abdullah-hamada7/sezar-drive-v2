@@ -2,7 +2,7 @@ import { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { inspectionService as api } from '../../services/inspection.service';
-import { offlineQueue } from '../../services/offline-queue.service';
+import { enqueueOfflineRequest } from '../../services/offline-enqueue.service';
 import { Camera, CheckCircle, Upload, ChevronRight, AlertCircle } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
@@ -238,7 +238,7 @@ export default function DriverInspection() {
       const completeIdempotencyKey = generateIdempotencyKey();
 
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        await offlineQueue.enqueue({
+        await enqueueOfflineRequest({
           endpoint: '/inspections',
           method: 'POST',
           body: {
@@ -257,7 +257,6 @@ export default function DriverInspection() {
             },
           },
         });
-        addToast(t('common.offline.saved_will_sync'), 'info');
         setQueuedOfflineSubmit(true);
       } else {
         const created = await api.createInspection({

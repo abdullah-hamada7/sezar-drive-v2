@@ -39,7 +39,10 @@ export function useOfflineSync() {
         emitToast(t('common.offline.sync_success', { count: result.synced }), 'success', 'OFFLINE_SYNCED');
         if (result.pending === 0 && typeof window !== 'undefined') {
           window.setTimeout(() => {
-            window.location.reload();
+            const onQueuePage = String(window.location.hash || '').includes('/driver/sync');
+            if (!onQueuePage) {
+              window.location.reload();
+            }
           }, 500);
         }
       } else if (result.failed > 0) {

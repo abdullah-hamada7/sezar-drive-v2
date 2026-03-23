@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { expenseService as api } from '../../services/expense.service';
 import { tripService } from '../../services/trip.service';
-import { offlineQueue } from '../../services/offline-queue.service';
+import { enqueueOfflineRequest } from '../../services/offline-enqueue.service';
 import { Receipt, Plus, X, Upload, CheckCircle } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
@@ -100,7 +100,7 @@ export default function DriverExpenses() {
       const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
 
       if (!isOnline) {
-        await offlineQueue.enqueue({
+        await enqueueOfflineRequest({
           endpoint: '/expenses',
           method: 'POST',
           body: {
@@ -118,8 +118,6 @@ export default function DriverExpenses() {
 
         setShowForm(false);
         setForm({ tripId: '', categoryId: '', amount: '', description: '', receipt: null });
-        addToast(t('expenses.success_create'), 'success');
-        await load();
         return;
       }
 

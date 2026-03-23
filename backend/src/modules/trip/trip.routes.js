@@ -267,20 +267,17 @@ router.put(
 // ─── PUT /api/v1/trips/:id/cash-collected ─────────
 router.put(
   '/:id/cash-collected',
-  authenticate, enforcePasswordChanged, authorize('driver'), requireIdempotencyKey,
+  authenticate, enforcePasswordChanged, authorize('driver', 'admin'), requireIdempotencyKey,
   [
     param('id').isUUID(),
     body('note')
       .optional({ checkFalsy: true })
-      .isString().withMessage('note must be a string')
-      .trim()
-      .isLength({ max: 250 }).withMessage('note must be 250 characters or less')
-      .escape(),
+      .isString().withMessage('note must be a string'),
   ],
   async (req, res, next) => {
     try {
       handleValidation(req);
-      const trip = await tripService.markCashCollected(req.params.id, req.user.id, req.body.note, req.clientIp);
+      const trip = await tripService.markCashCollected(req.params.id, req.user.id, req.user.role, req.body.note, req.clientIp);
       res.json(trip);
     } catch (err) { next(err); }
   }

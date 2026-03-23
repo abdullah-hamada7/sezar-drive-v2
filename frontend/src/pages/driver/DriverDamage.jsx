@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tripService } from '../../services/trip.service';
 import { damageService } from '../../services/damage.service';
-import { offlineQueue } from '../../services/offline-queue.service';
+import { enqueueOfflineRequest } from '../../services/offline-enqueue.service';
 import { AlertTriangle, Camera, CheckCircle, X } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
@@ -89,7 +89,7 @@ export default function DriverDamage() {
       const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
 
       if (!isOnline) {
-        await offlineQueue.enqueue({
+        await enqueueOfflineRequest({
           endpoint: '/damage-reports',
           method: 'POST',
           body: {
@@ -103,7 +103,6 @@ export default function DriverDamage() {
             },
           },
         });
-
         setStep('success');
         return;
       }

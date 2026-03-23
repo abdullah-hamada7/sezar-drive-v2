@@ -3,6 +3,7 @@ const { ConflictError, NotFoundError, ForbiddenError, ValidationError } = requir
 const AuditService = require('../../services/audit.service');
 const { TRIP_STATE_MACHINE } = require('../../services/state-machine');
 const TripValidator = require('./trip.validator');
+const { normalizeCashCollectedNote } = require('./cash-collected-note');
 const TripNotifier = require('./trip.notifier');
 const { EGYPT_PHONE_REGEX } = require('../../utils/validation');
 
@@ -361,10 +362,15 @@ async function completeTrip(tripId, driverId, ipAddress) {
  * Driver marks a CASH trip as cash collected.
  * Used for cash reconciliation; idempotent if already collected.
  */
-async function markCashCollected(tripId, driverId, note, ipAddress) {
+async function markCashCollected(tripId, actorId, actorRole, note, ipAddress) {
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
   if (!trip) throw new NotFoundError('Trip');
-  if (trip.driverId !== driverId) throw new ForbiddenError('FORBIDDEN', 'Not your trip');
+
+  const role = String(actorRole || '').toLowerCase();
+  const isAdmin = role === 'admin';
+  if (!isAdmin && trip.driverId !== actorId) {
+    throw new ForbiddenError('FORBIDDEN', 'Not your trip');
+  }
 
   const method = String(trip.paymentMethod || 'CASH').toUpperCase();
   if (method !== 'CASH') {
@@ -379,24 +385,34 @@ async function markCashCollected(tripId, driverId, note, ipAddress) {
     return trip;
   }
 
-  const trimmedNote = typeof note === 'string' ? note.trim() : '';
-  const updated = await prisma.trip.update({
-    where: { id: tripId },
+  const normalizedNote = normalizeCashCollectedNote(note);
+  const now = new Date();
+
+  const updateResult = await prisma.trip.updateMany({
+    where: { id: tripId, cashCollectedAt: null },
     data: {
-      cashCollectedAt: new Date(),
-      cashCollectedBy: driverId,
-      cashCollectedNote: trimmedNote ? trimmedNote.slice(0, 250) : null,
+      cashCollectedAt: now,
+      cashCollectedBy: actorId,
+      cashCollectedNote: normalizedNote,
       version: { increment: 1 },
     },
   });
 
+  if (updateResult.count === 0) {
+    const latest = await prisma.trip.findUnique({ where: { id: tripId } });
+    if (latest?.cashCollectedAt) return latest;
+    throw new ConflictError('CONCURRENT_MODIFICATION', 'Trip was modified concurrently');
+  }
+
+  const updated = await prisma.trip.findUnique({ where: { id: tripId } });
+
   await AuditService.log({
-    actorId: driverId,
-    actionType: 'trip.cash_collected',
+    actorId,
+    actionType: isAdmin ? 'trip.cash_collected_admin' : 'trip.cash_collected',
     entityType: 'trip',
     entityId: tripId,
     previousState: { cashCollectedAt: null },
-    newState: { cashCollectedAt: updated.cashCollectedAt },
+    newState: { cashCollectedAt: updated.cashCollectedAt, cashCollectedBy: actorId },
     ipAddress,
   });
 

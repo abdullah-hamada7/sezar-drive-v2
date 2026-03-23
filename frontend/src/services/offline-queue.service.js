@@ -223,6 +223,21 @@ export const offlineQueue = {
     });
   },
 
+  async remove(id) {
+    if (!id) return;
+    return withStore('readwrite', async (store) => {
+      await requestToPromise(store.delete(id));
+      emitQueueUpdated();
+    });
+  },
+
+  async clear() {
+    return withStore('readwrite', async (store) => {
+      await requestToPromise(store.clear());
+      emitQueueUpdated();
+    });
+  },
+
   async count() {
     return withStore('readonly', async (store) => requestToPromise(store.count()));
   },

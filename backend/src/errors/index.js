@@ -10,8 +10,16 @@ class AppError extends Error {
 }
 
 class ValidationError extends AppError {
-  constructor(message, details) {
-    super(400, 'VALIDATION_ERROR', message, details);
+  constructor(message, details = null, code = 'VALIDATION_ERROR') {
+    // Backward-compatible shorthand: new ValidationError(message, 'SOME_CODE')
+    // Historically the 2nd parameter was used for details, but many call sites
+    // pass a specific error code string there.
+    if (typeof details === 'string' && code === 'VALIDATION_ERROR') {
+      super(400, details, message, null);
+      return;
+    }
+
+    super(400, code, message, details);
   }
 }
 

@@ -443,6 +443,92 @@ async function getAllDriversDailyReport(date) {
   }));
 }
 
+/**
+ * Get uncollected CASH trips for a date (admin reconciliation).
+ */
+async function getCashExceptions(date) {
+  const targetDate = date ? new Date(date) : new Date();
+  targetDate.setHours(0, 0, 0, 0);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  const trips = await prisma.trip.findMany({
+    where: {
+      status: 'COMPLETED',
+      paymentMethod: 'CASH',
+      cashCollectedAt: null,
+      actualEndTime: { gte: targetDate, lt: nextDate },
+    },
+    select: {
+      id: true,
+      driverId: true,
+      shiftId: true,
+      vehicleId: true,
+      pickupLocation: true,
+      dropoffLocation: true,
+      price: true,
+      scheduledTime: true,
+      actualEndTime: true,
+      cashCollectedAt: true,
+      cashCollectedNote: true,
+      driver: { select: { id: true, name: true } },
+      vehicle: { select: { id: true, plateNumber: true } },
+    },
+    orderBy: { actualEndTime: 'desc' },
+  });
+
+  const driverMap = new Map();
+  let totalUncollectedCashTotal = 0;
+
+  for (const trip of trips) {
+    const amount = Number(trip.price) || 0;
+    totalUncollectedCashTotal += amount;
+    const driverId = trip.driverId;
+    const driverName = trip.driver?.name || '—';
+
+    if (!driverMap.has(driverId)) {
+      driverMap.set(driverId, {
+        driverId,
+        driverName,
+        uncollectedCashTotal: 0,
+        uncollectedCashTripsCount: 0,
+        trips: [],
+      });
+    }
+
+    const entry = driverMap.get(driverId);
+    entry.uncollectedCashTotal += amount;
+    entry.uncollectedCashTripsCount += 1;
+    entry.trips.push({
+      id: trip.id,
+      driverId: trip.driverId,
+      shiftId: trip.shiftId,
+      vehicleId: trip.vehicleId,
+      vehiclePlateNumber: trip.vehicle?.plateNumber || null,
+      pickupLocation: trip.pickupLocation,
+      dropoffLocation: trip.dropoffLocation,
+      price: amount,
+      scheduledTime: trip.scheduledTime,
+      actualEndTime: trip.actualEndTime,
+      cashCollectedAt: trip.cashCollectedAt,
+      cashCollectedNote: trip.cashCollectedNote,
+    });
+  }
+
+  const drivers = Array.from(driverMap.values()).sort((a, b) => {
+    if (b.uncollectedCashTotal !== a.uncollectedCashTotal) return b.uncollectedCashTotal - a.uncollectedCashTotal;
+    if (b.uncollectedCashTripsCount !== a.uncollectedCashTripsCount) return b.uncollectedCashTripsCount - a.uncollectedCashTripsCount;
+    return String(a.driverName).localeCompare(String(b.driverName));
+  });
+
+  return {
+    date: targetDate.toISOString().split('T')[0],
+    totalUncollectedCashTotal,
+    totalUncollectedCashTripsCount: trips.length,
+    drivers,
+  };
+}
+
 module.exports = {
   getRevenueStats,
   getActivityStats,
@@ -452,5 +538,6 @@ module.exports = {
   getDriverShiftStats,
   getDriverActivity,
   getDriverDailyReport,
-  getAllDriversDailyReport
+  getAllDriversDailyReport,
+  getCashExceptions,
 };

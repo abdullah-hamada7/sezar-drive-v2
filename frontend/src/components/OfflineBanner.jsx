@@ -1,5 +1,6 @@
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 export default function OfflineBanner() {
   const { t } = useTranslation();
@@ -38,7 +39,8 @@ export default function OfflineBanner() {
       )}
 
       {pendingCount > 0 && isOnline && !isSyncing && (
-        <div
+        <Link
+          to="/driver/sync"
           title={t('common.offline.pending_title', { count: pendingCount })}
           style={{
             position: 'fixed',
@@ -58,10 +60,11 @@ export default function OfflineBanner() {
             justifyContent: 'center',
             boxShadow: '0 2px 6px rgba(0, 0, 0, 0.25)',
             border: '1px solid rgba(17, 24, 39, 0.15)',
+            textDecoration: 'none',
           }}
         >
           {pendingCount}
-        </div>
+        </Link>
       )}
     </>
   );

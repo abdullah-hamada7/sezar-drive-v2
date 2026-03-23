@@ -20,5 +20,13 @@ export const statsService = {
     const query = date ? `?date=${encodeURIComponent(date)}` : '';
     return http.request(`/stats/my-daily-report${query}`);
   },
+  getCashExceptions(date) {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return http.request(`/stats/cash-exceptions${query}`);
+  },
+  getCashExceptionsPdf(date) {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return http.request(`/stats/cash-exceptions.pdf${query}`, { method: 'GET', suppressToast: true });
+  },
   getAuditLogs(params = '') { return http.request(`/audit-logs?${params}`); }
 };
