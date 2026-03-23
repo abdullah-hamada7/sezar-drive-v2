@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, Car, Route, ClipboardCheck,
   Receipt, AlertTriangle, MapPin, FileBarChart, Shield,
   Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
-  Sun, Moon
+  Sun, Moon, AlertCircle
 } from 'lucide-react';
 import BrandIcon from '../../components/BrandIcon';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -72,7 +72,9 @@ export default function AdminLayout() {
     { to: '/admin/damage', icon: AlertTriangle, label: t('nav.damage_reports'), countKey: 'damage' },
     { to: '/admin/tracking', icon: MapPin, label: t('nav.tracking') },
     { to: '/admin/reports', icon: FileBarChart, label: t('nav.reports') },
-    { to: '/admin/audit', icon: Shield, label: t('nav.audit_logs') },
+{ to: '/admin/audit', icon: Shield, label: t('nav.audit_logs') },
+    { to: '/admin/violations', icon: AlertCircle, label: t('nav.violations') },
+    { to: '/admin/driver-stats', icon: FileBarChart, label: t('nav.driver_stats') },
   ];
 
   useEffect(() => {

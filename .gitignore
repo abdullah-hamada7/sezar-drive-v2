@@ -37,5 +37,5 @@ frontend/e2e
 frontend/test-results/
 frontend/playwright-report/
 recovery.md
-prompt*.txt
-prompt*.md
+# prompt*.txt
+# prompt*.md

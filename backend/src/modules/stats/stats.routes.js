@@ -88,5 +88,37 @@ router.get(
   }
 );
 
+// GET /api/v1/stats/daily-report (all drivers)
+router.get(
+  '/daily-report',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  [query('date').optional().isISO8601()],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const data = await statsService.getAllDriversDailyReport(req.query.date);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// GET /api/v1/stats/my-daily-report (single driver)
+router.get(
+  '/my-daily-report',
+  authenticate, enforcePasswordChanged, authorize('driver'),
+  [query('date').optional().isISO8601()],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const data = await statsService.getDriverDailyReport(req.user.id, req.query.date);
+      res.json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 module.exports = router;
 

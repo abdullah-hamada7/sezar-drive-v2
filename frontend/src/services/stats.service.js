@@ -12,5 +12,13 @@ export const statsService = {
   getDriverActivity() { return http.request('/stats/my-activity'); },
   getSummaryStats() { return http.request('/stats/summary'); },
   getDriverDailyStats() { return http.request('/stats/my-daily-revenue'); },
+  getDailyReport(date) {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return http.request(`/stats/daily-report${query}`);
+  },
+  getMyDailyReport(date) {
+    const query = date ? `?date=${encodeURIComponent(date)}` : '';
+    return http.request(`/stats/my-daily-report${query}`);
+  },
   getAuditLogs(params = '') { return http.request(`/audit-logs?${params}`); }
 };

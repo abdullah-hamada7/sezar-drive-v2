@@ -1,0 +1,46 @@
+Act as a senior full-stack engineer and implement a Traffic Violations and Driver Daily Statistics module in the fleet/trip management system.
+
+Feature 1: Traffic Violations
+Build a CRUD module for traffic violations with these fields:
+- Driver (dropdown from drivers)
+- Vehicle (dropdown from vehicles)
+- Date
+- Time
+- Location
+- Violation number
+- Violation fine amount
+
+Feature 2: Driver Daily Statistics
+For each driver, calculate:
+- Number of trips completed today
+- Total violation fines today
+- Daily total after deducting violation fines
+
+Feature 3: Daily Report Deduction
+Update the daily report so that traffic violation fines are automatically deducted from the driver’s daily report.
+
+Example:
+- Driver completed 8 trips today
+- Original daily report total = 1000
+- Total fines today = 200
+- Final daily report total = 800
+
+UI Requirements:
+- Admin form for adding/editing violations
+- Driver and vehicle fields as dropdowns
+- Violations table with filtering and search
+- Daily statistics table grouped by driver
+- Daily report view showing deductions clearly
+
+Technical Requirements:
+- Create database model for violations
+- Add proper foreign key relationships
+- Add validation for required fields and numeric fine amount
+- Build API/service layer for violations and reports
+- Keep code modular and maintainable
+
+Important:
+- Use clean code
+- Preserve existing trip and report logic
+- Extend the system without breaking current functionality
+- Make the feature responsive and admin-friendly

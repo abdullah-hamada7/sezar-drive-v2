@@ -291,6 +291,95 @@ async function getDriverActivity(driverId, limit = 10) {
   return activity.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, limit);
 }
 
+/**
+ * Get driver daily report with violation deductions.
+ */
+async function getDriverDailyReport(driverId, date) {
+  const targetDate = date ? new Date(date) : new Date();
+  targetDate.setHours(0, 0, 0, 0);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  const [tripsAgg, violationsAgg] = await Promise.all([
+    prisma.trip.aggregate({
+      where: {
+        driverId,
+        status: 'COMPLETED',
+        actualEndTime: { gte: targetDate, lt: nextDate }
+      },
+      _sum: { price: true },
+      _count: { id: true }
+    }),
+    prisma.trafficViolation.aggregate({
+      where: {
+        driverId,
+        date: { gte: targetDate, lt: nextDate }
+      },
+      _sum: { fineAmount: true }
+    })
+  ]);
+
+  const tripRevenue = tripsAgg._sum.price ? Number(tripsAgg._sum.price) : 0;
+  const tripCount = tripsAgg._count.id || 0;
+  const totalFines = violationsAgg._sum.fineAmount ? Number(violationsAgg._sum.fineAmount) : 0;
+
+  return {
+    driverId,
+    date: targetDate.toISOString(),
+    tripsCompleted: tripCount,
+    tripRevenue,
+    totalFines,
+    netRevenue: tripRevenue - totalFines
+  };
+}
+
+/**
+ * Get all drivers' daily reports for a date.
+ */
+async function getAllDriversDailyReport(date) {
+  const targetDate = date ? new Date(date) : new Date();
+  targetDate.setHours(0, 0, 0, 0);
+  const nextDate = new Date(targetDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+
+  const drivers = await prisma.user.findMany({
+    where: { role: 'driver', isActive: true },
+    select: { id: true, name: true }
+  });
+
+  const [tripsAggByDriver, violationsAggByDriver] = await Promise.all([
+    prisma.trip.groupBy({
+      by: ['driverId'],
+      where: {
+        status: 'COMPLETED',
+        actualEndTime: { gte: targetDate, lt: nextDate }
+      },
+      _sum: { price: true },
+      _count: { id: true }
+    }),
+    prisma.trafficViolation.groupBy({
+      by: ['driverId'],
+      where: {
+        date: { gte: targetDate, lt: nextDate }
+      },
+      _sum: { fineAmount: true }
+    })
+  ]);
+
+  const tripMap = Object.fromEntries(tripsAggByDriver.map(t => [t.driverId, { revenue: Number(t._sum.price) || 0, count: t._count.id || 0 }]));
+  const violationMap = Object.fromEntries(violationsAggByDriver.map(v => [v.driverId, Number(v._sum.fineAmount) || 0]));
+
+  return drivers.map(driver => ({
+    driverId: driver.id,
+    driverName: driver.name,
+    date: targetDate.toISOString().split('T')[0],
+    tripsCompleted: tripMap[driver.id]?.count || 0,
+    tripRevenue: tripMap[driver.id]?.revenue || 0,
+    totalFines: violationMap[driver.id] || 0,
+    netRevenue: (tripMap[driver.id]?.revenue || 0) - (violationMap[driver.id] || 0)
+  }));
+}
+
 module.exports = {
   getRevenueStats,
   getActivityStats,
@@ -298,5 +387,7 @@ module.exports = {
   getDriverDailyStats,
   getSummaryStats,
   getDriverShiftStats,
-  getDriverActivity
+  getDriverActivity,
+  getDriverDailyReport,
+  getAllDriversDailyReport
 };

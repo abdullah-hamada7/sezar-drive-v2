@@ -8,6 +8,8 @@ i18n
   .init({
     lng: 'en',
     fallbackLng: 'en',
+    supportedLngs: ['en', 'ar'],
+    load: 'languageOnly',
     debug: false,
     interpolation: {
       escapeValue: false,

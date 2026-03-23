@@ -127,7 +127,7 @@ function MapViewUpdater({ center, zoom = 14 }) {
   useEffect(() => {
     if (!center) return;
     map.setView(center, zoom, { animate: true });
-  }, [map, zoom, center?.[0], center?.[1]]);
+  }, [map, zoom, center]);
   return null;
 }
 
@@ -663,7 +663,7 @@ export default function TripsPage() {
                 </div>
 
                 <div className="form-group mb-md">
-                  <label className="form-label">{t('trips.modal.payment_method_label')}</label>
+                  <label className="form-label">{t('trip.payment.method')} *</label>
                   <select
                     className="form-input"
                     value={form.paymentMethod}
@@ -672,10 +672,12 @@ export default function TripsPage() {
                       setError('');
                     }}
                     required
+                    dir={i18n.dir()}
+                    lang={i18n.language}
                   >
-                    <option value="CASH">{t('trips.modal.payment_method_cash')}</option>
-                    <option value="E_WALLET">{t('trips.modal.payment_method_ewallet')}</option>
-                    <option value="E_PAYMENT">{t('trips.modal.payment_method_epayment')}</option>
+                    <option value="CASH">{t('trip.payment.cash')}</option>
+                    <option value="E_WALLET">{t('trip.payment.ewallet')}</option>
+                    <option value="E_PAYMENT">{t('trip.payment.epayment')}</option>
                   </select>
                 </div>
 
@@ -873,8 +875,16 @@ export default function TripsPage() {
                       </button>
                     </div>
                     <div className="text-xs text-muted" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span className="badge badge-neutral">{form.pickupLat != null && form.pickupLng != null ? `${t('trips.table.pickup')} pinned` : `${t('trips.table.pickup')}: not pinned`}</span>
-                      <span className="badge badge-neutral">{form.dropoffLat != null && form.dropoffLng != null ? `${t('trips.table.dropoff')} pinned` : `${t('trips.table.dropoff')}: not pinned`}</span>
+                      <span className="badge badge-neutral">
+                        {form.pickupLat != null && form.pickupLng != null
+                          ? t('trips.modal.pin_status_pinned', { label: t('trips.table.pickup') })
+                          : t('trips.modal.pin_status_not_pinned', { label: t('trips.table.pickup') })}
+                      </span>
+                      <span className="badge badge-neutral">
+                        {form.dropoffLat != null && form.dropoffLng != null
+                          ? t('trips.modal.pin_status_pinned', { label: t('trips.table.dropoff') })
+                          : t('trips.modal.pin_status_not_pinned', { label: t('trips.table.dropoff') })}
+                      </span>
                     </div>
                   </div>
                   <div style={{ height: 260, borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
@@ -888,25 +898,29 @@ export default function TripsPage() {
                            selectionMode={mapSelectionMode}
                          onSelect={async (mode, lat, lng) => {
                            const address = await reverseGeocode(lat, lng, i18n.language);
-                           if (mode === 'pickup') {
-                             setForm((prev) => ({
-                               ...prev,
-                               pickupLat: lat,
-                               pickupLng: lng,
-                               pickupLocation: prev.pickupLocation?.trim() ? prev.pickupLocation : (address || 'Pinned pickup location'),
-                             }));
-                             setMapFocus('pickup');
-                           } else {
-                             setForm((prev) => ({
-                               ...prev,
-                               dropoffLat: lat,
-                               dropoffLng: lng,
-                               dropoffLocation: prev.dropoffLocation?.trim() ? prev.dropoffLocation : (address || 'Pinned dropoff location'),
-                             }));
-                             setMapFocus('dropoff');
-                           }
-                         }}
-                         />
+                            if (mode === 'pickup') {
+                              setForm((prev) => ({
+                                ...prev,
+                                pickupLat: lat,
+                                pickupLng: lng,
+                               pickupLocation: prev.pickupLocation?.trim()
+                                 ? prev.pickupLocation
+                                 : (address || t('trips.modal.pinned_pickup_fallback')),
+                              }));
+                              setMapFocus('pickup');
+                            } else {
+                              setForm((prev) => ({
+                                ...prev,
+                                dropoffLat: lat,
+                                dropoffLng: lng,
+                               dropoffLocation: prev.dropoffLocation?.trim()
+                                 ? prev.dropoffLocation
+                                 : (address || t('trips.modal.pinned_dropoff_fallback')),
+                              }));
+                              setMapFocus('dropoff');
+                            }
+                          }}
+                          />
                       {form.pickupLat != null && form.pickupLng != null && (
                         <Marker position={[form.pickupLat, form.pickupLng]} icon={TRIP_MARKER_ICONS.pickup}>
                           <Popup>

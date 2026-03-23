@@ -15,7 +15,9 @@
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
     "admins": "المشرفين",
-    "profile": "ملفي الشخصي"
+    "profile": "ملفي الشخصي",
+    "violations": "المخالفات المرورية",
+    "driver_stats": "إحصائيات السائقين"
   },
   "nav_driver": {
     "home": "الرئيسية",
@@ -388,6 +390,45 @@
       "reactivate": "تفعيل"
     }
   },
+  "violations": {
+    "title": "المخالفات المرورية",
+    "subtitle": "إدارة مخالفات السائقين والغرامات",
+    "add": "إضافة مخالفة",
+    "add_title": "إضافة مخالفة مرورية",
+    "edit_title": "تعديل المخالفة المرورية",
+    "search": "بحث",
+    "search_placeholder": "بحث بالرقم، الموقع...",
+    "empty": "لم يتم العثور على مخالفات",
+    "driver": "السائق",
+    "vehicle": "المركبة",
+    "date": "التاريخ",
+    "time": "الوقت",
+    "location": "الموقع",
+    "violation_number": "رقم المخالفة",
+    "fine_amount": "مبلغ الغرامة",
+    "actions": "الإجراءات",
+    "details": "تفاصيل المخالفة",
+    "create_success": "تمت إضافة المخالفة بنجاح",
+    "update_success": "تم تحديث المخالفة بنجاح",
+    "delete_success": "تم حذف المخالفة بنجاح",
+    "delete_title": "حذف المخالفة",
+    "delete_confirm": "هل أنت متأكد من حذف هذه المخالفة؟"
+  },
+  "driver_stats": {
+    "title": "إحصائيات السائقين اليومية",
+    "subtitle": "عرض أداء السائقين اليومي وخصومات المخالفات",
+    "active_drivers": "السائقين النشطين",
+    "total_trips": "إجمالي الرحلات",
+    "total_fines": "إجمالي الغرامات",
+    "driver": "السائق",
+    "trip_revenue": "إيراد الرحلات",
+    "net_revenue": "صافي الإيراد",
+    "avg_trips": "متوسط الرحلات/سائق",
+    "table_title": "أداء السائقين",
+    "trips_completed": "الرحلات",
+    "fine_deduction": "خصم الغرامات",
+    "empty": "لا توجد بيانات للتاريخ المحدد"
+  },
   "errors": {
     "fetch_failed": "فشل جلب البيانات. يرجى المحاولة مرة أخرى.",
     "NO_ACTIVE_SHIFT": "السائق {{name}} ليس لديه مناوبة نشطة. يجب أن يبدأ ويفعل مناوبته أولاً.",
@@ -657,6 +698,10 @@
       "net_to_driver_label": "صافي السائق ({{unit}})",
       "price_lt_charge": "السعر أقل من الرسوم",
       "after_charge_hint": "بعد خصم الرسوم",
+      "pin_status_pinned": "{{label}} مثبت",
+      "pin_status_not_pinned": "{{label}}: غير مثبت",
+      "pinned_pickup_fallback": "موقع الاستلام المثبت",
+      "pinned_dropoff_fallback": "موقع التوصيل المثبت",
       "pickup_label": "موقع الاستلام *",
       "dropoff_label": "موقع التوصيل *",
       "source_pickup_label": "مصدر الراكب / موقع الاستلام",

@@ -37,6 +37,8 @@ const TrackingPage = lazy(() => import("./pages/admin/Tracking"));
 const ReportsPage = lazy(() => import("./pages/admin/Reports"));
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogs"));
 const AdminProfilePage = lazy(() => import("./pages/admin/Profile"));
+const ViolationsPage = lazy(() => import("./pages/admin/Violations"));
+const DriverStatsPage = lazy(() => import("./pages/admin/DriverStats"));
 
 // Driver Pages
 const DriverLayout = lazy(() => import("./layouts/DriverLayout/DriverLayout"));
@@ -129,6 +131,8 @@ function AppRoutes() {
         <Route path="audit" element={<AuditLogsPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
         <Route path="verification" element={<VerificationQueuePage />} />
+        <Route path="violations" element={<ViolationsPage />} />
+        <Route path="driver-stats" element={<DriverStatsPage />} />
       </Route>
 
       {/* Driver Routes */}

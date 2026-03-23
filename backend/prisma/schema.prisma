@@ -393,6 +393,26 @@ model RescueRequest {
   @@map("rescue_requests")
 }
 
+model TrafficViolation {
+  id              String   @id @default(uuid()) @db.Uuid
+  driverId        String   @map("driver_id") @db.Uuid
+  vehicleId       String   @map("vehicle_id") @db.Uuid
+  violationNumber String  @map("violation_number") @db.VarChar(50)
+  date            DateTime @db.Date
+  time            String   @db.VarChar(10)
+  location        String   @db.VarChar(255)
+  fineAmount      Decimal  @map("fine_amount") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  driver          User     @relation(fields: [driverId], references: [id])
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([date])
+  @@map("traffic_violations")
+}
+
 enum AdminRole {
   SUPER_ADMIN
   ADMIN
