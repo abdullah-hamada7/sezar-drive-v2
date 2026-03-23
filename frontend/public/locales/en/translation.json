@@ -114,6 +114,15 @@
     "no_active_shift_warning": "You must start and activate a shift before trips.",
     "new_assignment_notif": "You have been assigned a new trip!",
     "cancellation_notif": "A trip has been cancelled."
+    ,"payment": {
+      "method": "Payment",
+      "collect": "Collect",
+      "paid": "Paid",
+      "cash": "Cash",
+      "ewallet": "E-Wallet",
+      "epayment": "E-Payment"
+    }
+    ,"contact_whatsapp": "Contact on WhatsApp"
   },
   "shift": {
     "management": "Shift Management",
@@ -672,6 +681,10 @@
       "reason_placeholder": "Reason for cancellation",
       "pickup_placeholder": "Type pickup location",
       "dropoff_placeholder": "Type dropoff location"
+      ,"payment_method_label": "Payment Method *"
+      ,"payment_method_cash": "Cash"
+      ,"payment_method_ewallet": "E-Wallet"
+      ,"payment_method_epayment": "E-Payment"
     },
     "details": {
       "status": "Status",

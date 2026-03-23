@@ -124,6 +124,8 @@ async function assignTrip(data, adminId, ipAddress) {
   const { driverId, scheduledTime, price } = data;
   const pickupLocation = data.pickupLocation || data.pickup;
   const dropoffLocation = data.dropoffLocation || data.dropoff;
+  const paymentMethodRaw = data.paymentMethod;
+  const paymentMethod = String(paymentMethodRaw || 'CASH').trim().toUpperCase();
   const pickupLat = toCoordinateNumber(data.pickupLat);
   const pickupLng = toCoordinateNumber(data.pickupLng);
   const dropoffLat = toCoordinateNumber(data.dropoffLat);
@@ -166,6 +168,10 @@ async function assignTrip(data, adminId, ipAddress) {
 
   if (driverNetPrice < 0) {
     throw new ValidationError('Trip price cannot be less than configured assignment charge');
+  }
+
+  if (!['CASH', 'E_WALLET', 'E_PAYMENT'].includes(paymentMethod)) {
+    throw new ValidationError('paymentMethod must be one of CASH, E_WALLET, E_PAYMENT');
   }
 
   const { shift, assignment } = await TripValidator.validateAssignmentPreconditions(driverId, {
@@ -231,6 +237,7 @@ async function assignTrip(data, adminId, ipAddress) {
       vehicleId: assignment.vehicleId,
       pickupLocation,
       dropoffLocation,
+      paymentMethod,
       pickupLat,
       pickupLng,
       dropoffLat,

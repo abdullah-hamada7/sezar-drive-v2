@@ -7,6 +7,7 @@ import { useShift } from '../../contexts/ShiftContext';
 import { useAuth } from '../../hooks/useAuth';
 import PromptModal from '../../components/common/PromptModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import WhatsAppLink from '../../components/common/WhatsAppLink';
 import { MapContainer, Marker, TileLayer, Polyline, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -387,6 +388,14 @@ export default function DriverTrips() {
 
   if (loading) return <div className="loading-page"><div className="spinner"></div></div>;
 
+  const paymentLabel = (method) => {
+    const m = String(method || 'CASH').toUpperCase();
+    if (m === 'CASH') return t('trip.payment.cash');
+    if (m === 'E_WALLET') return t('trip.payment.ewallet');
+    if (m === 'E_PAYMENT') return t('trip.payment.epayment');
+    return m;
+  };
+
   return (
     <div>
       <h2 className="page-title" style={{ marginBottom: 'var(--space-lg)' }}>{t('trip.my_trips')}</h2>
@@ -409,7 +418,25 @@ export default function DriverTrips() {
             <div key={trip.id} className="card">
               <div className="flex items-center justify-between" style={{ marginBottom: 'var(--space-md)' }}>
                 <span className={`badge badge-status ${STATUS_BADGES[trip.status]}`}>{t(`common.trip_status.${trip.status.toLowerCase()}`, trip.status)}</span>
-                <span className="text-sm text-muted">{trip.price} {t('trip.price_unit')}</span>
+                {(() => {
+                  const method = String(trip.paymentMethod || 'CASH').toUpperCase();
+                  const isCash = method === 'CASH';
+                  const total = Number(trip.price);
+                  const totalText = Number.isFinite(total) ? total.toFixed(2) : String(trip.price);
+                  return (
+                    <span className="text-sm text-muted">
+                      {isCash ? (
+                        <>
+                          {t('trip.payment.collect')}: {totalText} {t('trip.price_unit')}
+                        </>
+                      ) : (
+                        <>
+                          {t('trip.payment.method')}: {paymentLabel(method)}
+                        </>
+                      )}
+                    </span>
+                  );
+                })()}
               </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 'var(--space-md)' }}>
@@ -434,6 +461,25 @@ export default function DriverTrips() {
                   </div>
                 )}
 
+                {(() => {
+                  const method = String(trip.paymentMethod || 'CASH').toUpperCase();
+                  const isCash = method === 'CASH';
+                  const total = Number(trip.price);
+                  const totalText = Number.isFinite(total) ? total.toFixed(2) : String(trip.price);
+                  return (
+                    <div className="flex items-center gap-sm">
+                      <CheckCircle size={14} style={{ color: isCash ? 'var(--color-warning)' : 'var(--color-success)', flexShrink: 0 }} />
+                      <span className="text-sm">
+                        {t('trip.payment.method')}: {paymentLabel(method)}
+                        {isCash ? ` • ${t('trip.payment.collect')}: ${totalText} ${t('trip.price_unit')}` : ''}
+                      </span>
+                      {!isCash && (
+                        <span className="badge badge-success" style={{ marginInlineStart: 'auto' }}>{t('trip.payment.paid')}</span>
+                      )}
+                    </div>
+                  );
+                })()}
+
                 {trip.passengers && trip.passengers.length > 0 && (
                   <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--color-border-subtle)' }}>
                     <div className="text-xs font-bold text-muted uppercase mb-xs">{t('trip.passenger')}</div>
@@ -447,6 +493,12 @@ export default function DriverTrips() {
                         <a href={`tel:${trip.passengers[0].phone}`} className="text-sm font-medium" style={{ textDecoration: 'none', color: 'inherit' }}>
                           {trip.passengers[0].phone || t('trip.no_phone')}
                         </a>
+                        <WhatsAppLink
+                          phone={trip.passengers[0].phone}
+                          title={t('trip.contact_whatsapp')}
+                          size={18}
+                          className="text-success"
+                        />
                       </div>
                       <div className="flex items-center gap-sm text-muted">
                         <span className="text-sm font-medium">
@@ -568,6 +620,10 @@ export default function DriverTrips() {
                 <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
                   <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.dropoff')}</div>
                   <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{addressOverrides[`${mapDetails.trip.id}:dropoff`] || mapDetails.trip.dropoffLocation}</div>
+                </div>
+                <div className="card" style={{ padding: '0.75rem', border: '1px solid var(--color-border)' }}>
+                  <div className="text-xs text-muted uppercase" style={{ letterSpacing: '0.08em' }}>{t('trip.payment.method')}</div>
+                  <div className="text-sm" style={{ fontWeight: 650, marginTop: 6 }}>{paymentLabel(mapDetails.trip.paymentMethod)}</div>
                 </div>
               </div>
             </div>

@@ -29,6 +29,7 @@ router.post(
     body('pickupLng').optional().isFloat({ min: -180, max: 180 }).withMessage('pickupLng must be between -180 and 180'),
     body('dropoffLat').optional().isFloat({ min: -90, max: 90 }).withMessage('dropoffLat must be between -90 and 90'),
     body('dropoffLng').optional().isFloat({ min: -180, max: 180 }).withMessage('dropoffLng must be between -180 and 180'),
+    body('paymentMethod').optional().isIn(['CASH', 'E_WALLET', 'E_PAYMENT', 'cash', 'e_wallet', 'e_payment']).withMessage('paymentMethod must be one of CASH, E_WALLET, E_PAYMENT'),
     body('price').isFloat({ min: 0.01 }).withMessage('Price must be greater than 0'),
     body('scheduledTime').optional().isISO8601().withMessage('Invalid scheduled time format'),
     body().custom(body => {
@@ -62,6 +63,7 @@ router.post(
     body('pickupLng').optional().isFloat({ min: -180, max: 180 }).withMessage('pickupLng must be between -180 and 180'),
     body('dropoffLat').optional().isFloat({ min: -90, max: 90 }).withMessage('dropoffLat must be between -90 and 90'),
     body('dropoffLng').optional().isFloat({ min: -180, max: 180 }).withMessage('dropoffLng must be between -180 and 180'),
+    body('paymentMethod').optional().isIn(['CASH', 'E_WALLET', 'E_PAYMENT', 'cash', 'e_wallet', 'e_payment']).withMessage('paymentMethod must be one of CASH, E_WALLET, E_PAYMENT'),
     body('price').isFloat({ min: 0.01 }).withMessage('Price must be greater than 0'),
     body('scheduledTime').optional().isISO8601().withMessage('Invalid scheduled time format'),
     body().custom(payload => {

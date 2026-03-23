@@ -12,7 +12,8 @@ class TripNotifier {
         id: trip.id,
         pickupLocation: trip.pickupLocation,
         dropoffLocation: trip.dropoffLocation,
-        price: trip.price
+        price: trip.price,
+        paymentMethod: trip.paymentMethod
       }
     });
     notifyAdmins('trip_assigned', 'Trip Assigned', 'A trip has been assigned', {

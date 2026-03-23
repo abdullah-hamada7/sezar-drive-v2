@@ -28,9 +28,11 @@ export interface TripDTO {
     id: string;
     status: TripState;
     price: number;
+    paymentMethod?: 'CASH' | 'E_WALLET' | 'E_PAYMENT';
     pickupLocation: string;
     dropoffLocation: string;
     passengerName: string;
+    passengerPhone?: string;
     notes?: string;
 }
 

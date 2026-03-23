@@ -114,6 +114,15 @@
     "no_active_shift_warning": "يجب أن تبدأ وتفعل مناوبتك قبل الرحلات.",
     "new_assignment_notif": "تم تعيين رحلة جديدة لك!",
     "cancellation_notif": "تم إلغاء رحلة."
+    ,"payment": {
+      "method": "طريقة الدفع",
+      "collect": "تحصيل",
+      "paid": "تم الدفع",
+      "cash": "كاش",
+      "ewallet": "محفظة إلكترونية",
+      "epayment": "دفع إلكتروني"
+    }
+    ,"contact_whatsapp": "التواصل عبر واتساب"
   },
   "shift": {
     "management": "إدارة المناوبات",
@@ -661,6 +670,10 @@
       "reason_placeholder": "سبب الإلغاء",
       "pickup_placeholder": "اكتب موقع الاستلام",
       "dropoff_placeholder": "اكتب موقع التوصيل"
+      ,"payment_method_label": "طريقة الدفع *"
+      ,"payment_method_cash": "كاش"
+      ,"payment_method_ewallet": "محفظة إلكترونية"
+      ,"payment_method_epayment": "دفع إلكتروني"
     },
     "details": {
       "status": "الحالة",

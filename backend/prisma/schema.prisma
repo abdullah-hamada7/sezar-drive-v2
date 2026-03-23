@@ -173,6 +173,7 @@ model Trip {
   vehicleId          String?        @map("vehicle_id") @db.Uuid
   pickupLocation     String         @map("pickup_location") @db.VarChar(500)
   dropoffLocation    String         @map("dropoff_location") @db.VarChar(500)
+  paymentMethod      String         @default("CASH") @map("payment_method") @db.VarChar(20)
   pickupLat          Decimal?       @map("pickup_lat") @db.Decimal(10, 7)
   pickupLng          Decimal?       @map("pickup_lng") @db.Decimal(10, 7)
   dropoffLat         Decimal?       @map("dropoff_lat") @db.Decimal(10, 7)

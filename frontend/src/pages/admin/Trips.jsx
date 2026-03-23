@@ -7,6 +7,7 @@ import { Eye, XCircle, MapPin, DollarSign, Save, X } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { EGYPT_PHONE_REGEX } from '../../utils/validation';
+import WhatsAppLink from '../../components/common/WhatsAppLink';
 import { MapContainer, Marker, TileLayer, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -154,6 +155,7 @@ export default function TripsPage() {
     driverId: '',
     pickupLocation: '',
     dropoffLocation: '',
+    paymentMethod: 'CASH',
     pickupLat: null,
     pickupLng: null,
     dropoffLat: null,
@@ -403,18 +405,19 @@ export default function TripsPage() {
       }
       await api.assignTrip({ ...form, price: parsedPrice, scheduledTime });
       setShowCreateModal(false);
-      setForm({
-        driverId: '',
-        pickupLocation: '',
-        dropoffLocation: '',
-        pickupLat: null,
-        pickupLng: null,
-        dropoffLat: null,
-        dropoffLng: null,
-        price: '',
-        scheduledTime: '',
-        passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
-      });
+                      setForm({
+                        driverId: '',
+                        pickupLocation: '',
+                        dropoffLocation: '',
+                        paymentMethod: 'CASH',
+                        pickupLat: null,
+                        pickupLng: null,
+                        dropoffLat: null,
+                        dropoffLng: null,
+                        price: '',
+                        scheduledTime: '',
+                        passengers: [{ name: '', phone: '', companionCount: 0, bagCount: 0 }]
+                      });
       setPickupSuggestions([]);
       setDropoffSuggestions([]);
       setPickupSuggestOpen(false);
@@ -656,6 +659,23 @@ export default function TripsPage() {
                     {drivers.map(d => (
                       <option key={d.id} value={d.id}>{d.name} ({d.identityVerified ? t('common.shift_verification_status.verified') : t('common.shift_verification_status.pending')})</option>
                     ))}
+                  </select>
+                </div>
+
+                <div className="form-group mb-md">
+                  <label className="form-label">{t('trips.modal.payment_method_label')}</label>
+                  <select
+                    className="form-input"
+                    value={form.paymentMethod}
+                    onChange={(e) => {
+                      setForm((prev) => ({ ...prev, paymentMethod: e.target.value }));
+                      setError('');
+                    }}
+                    required
+                  >
+                    <option value="CASH">{t('trips.modal.payment_method_cash')}</option>
+                    <option value="E_WALLET">{t('trips.modal.payment_method_ewallet')}</option>
+                    <option value="E_PAYMENT">{t('trips.modal.payment_method_epayment')}</option>
                   </select>
                 </div>
 
@@ -1048,6 +1068,10 @@ export default function TripsPage() {
                       <span className="font-medium text-primary">{selectedTrip.price} {t('common.currency')}</span>
                     </div>
                     <div className="flex justify-between border-b border-subtle pb-xs">
+                      <span className="text-muted text-sm">{t('trip.payment.method')}</span>
+                      <span className="font-medium">{String(selectedTrip.paymentMethod || 'CASH').toUpperCase()}</span>
+                    </div>
+                    <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.details.scheduled')}</span>
                       <span className="font-medium">{formatDate(selectedTrip.scheduledTime)}</span>
                     </div>
@@ -1081,7 +1105,14 @@ export default function TripsPage() {
                         <div className="grid grid-2 gap-x-md gap-y-xs">
                           {p.phone && (
                             <div className="text-xs">
-                              <span className="text-muted">{t('drivers.table.phone')}:</span> <span className="font-medium">{p.phone}</span>
+                              <span className="text-muted">{t('drivers.table.phone')}:</span>{' '}
+                              <span className="font-medium">{p.phone}</span>{' '}
+                              <WhatsAppLink
+                                phone={p.phone}
+                                title={t('trip.contact_whatsapp')}
+                                size={18}
+                                className="text-success"
+                              />
                             </div>
                           )}
                           <div className="text-xs">
