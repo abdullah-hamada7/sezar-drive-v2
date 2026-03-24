@@ -48,6 +48,9 @@ export default function ViolationsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [refresh, setRefresh] = useState(0);
   const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
 
   const [formData, setFormData] = useState({
     driverId: '',
@@ -58,6 +61,15 @@ export default function ViolationsPage() {
     violationNumber: '',
     fineAmount: '',
   });
+
+  useEffect(() => {
+    if (!photoFile) return;
+    const objectUrl = URL.createObjectURL(photoFile);
+    setPhotoPreviewUrl(objectUrl);
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [photoFile]);
 
   useEffect(() => {
     async function loadOptions() {
@@ -129,12 +141,25 @@ export default function ViolationsPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
     try {
+      const payload = (() => {
+        if (!photoFile) return formData;
+        const fd = new FormData();
+        Object.entries(formData).forEach(([k, v]) => {
+          if (v === undefined || v === null) return;
+          fd.append(k, String(v));
+        });
+        fd.append('photo', photoFile);
+        return fd;
+      })();
+
       if (selected?.id) {
-        await violationService.updateViolation(selected.id, formData);
+        await violationService.updateViolation(selected.id, payload);
         addToast(t('violations.update_success'), 'success');
       } else {
-        await violationService.createViolation(formData);
+        await violationService.createViolation(payload);
         addToast(t('violations.create_success'), 'success');
       }
       setIsEditing(false);
@@ -148,9 +173,13 @@ export default function ViolationsPage() {
         violationNumber: '',
         fineAmount: '',
       });
+      setPhotoFile(null);
+      setPhotoPreviewUrl('');
       setRefresh(r => r + 1);
     } catch (err) {
       addToast(err.message || t('common.error'), 'error');
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -195,7 +224,7 @@ export default function ViolationsPage() {
             location: '',
             violationNumber: '',
             fineAmount: '',
-          }); }}>
+          }); setPhotoFile(null); setPhotoPreviewUrl(''); }}>
             <Plus size={18} /> {t('violations.add')}
           </button>
         </div>
@@ -308,7 +337,7 @@ export default function ViolationsPage() {
                           location: v.location || '',
                           violationNumber: v.violationNumber || '',
                           fineAmount: v.fineAmount?.toString() || '',
-                        }); }} title={t('common.edit')}><Edit size={16} /></button>
+                        }); setPhotoFile(null); setPhotoPreviewUrl(v.photoUrl || ''); }} title={t('common.edit')}><Edit size={16} /></button>
                         <button className="btn-icon" onClick={() => setDeleteConfirm(v.id)} style={{ color: 'var(--color-danger)' }} title={t('common.delete')}><Trash2 size={16} /></button>
                       </div>
                     </td>
@@ -414,11 +443,54 @@ export default function ViolationsPage() {
                       required
                     />
                   </div>
+
+                  <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                    <label className="form-label">{t('violations.photo_optional')}</label>
+                    <input
+                      type="file"
+                      className="form-input"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] || null;
+                        setPhotoFile(file);
+                      }}
+                    />
+                    <div className="text-xs text-muted" style={{ marginTop: 6 }}>
+                      {t('violations.photo_help')}
+                    </div>
+                    {photoPreviewUrl ? (
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <a href={photoPreviewUrl} target="_blank" rel="noopener noreferrer" className="block" style={{ maxWidth: 280 }}>
+                          <img
+                            src={photoPreviewUrl}
+                            alt={t('violations.photo_optional')}
+                            className="w-full"
+                            style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}
+                          />
+                        </a>
+                        {photoFile ? (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ marginTop: 8 }}
+                            onClick={() => {
+                              setPhotoFile(null);
+                              setPhotoPreviewUrl(selected?.photoUrl || '');
+                            }}
+                          >
+                            {t('violations.photo_clear')}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => { setIsEditing(false); setSelected(null); }}>{t('common.cancel')}</button>
-                <button type="submit" className="btn btn-primary">{t('common.save')}</button>
+                <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => { setIsEditing(false); setSelected(null); setPhotoFile(null); setPhotoPreviewUrl(''); }}>{t('common.cancel')}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? <span className="spinner" /> : null} {t('common.save')}
+                </button>
               </div>
             </form>
           </div>
@@ -444,7 +516,12 @@ export default function ViolationsPage() {
                 { label: t('violations.violation_number'), value: selected.violationNumber },
                 { label: t('violations.fine_amount'), value: formatMoney(selected.fineAmount), type: 'badge', badgeClass: 'badge-danger' },
               ]
-            }
+            },
+            selected.photoUrl ? {
+              title: t('violations.photo'),
+              type: 'photos',
+              data: [{ photoUrl: selected.photoUrl, label: t('violations.photo') }],
+            } : null,
           ].filter(Boolean)}
         />
       )}

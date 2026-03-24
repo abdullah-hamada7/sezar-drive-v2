@@ -2,10 +2,13 @@ const express = require('express');
 const { body, param, query, validationResult } = require('express-validator');
 const violationService = require('./violation.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
+const { createUploader } = require('../../middleware/upload');
+const fileService = require('../../services/FileService');
 const { ValidationError } = require('../../errors');
 const { sendCsv } = require('../../utils/csv');
 
 const router = express.Router();
+const upload = createUploader();
 
 function handleValidation(req) {
   const errors = validationResult(req);
@@ -59,11 +62,17 @@ const myListValidation = [
 router.post(
   '/',
   authenticate, enforcePasswordChanged, authorize('admin'),
+  upload.single('photo'),
   violationValidation,
   async (req, res, next) => {
     try {
       handleValidation(req);
-      const violation = await violationService.createViolation(req.body, req.user.id, req.clientIp);
+      let photoUrl = null;
+      if (req.file) {
+        photoUrl = await fileService.upload(req.file, 'violations');
+      }
+
+      const violation = await violationService.createViolation({ ...req.body, photoUrl }, req.user.id, req.clientIp);
       res.status(201).json(violation);
     } catch (err) { next(err); }
   }
@@ -73,11 +82,16 @@ router.post(
 router.put(
   '/:id',
   authenticate, enforcePasswordChanged, authorize('admin'),
+  upload.single('photo'),
   updateValidation,
   async (req, res, next) => {
     try {
       handleValidation(req);
-      const violation = await violationService.updateViolation(req.params.id, req.body, req.user.id, req.clientIp);
+      let photoUrl;
+      if (req.file) {
+        photoUrl = await fileService.upload(req.file, 'violations');
+      }
+      const violation = await violationService.updateViolation(req.params.id, { ...req.body, ...(photoUrl ? { photoUrl } : {}) }, req.user.id, req.clientIp);
       res.json(violation);
     } catch (err) { next(err); }
   }

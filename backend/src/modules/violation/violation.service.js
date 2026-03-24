@@ -1,9 +1,19 @@
 const prisma = require('../../config/database');
 const { NotFoundError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
+const FileService = require('../../services/FileService');
+
+async function signViolation(violation) {
+  if (!violation) return violation;
+  const v = { ...violation };
+  if (v.photoUrl) {
+    v.photoUrl = await FileService.getUrl(v.photoUrl);
+  }
+  return v;
+}
 
 async function createViolation(data, adminId, ipAddress) {
-  const { driverId, vehicleId, date, time, location, violationNumber, fineAmount } = data;
+  const { driverId, vehicleId, date, time, location, violationNumber, fineAmount, photoUrl } = data;
 
   const driver = await prisma.user.findUnique({ where: { id: driverId } });
   if (!driver || driver.role !== 'driver') throw new NotFoundError('Driver not found');
@@ -20,6 +30,7 @@ async function createViolation(data, adminId, ipAddress) {
       location,
       violationNumber,
       fineAmount: parseFloat(fineAmount),
+      photoUrl: photoUrl || null,
     },
     include: {
       driver: { select: { id: true, name: true } },
@@ -36,14 +47,14 @@ async function createViolation(data, adminId, ipAddress) {
     ipAddress,
   });
 
-  return violation;
+  return await signViolation(violation);
 }
 
 async function updateViolation(id, data, adminId, ipAddress) {
   const existing = await prisma.trafficViolation.findUnique({ where: { id } });
   if (!existing) throw new NotFoundError('Violation not found');
 
-  const { driverId, vehicleId, date, time, location, violationNumber, fineAmount } = data;
+  const { driverId, vehicleId, date, time, location, violationNumber, fineAmount, photoUrl } = data;
 
   if (driverId) {
     const driver = await prisma.user.findUnique({ where: { id: driverId } });
@@ -65,6 +76,7 @@ async function updateViolation(id, data, adminId, ipAddress) {
       ...(location && { location }),
       ...(violationNumber && { violationNumber }),
       ...(fineAmount !== undefined && { fineAmount: parseFloat(fineAmount) }),
+      ...(photoUrl && { photoUrl }),
     },
     include: {
       driver: { select: { id: true, name: true } },
@@ -82,7 +94,7 @@ async function updateViolation(id, data, adminId, ipAddress) {
     ipAddress,
   });
 
-  return violation;
+  return await signViolation(violation);
 }
 
 async function deleteViolation(id, adminId, ipAddress) {
@@ -142,8 +154,10 @@ async function getViolations({ page = 1, limit = 15, driverId, vehicleId, startD
     prisma.trafficViolation.count({ where }),
   ]);
 
+  const signed = await Promise.all(violations.map((v) => signViolation(v)));
+
   return {
-    data: violations,
+    data: signed,
     pagination: {
       page,
       limit,
@@ -162,7 +176,7 @@ async function getViolationById(id) {
     },
   });
   if (!violation) throw new NotFoundError('Violation not found');
-  return violation;
+  return await signViolation(violation);
 }
 
 async function getDriverDailyStats(date) {

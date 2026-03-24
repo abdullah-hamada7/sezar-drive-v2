@@ -403,6 +403,7 @@ model TrafficViolation {
   driverId        String   @map("driver_id") @db.Uuid
   vehicleId       String   @map("vehicle_id") @db.Uuid
   violationNumber String  @map("violation_number") @db.VarChar(50)
+  photoUrl        String?  @map("photo_url") @db.VarChar(500)
   date            DateTime @db.Date
   time            String   @db.VarChar(10)
   location        String   @db.VarChar(255)

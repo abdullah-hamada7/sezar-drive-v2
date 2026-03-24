@@ -125,19 +125,39 @@ export default function DriverViolationsPage() {
                   <th>{t('violations.time')}</th>
                   <th>{t('violations.location')}</th>
                   <th>{t('violations.violation_number')}</th>
+                  <th>{t('violations.photo')}</th>
                   <th>{t('violations.vehicle')}</th>
                   <th>{t('violations.fine_amount')}</th>
                 </tr>
               </thead>
               <tbody>
                 {violations.length === 0 ? (
-                  <tr><td colSpan={6} className="empty-state">{t('violations.empty')}</td></tr>
+                  <tr><td colSpan={7} className="empty-state">{t('violations.empty')}</td></tr>
                 ) : violations.map(v => (
                   <tr key={v.id}>
                     <td>{formatDate(v.date)}</td>
                     <td>{v.time || '—'}</td>
                     <td className="text-sm">{v.location || '—'}</td>
                     <td>{v.violationNumber || '—'}</td>
+                    <td>
+                      {v.photoUrl ? (
+                        <a
+                          href={v.photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+                          title={t('violations.photo')}
+                        >
+                          <img
+                            src={v.photoUrl}
+                            alt={t('violations.photo')}
+                            style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }}
+                          />
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td>{v.vehicle?.plateNumber || '—'}</td>
                     <td style={{ fontWeight: 600, color: 'var(--color-danger)' }}>{formatMoney(v.fineAmount)}</td>
                   </tr>
