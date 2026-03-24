@@ -175,6 +175,9 @@ export default function TripsPage() {
   const [loadError, setLoadError] = useState('');
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [selectedTripLoading, setSelectedTripLoading] = useState(false);
+  const [selectedTripLoadingId, setSelectedTripLoadingId] = useState(null);
+  const [openingCreate, setOpeningCreate] = useState(false);
 
   const tripIdQuery = useMemo(() => {
     const id = searchParams.get('tripId');
@@ -188,8 +191,28 @@ export default function TripsPage() {
 
   const closeSelectedTrip = () => {
     setSelectedTrip(null);
+    setSelectedTripLoading(false);
+    setSelectedTripLoadingId(null);
     clearTripIdQuery();
   };
+
+  const openTripDetails = useCallback(async (trip) => {
+    if (!trip?.id) return;
+    setSelectedTrip(trip);
+    setSelectedTripLoading(true);
+    setSelectedTripLoadingId(trip.id);
+    try {
+      const res = await api.getTrip(trip.id);
+      if (res?.data) setSelectedTrip(res.data);
+    } catch (err) {
+      const code = err?.errorCode || err?.code;
+      const msg = code ? t(`errors.${code}`) : (err?.message || t('common.error'));
+      addToast(msg, 'error');
+    } finally {
+      setSelectedTripLoading(false);
+      setSelectedTripLoadingId(null);
+    }
+  }, [addToast, t]);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [drivers, setDrivers] = useState([]);
@@ -405,6 +428,7 @@ export default function TripsPage() {
 
   async function openCreate() {
     setError('');
+    setOpeningCreate(true);
     setShowCreateModal(true);
     try {
       const res = await driverService.getDrivers('limit=100');
@@ -412,6 +436,8 @@ export default function TripsPage() {
     } catch (err) {
       const msg = err.code ? t(`errors.${err.code}`) : (err.message || t('common.error'));
       addToast(msg, 'error');
+    } finally {
+      setOpeningCreate(false);
     }
   }
 
@@ -594,7 +620,8 @@ export default function TripsPage() {
           <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
             {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
           </button>
-          <button className="btn btn-primary" onClick={openCreate}>
+          <button className="btn btn-primary" onClick={openCreate} disabled={openingCreate}>
+            {openingCreate ? <span className="spinner" /> : null}
             {t('trips.assign_btn')}
           </button>
         </div>
@@ -727,7 +754,9 @@ export default function TripsPage() {
                   <td className="text-muted text-sm">{formatDate(t_obj.createdAt)}</td>
                   <td>
                     <div className="flex gap-sm">
-                      <button className="btn-icon" onClick={() => setSelectedTrip(t_obj)} title={t('common.view')}><Eye size={16} /></button>
+                      <button className="btn-icon" onClick={() => openTripDetails(t_obj)} title={t('common.view')} disabled={selectedTripLoadingId === t_obj.id}>
+                        {selectedTripLoadingId === t_obj.id ? <span className="spinner" /> : <Eye size={16} />}
+                      </button>
                       {(t_obj.status === 'ASSIGNED' || t_obj.status === 'IN_PROGRESS') && (
                         <button className="btn-icon text-danger" onClick={() => handleCancel(t_obj.id)} title={t('common.cancel')}>
                           <XCircle size={16} />
@@ -1231,7 +1260,10 @@ export default function TripsPage() {
         <div className="modal-overlay" onClick={closeSelectedTrip}>
           <div className="modal modal-xl" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">{t('trips.modal.details_title')}</h2>
+              <h2 className="modal-title">
+                {t('trips.modal.details_title')}
+                {selectedTripLoading && <span className="spinner" style={{ marginInlineStart: 10 }} />}
+              </h2>
               <button className="btn-icon" onClick={closeSelectedTrip}>
                 <XCircle size={18} />
               </button>
@@ -1288,6 +1320,29 @@ export default function TripsPage() {
                         })()}
                       </span>
                     </div>
+
+                    {String(selectedTrip.paymentMethod || 'CASH').toUpperCase() === 'CASH' && (
+                      <>
+                        <div className="flex justify-between border-b border-subtle pb-xs">
+                          <span className="text-muted text-sm">{t('trip.payment.cash_collected_at')}</span>
+                          <span className="font-medium">{selectedTrip.cashCollectedAt ? formatDate(selectedTrip.cashCollectedAt) : '—'}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-subtle pb-xs" style={{ gap: '0.75rem' }}>
+                          <span className="text-muted text-sm">{t('trip.payment.cash_collected_note')}</span>
+                          <span
+                            className="font-medium"
+                            style={{
+                              maxWidth: '65%',
+                              textAlign: 'end',
+                              whiteSpace: 'pre-wrap',
+                              overflowWrap: 'anywhere'
+                            }}
+                          >
+                            {selectedTrip.cashCollectedNote ? String(selectedTrip.cashCollectedNote) : '—'}
+                          </span>
+                        </div>
+                      </>
+                    )}
                     <div className="flex justify-between border-b border-subtle pb-xs">
                       <span className="text-muted text-sm">{t('trips.details.scheduled')}</span>
                       <span className="font-medium">{formatDate(selectedTrip.scheduledTime)}</span>
@@ -1347,7 +1402,7 @@ export default function TripsPage() {
             </div>
 
             <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={() => setSelectedTrip(null)}>{t('common.cancel')}</button>
+              <button className="btn btn-secondary" onClick={closeSelectedTrip}>{t('common.cancel')}</button>
             </div>
           </div>
         </div>

@@ -82,6 +82,7 @@ function PromptModalContent({
               {cancelText || t('common.cancel')}
             </button>
             <button type="submit" className="btn btn-primary" disabled={submitting || (required && !value.trim())}>
+              {submitting ? <span className="spinner" /> : null}
               {confirmText || t('common.submit')}
             </button>
           </div>
