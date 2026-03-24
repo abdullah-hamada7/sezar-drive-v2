@@ -40,7 +40,8 @@ export default function DriversPage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
   const [files, setFiles] = useState({});
   const [previews, setPreviews] = useState({});
-  const [, setError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [confirmData, setConfirmData] = useState({ isOpen: false, type: '', data: null });
   const [exporting, setExporting] = useState(false);
@@ -120,7 +121,8 @@ export default function DriversPage() {
     setForm({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
     setFiles({});
     setPreviews({});
-    setError('');
+    setFieldErrors({});
+    setSubmitError('');
     setShowModal(true);
   }
 
@@ -133,13 +135,15 @@ export default function DriversPage() {
       idCardFront: driver.idCardFront,
       idCardBack: driver.idCardBack
     });
-    setError('');
+    setFieldErrors({});
+    setSubmitError('');
     setShowModal(true);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
+    if (submitting) return;
+    setSubmitError('');
 
     // Final check
     const isNameValid = validateField('name', form.name);
@@ -149,7 +153,7 @@ export default function DriversPage() {
     const isPasswordValid = editDriver ? true : validateField('password', form.password);
 
     if (!isNameValid || !isEmailValid || !isPhoneValid || !isLicenseValid || !isPasswordValid) {
-      setError(t('common.errors.check_fields'));
+      setSubmitError(t('drivers.messages.check_fields'));
       return;
     }
 
@@ -167,11 +171,12 @@ export default function DriversPage() {
           idCardFront: missingPhotos.idCardFront ? t('drivers.modal.photo_required') : '',
           idCardBack: missingPhotos.idCardBack ? t('drivers.modal.photo_required') : '',
         }));
-        setError(t('drivers.modal.required_photos_error'));
+        setSubmitError(t('drivers.modal.required_photos_error'));
         return;
       }
     }
 
+    setSubmitting(true);
     try {
       const formData = new FormData();
       formData.append('name', form.name);
@@ -184,25 +189,41 @@ export default function DriversPage() {
       if (files.idCardBack) formData.append('idCardBack', files.idCardBack);
 
       if (editDriver) {
-        await api.updateDriver(editDriver.id, formData);
+        const res = await api.updateDriver(editDriver.id, formData);
+        if (res?.queued) {
+          addToast(t('common.offline.saved_will_sync'), 'info');
+        } else {
+          addToast(t('common.success'), 'success');
+        }
       } else {
         formData.append('email', form.email);
-        await api.createDriver(formData);
+        const res = await api.createDriver(formData);
+        if (res?.queued) {
+          addToast(t('common.offline.saved_will_sync'), 'info');
+        } else {
+          addToast(t('common.success'), 'success');
+        }
       }
       setShowModal(false);
-      load();
+      await load();
     } catch (err) {
-      if (err.response?.data?.errors) {
+      if (Array.isArray(err?.details) && err.details.length > 0) {
         const backendErrs = {};
-        err.response.data.errors.forEach(e => {
-          backendErrs[e.path || e.param] = e.msg;
+        err.details.forEach((d) => {
+          const key = d?.path || d?.param;
+          if (!key) return;
+          backendErrs[key] = d?.msg || t('common.error');
         });
-        setFieldErrors(prev => ({ ...prev, ...backendErrs }));
-        addToast(t('common.errors.validation_failed'), 'error');
+        setFieldErrors((prev) => ({ ...prev, ...backendErrs }));
+        setSubmitError(t('drivers.messages.validation_failed'));
+        addToast(t('drivers.messages.validation_failed'), 'error');
       } else {
-        const msg = err.errorCode ? t(`errors.${err.errorCode}`) : (err.message || t('drivers.messages.op_failed'));
+        const msg = err?.message || t('drivers.messages.op_failed');
+        setSubmitError(msg);
         addToast(msg, 'error');
       }
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -398,6 +419,11 @@ export default function DriversPage() {
               <button className="btn-icon" onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="modal-body">
+              {submitError && (
+                <div className="alert alert-danger mb-md">
+                  {submitError}
+                </div>
+              )}
               <div className="form-section mb-md">
                 <label className="form-label mb-sm" style={{ display: 'block' }}>{t('drivers.modal.photos_section')}</label>
                 <div className="grid grid-3 gap-md">
@@ -531,8 +557,11 @@ export default function DriversPage() {
                 </div>
               )}
               <div className="modal-actions">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>{t('common.cancel')}</button>
-                <button type="submit" className="btn btn-primary">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)} disabled={submitting}>
+                  {t('common.cancel')}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submitting} aria-busy={submitting}>
+                  {submitting ? <span className="spinner" /> : null}{' '}
                   {editDriver ? t('drivers.modal.update_btn') : t('drivers.modal.create_btn')}
                 </button>
               </div>
