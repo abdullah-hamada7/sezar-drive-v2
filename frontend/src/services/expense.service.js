@@ -14,6 +14,9 @@ export const expenseService = {
   reviewExpense(id, data) {
     return http.request(`/expenses/${id}/review`, { method: 'PUT', body: data });
   },
+  reviewExpensesBulk(data) {
+    return http.request('/expenses/review-bulk', { method: 'PUT', body: data });
+  },
   getExpenseCategories() {
     return http.request('/expenses/categories');
   }

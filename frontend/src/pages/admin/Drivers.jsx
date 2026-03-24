@@ -1,20 +1,40 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { driverService as api } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Users, Plus, Search, Edit, Trash2, X, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, UserCheck, UserX, Download } from 'lucide-react';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { EMAIL_REGEX, EGYPT_PHONE_REGEX } from '../../utils/validation';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
+import { downloadApiFile } from '../../utils/download';
 
 export default function DriversPage() {
   const { t } = useTranslation();
   const { addToast } = useContext(ToastContext);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const search = useMemo(() => String(searchParams.get('search') || ''), [searchParams]);
+  const statusFilter = useMemo(() => String(searchParams.get('status') || 'active'), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '' || v === false) next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [drivers, setDrivers] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editDriver, setEditDriver] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
@@ -23,6 +43,7 @@ export default function DriversPage() {
   const [, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [confirmData, setConfirmData] = useState({ isOpen: false, type: '', data: null });
+  const [exporting, setExporting] = useState(false);
 
   const validateField = (name, value) => {
     let err = '';
@@ -50,15 +71,37 @@ export default function DriversPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const params = new URLSearchParams({ page, limit: 15, status: statusFilter });
+      const params = new URLSearchParams({ page, limit, status: statusFilter });
       if (search) params.set('search', search);
       const res = await api.getDrivers(params.toString());
       setDrivers(res.data.drivers || []);
       setPagination(res.data || {});
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
+    }
     finally { setLoading(false); }
-  }, [page, search, statusFilter]);
+  }, [addToast, limit, page, search, statusFilter, t]);
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ search, status: statusFilter });
+      await downloadApiFile({
+        endpoint: `/drivers/export?${params.toString()}`,
+        filename: `drivers-${new Date().toISOString().slice(0, 10)}.csv`,
+      });
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -198,9 +241,14 @@ export default function DriversPage() {
           <h1 className="page-title">{t('drivers.title')}</h1>
           <p className="page-subtitle">{t('drivers.subtitle')}</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <Plus size={18} /> {t('drivers.add_btn')}
-        </button>
+        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
+          </button>
+          <button className="btn btn-primary" onClick={openCreate}>
+            <Plus size={18} /> {t('drivers.add_btn')}
+          </button>
+        </div>
       </div>
 
       <div className="card mb-md">
@@ -211,7 +259,7 @@ export default function DriversPage() {
             className="form-input"
             placeholder={t('drivers.search_placeholder')}
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => setQuery({ search: e.target.value, page: 1 })}
             style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
           />
         </div>
@@ -222,7 +270,7 @@ export default function DriversPage() {
           <button
             key={filter}
             className={`btn btn-sm ${statusFilter === filter ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => { setStatusFilter(filter); setPage(1); }}
+            onClick={() => setQuery({ status: filter, page: 1 })}
           >
             {filter === 'active'
               ? t('drivers.filters.active')
@@ -245,7 +293,13 @@ export default function DriversPage() {
       )}
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError
+          message={loadError}
+          onRetry={load}
+          onClearFilters={() => setQuery({ search: '', status: 'active', page: 1 })}
+        />
       ) : (
         <div className="table-container">
           <table>
@@ -328,15 +382,13 @@ export default function DriversPage() {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
-          <span className="text-sm text-muted">
-            {t('vehicles.pagination.info', { current: page, total: pagination.totalPages })}
-          </span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(nextPage) => setQuery({ page: nextPage })}
+        pageSize={limit}
+        onPageSizeChange={(nextLimit) => setQuery({ limit: nextLimit, page: 1 })}
+      />
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

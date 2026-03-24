@@ -3,6 +3,7 @@ const { body, param, query, validationResult } = require('express-validator');
 const violationService = require('./violation.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
+const { sendCsv } = require('../../utils/csv');
 
 const router = express.Router();
 
@@ -40,6 +41,8 @@ const listValidation = [
   query('startDate').optional().isISO8601(),
   query('endDate').optional().isISO8601(),
   query('search').optional().isString(),
+  query('sortBy').optional().isIn(['date', 'fineAmount', 'createdAt']),
+  query('sortOrder').optional().isIn(['asc', 'desc']),
 ];
 
 const myListValidation = [
@@ -48,6 +51,8 @@ const myListValidation = [
   query('startDate').optional().isISO8601(),
   query('endDate').optional().isISO8601(),
   query('search').optional().isString(),
+  query('sortBy').optional().isIn(['date', 'fineAmount', 'createdAt']),
+  query('sortOrder').optional().isIn(['asc', 'desc']),
 ];
 
 // ─── POST /api/v1/violations ─────────────────────
@@ -110,10 +115,55 @@ router.get(
         startDate: req.query.startDate,
         endDate: req.query.endDate,
         search: req.query.search,
+        sortBy: req.query.sortBy,
+        sortOrder: req.query.sortOrder,
       });
       res.json(data);
     } catch (err) { next(err); }
   }
+);
+
+// ─── GET /api/v1/violations/export (CSV) ───────────
+router.get(
+  '/export',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  listValidation,
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const page = 1;
+      const limit = Math.min(Math.max(parseInt(req.query.limit) || 5000, 1), 10000);
+      const data = await violationService.getViolations({
+        page,
+        limit,
+        driverId: req.query.driverId,
+        vehicleId: req.query.vehicleId,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        search: req.query.search,
+        sortBy: req.query.sortBy,
+        sortOrder: req.query.sortOrder,
+      });
+
+      sendCsv(res, {
+        filename: `violations-${new Date().toISOString().slice(0, 10)}.csv`,
+        columns: [
+          { header: 'id', value: (v) => v.id },
+          { header: 'date', value: (v) => v.date?.toISOString?.() ?? v.date },
+          { header: 'time', value: (v) => v.time || '' },
+          { header: 'driver', value: (v) => v.driver?.name || '' },
+          { header: 'vehicle', value: (v) => v.vehicle?.plateNumber || '' },
+          { header: 'location', value: (v) => v.location || '' },
+          { header: 'violation_number', value: (v) => v.violationNumber || '' },
+          { header: 'fine_amount', value: (v) => v.fineAmount },
+          { header: 'currency', value: () => 'EGP' },
+        ],
+        rows: data.data || [],
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 );
 
 // ─── GET /api/v1/violations/my ─────────────────────
@@ -133,6 +183,8 @@ router.get(
         startDate: req.query.startDate,
         endDate: req.query.endDate,
         search: req.query.search,
+        sortBy: req.query.sortBy,
+        sortOrder: req.query.sortOrder,
       });
       res.json(data);
     } catch (err) { next(err); }

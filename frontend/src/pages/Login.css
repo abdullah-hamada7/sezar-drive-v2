@@ -90,9 +90,18 @@
   animation: slideUp var(--transition-base) ease-out;
 }
 
+/* When paired with .glass-card, make panel more transparent so background shows */
+.login-card.glass-card {
+  background: rgba(10, 10, 10, 0.44);
+}
+
 [data-theme="light"] .login-card {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border-color: var(--color-border);
+}
+
+[data-theme="light"] .login-card.glass-card {
+  background: rgba(255, 255, 255, 0.58);
 }
 .login-card::before {
   /* Accent Top Line */

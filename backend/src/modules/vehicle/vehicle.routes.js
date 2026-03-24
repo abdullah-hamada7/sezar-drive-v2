@@ -6,6 +6,7 @@ const shiftService = require('../shift/shift.service');
 const prisma = require('../../config/database');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
+const { sendCsv } = require('../../utils/csv');
 
 const router = express.Router();
 
@@ -50,6 +51,11 @@ router.get(
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('search').optional().trim().escape(),
     query('status').optional().isIn(['available', 'damaged', 'maintenance']),
+    query('availableOnly').optional().isBoolean().toBoolean(),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('sortBy').optional().isIn(['createdAt', 'plateNumber', 'status']),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req, res, next) => {
     try {
@@ -58,6 +64,38 @@ router.get(
       res.json(result);
     } catch (err) { next(err); }
   }
+);
+
+// ─── GET /api/v1/vehicles/export (CSV) ─────────────
+router.get(
+  '/export',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  async (req, res, next) => {
+    try {
+      const query = {
+        ...req.query,
+        page: 1,
+        limit: Math.min(Math.max(parseInt(req.query.limit) || 5000, 1), 10000),
+      };
+      const result = await vehicleService.getVehicles(query);
+      sendCsv(res, {
+        filename: `vehicles-${new Date().toISOString().slice(0, 10)}.csv`,
+        columns: [
+          { header: 'id', value: (v) => v.id },
+          { header: 'plate_number', value: (v) => v.plateNumber },
+          { header: 'model', value: (v) => v.model },
+          { header: 'year', value: (v) => v.year },
+          { header: 'capacity', value: (v) => v.capacity },
+          { header: 'qr_code', value: (v) => v.qrCode },
+          { header: 'status', value: (v) => v.status },
+          { header: 'created_at', value: (v) => v.createdAt?.toISOString?.() ?? v.createdAt },
+        ],
+        rows: result.vehicles || [],
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 );
 
 // ─── GET /api/v1/vehicles/:id ─────────────────────

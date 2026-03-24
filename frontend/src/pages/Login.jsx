@@ -100,13 +100,7 @@ export default function LoginPage() {
 
       <div className="login-card glass-card">
         <div className="login-header">
-          <div className="login-logo glow-effect">
-            <BrandIcon size={32} />
-          </div>
           <h1 className="login-title text-gradient">{t('common.brand')}</h1>
-          <p className="login-subtitle">
-            {t('nav.dashboard')}
-          </p>
         </div>
 
         {view === 'login' ? (

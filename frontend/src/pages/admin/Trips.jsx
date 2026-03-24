@@ -1,12 +1,15 @@
-import { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import { useState, useEffect, useContext, useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { tripService as api } from '../../services/trip.service';
 import { driverService } from '../../services/driver.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Eye, XCircle, MapPin, DollarSign, Save, X } from 'lucide-react';
+import { Eye, XCircle, MapPin, DollarSign, Save, X, Download, Search } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
+import { downloadApiFile } from '../../utils/download';
 import { EGYPT_PHONE_REGEX } from '../../utils/validation';
 import WhatsAppLink from '../../components/common/WhatsAppLink';
 import { MapContainer, Marker, TileLayer, Polyline, Popup, useMap, useMapEvents } from 'react-leaflet';
@@ -143,29 +146,44 @@ const STATUS_BADGES = {
 export default function TripsPage() {
   const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const status = useMemo(() => String(searchParams.get('status') || ''), [searchParams]);
+  const search = useMemo(() => String(searchParams.get('search') || ''), [searchParams]);
+  const startDate = useMemo(() => String(searchParams.get('startDate') || ''), [searchParams]);
+  const endDate = useMemo(() => String(searchParams.get('endDate') || ''), [searchParams]);
+  const sortBy = useMemo(() => String(searchParams.get('sortBy') || ''), [searchParams]);
+  const sortOrder = useMemo(() => String(searchParams.get('sortOrder') || ''), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [trips, setTrips] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selectedTrip, setSelectedTrip] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const tripIdQuery = useMemo(() => {
-    const id = new URLSearchParams(location.search || '').get('tripId');
+    const id = searchParams.get('tripId');
     return id ? String(id).trim() : '';
-  }, [location.search]);
+  }, [searchParams]);
 
   const clearTripIdQuery = () => {
     if (!tripIdQuery) return;
-    const params = new URLSearchParams(location.search || '');
-    params.delete('tripId');
-    const nextSearch = params.toString();
-    navigate(
-      { pathname: location.pathname, search: nextSearch ? `?${nextSearch}` : '' },
-      { replace: true }
-    );
+    setQuery({ tripId: '' });
   };
 
   const closeSelectedTrip = () => {
@@ -210,7 +228,7 @@ export default function TripsPage() {
   const [mapDetails, setMapDetails] = useState({ isOpen: false, trip: null });
   const [confirmSaveChargeOpen, setConfirmSaveChargeOpen] = useState(false);
   const [confirmAssignOpen, setConfirmAssignOpen] = useState(false);
-  const filterLabel = statusFilter ? t(`common.status.${statusFilter.toLowerCase()}`) : t('trips.filter_all');
+  const filterLabel = status ? t(`common.trip_status.${status.toLowerCase()}`) : t('trips.filter_all');
 
   const mapCenter = useMemo(() => {
     const pickup = form.pickupLat != null && form.pickupLng != null ? [form.pickupLat, form.pickupLng] : null;
@@ -300,17 +318,28 @@ export default function TripsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
+      setLoadError('');
       try {
-        const params = new URLSearchParams({ page, limit: 15 });
-        if (statusFilter) params.set('status', statusFilter);
+        const params = new URLSearchParams({ page, limit });
+        if (status) params.set('status', status);
+        if (search.trim()) params.set('search', search.trim());
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        if (sortBy) params.set('sortBy', sortBy);
+        if (sortOrder) params.set('sortOrder', sortOrder);
         const res = await api.getTrips(params.toString());
         setTrips(res.data.trips || []);
         setPagination(res.data || {});
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        const msg = err?.message || t('common.error');
+        setLoadError(msg);
+        addToast(msg, 'error');
+      }
       finally { setLoading(false); }
     }
     load();
-  }, [page, statusFilter, refresh]);
+  }, [addToast, endDate, limit, page, refresh, search, sortBy, sortOrder, startDate, status, t]);
 
   useEffect(() => {
     if (!tripIdQuery) return;
@@ -516,6 +545,44 @@ export default function TripsPage() {
     return new Date(d).toLocaleString(i18n.language, { dateStyle: 'short', timeStyle: 'short' });
   }
 
+  const sortPreset = useMemo(() => {
+    if (sortBy === 'createdAt' && sortOrder === 'asc') return 'created_asc';
+    if (sortBy === 'scheduledTime' && sortOrder === 'asc') return 'scheduled_asc';
+    if (sortBy === 'scheduledTime' && sortOrder === 'desc') return 'scheduled_desc';
+    if (sortBy === 'price' && sortOrder === 'asc') return 'price_asc';
+    if (sortBy === 'price' && sortOrder === 'desc') return 'price_desc';
+    if (sortBy === 'status' && sortOrder === 'asc') return 'status_asc';
+    if (sortBy === 'status' && sortOrder === 'desc') return 'status_desc';
+    if (sortBy === 'createdAt' && sortOrder === 'desc') return 'created_desc';
+    return 'created_desc';
+  }, [sortBy, sortOrder]);
+
+  function clearFilters() {
+    setQuery({ page: 1, status: '', search: '', startDate: '', endDate: '', sortBy: '', sortOrder: '' });
+  }
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (search.trim()) params.set('search', search.trim());
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (sortBy) params.set('sortBy', sortBy);
+      if (sortOrder) params.set('sortOrder', sortOrder);
+      await downloadApiFile({
+        endpoint: `/trips/export?${params.toString()}`,
+        filename: `trips-${new Date().toISOString().slice(0, 10)}.csv`,
+      });
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -523,21 +590,88 @@ export default function TripsPage() {
           <h1 className="page-title">{t('trips.title')}</h1>
           <p className="page-subtitle">{t('trips.subtitle')}</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          {t('trips.assign_btn')}
-        </button>
+        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
+          </button>
+          <button className="btn btn-primary" onClick={openCreate}>
+            {t('trips.assign_btn')}
+          </button>
+        </div>
       </div>
 
       <div className="card p-sm mb-md flex gap-sm" style={{ overflowX: 'auto' }}>
         {['', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].map(s => (
           <button
             key={s}
-            className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => { setStatusFilter(s); setPage(1); }}
+            className={`btn btn-sm ${status === s ? 'btn-primary' : 'btn-secondary'}`}
+            onClick={() => setQuery({ status: s, page: 1 })}
           >
             {s ? t(`common.trip_status.${s.toLowerCase()}`) : t('trips.filter_all')}
           </button>
         ))}
+      </div>
+
+      <div className="card mb-md" style={{ padding: '0.75rem var(--space-md)' }}>
+        <div className="grid grid-4 gap-md" style={{ alignItems: 'end' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('common.search')}</label>
+            <div className="flex items-center gap-sm">
+              <Search size={16} className="text-muted" />
+              <input
+                className="form-input"
+                value={search}
+                onChange={(e) => setQuery({ search: e.target.value, page: 1 })}
+                placeholder={t('common.search')}
+                style={{ flex: 1 }}
+              />
+            </div>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.date_from')}</label>
+            <input type="date" className="form-input" value={startDate} onChange={(e) => setQuery({ startDate: e.target.value, page: 1 })} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.date_to')}</label>
+            <input type="date" className="form-input" value={endDate} onChange={(e) => setQuery({ endDate: e.target.value, page: 1 })} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.sort_by')}</label>
+            <select
+              className="form-select"
+              value={sortPreset}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'created_asc') setQuery({ sortBy: 'createdAt', sortOrder: 'asc', page: 1 });
+                else if (v === 'scheduled_asc') setQuery({ sortBy: 'scheduledTime', sortOrder: 'asc', page: 1 });
+                else if (v === 'scheduled_desc') setQuery({ sortBy: 'scheduledTime', sortOrder: 'desc', page: 1 });
+                else if (v === 'price_asc') setQuery({ sortBy: 'price', sortOrder: 'asc', page: 1 });
+                else if (v === 'price_desc') setQuery({ sortBy: 'price', sortOrder: 'desc', page: 1 });
+                else if (v === 'status_asc') setQuery({ sortBy: 'status', sortOrder: 'asc', page: 1 });
+                else if (v === 'status_desc') setQuery({ sortBy: 'status', sortOrder: 'desc', page: 1 });
+                else setQuery({ sortBy: 'createdAt', sortOrder: 'desc', page: 1 });
+              }}
+            >
+              <option value="created_desc">{t('common.sort.newest')}</option>
+              <option value="created_asc">{t('common.sort.oldest')}</option>
+              <option value="scheduled_desc">{t('trips.modal.time_label')} (desc)</option>
+              <option value="scheduled_asc">{t('trips.modal.time_label')} (asc)</option>
+              <option value="price_desc">{t('common.sort.amount_desc')}</option>
+              <option value="price_asc">{t('common.sort.amount_asc')}</option>
+              <option value="status_desc">{t('common.sort.status_desc')}</option>
+              <option value="status_asc">{t('common.sort.status_asc')}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-sm mt-md" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={clearFilters} disabled={!(status || search || startDate || endDate || sortBy || sortOrder)}>
+            {t('common.filters.clear')}
+          </button>
+        </div>
       </div>
 
       {!loading && (
@@ -553,7 +687,9 @@ export default function TripsPage() {
       )}
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError message={loadError} onRetry={() => setRefresh((r) => r + 1)} onClearFilters={clearFilters} />
       ) : (
         <div className="table-container">
           <table>
@@ -606,15 +742,13 @@ export default function TripsPage() {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
-          <span className="text-sm text-muted">
-            {t('vehicles.pagination.info', { current: page, total: pagination.totalPages })}
-          </span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(p) => setQuery({ page: p })}
+        pageSize={limit}
+        onPageSizeChange={(size) => setQuery({ limit: size, page: 1 })}
+      />
 
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>

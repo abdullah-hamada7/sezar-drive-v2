@@ -1,26 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import violationService from '../../services/violation.service';
 import { useContext } from 'react';
 import { ToastContext } from '../../contexts/toastContext';
 import DetailModal from '../../components/common/DetailModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import { Plus, Edit, Trash2, Eye, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, X, Download } from 'lucide-react';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
+import { downloadApiFile } from '../../utils/download';
 
 export default function ViolationsPage() {
   const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const search = useMemo(() => String(searchParams.get('search') || ''), [searchParams]);
+  const driverId = useMemo(() => String(searchParams.get('driverId') || ''), [searchParams]);
+  const vehicleId = useMemo(() => String(searchParams.get('vehicleId') || ''), [searchParams]);
+  const startDate = useMemo(() => String(searchParams.get('startDate') || ''), [searchParams]);
+  const endDate = useMemo(() => String(searchParams.get('endDate') || ''), [searchParams]);
+  const sortBy = useMemo(() => String(searchParams.get('sortBy') || 'date'), [searchParams]);
+  const sortOrder = useMemo(() => String(searchParams.get('sortOrder') || 'desc'), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '' || v === false) next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [violations, setViolations] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [drivers, setDrivers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [selected, setSelected] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [refresh, setRefresh] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   const [formData, setFormData] = useState({
     driverId: '',
@@ -49,16 +76,56 @@ export default function ViolationsPage() {
   useEffect(() => {
     async function load() {
       setLoading(true);
+      setLoadError('');
       try {
-        const params = { page, limit: 15, ...(search && { search }) };
+        const params = {
+          page,
+          limit,
+          ...(search && { search }),
+          ...(driverId && { driverId }),
+          ...(vehicleId && { vehicleId }),
+          ...(startDate && { startDate }),
+          ...(endDate && { endDate }),
+          ...(sortBy && { sortBy }),
+          ...(sortOrder && { sortOrder }),
+        };
         const res = await violationService.getViolations(params);
         setViolations(res.data?.data || []);
         setPagination(res.data?.pagination || {});
-      } catch (err) { console.error(err); }
+      } catch (err) {
+        console.error(err);
+        const msg = err?.message || t('common.error');
+        setLoadError(msg);
+        addToast(msg, 'error');
+      }
       finally { setLoading(false); }
     }
     load();
-  }, [page, search, refresh]);
+  }, [addToast, driverId, endDate, limit, page, refresh, search, sortBy, sortOrder, startDate, t, vehicleId]);
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({
+        search,
+        driverId,
+        vehicleId,
+        startDate,
+        endDate,
+        sortBy,
+        sortOrder,
+      });
+      await downloadApiFile({
+        endpoint: `/violations/export?${params.toString()}`,
+        filename: `violations-${new Date().toISOString().slice(0, 10)}.csv`,
+      });
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -116,37 +183,92 @@ export default function ViolationsPage() {
           <h1 className="page-title">{t('violations.title')}</h1>
           <p className="page-subtitle">{t('violations.subtitle')}</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setIsEditing(true); setSelected(null); setFormData({
-          driverId: '',
-          vehicleId: '',
-          date: new Date().toISOString().split('T')[0],
-          time: '',
-          location: '',
-          violationNumber: '',
-          fineAmount: '',
-        }); }}>
-          <Plus size={18} /> {t('violations.add')}
-        </button>
+        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
+          </button>
+          <button className="btn btn-primary" onClick={() => { setIsEditing(true); setSelected(null); setFormData({
+            driverId: '',
+            vehicleId: '',
+            date: new Date().toISOString().split('T')[0],
+            time: '',
+            location: '',
+            violationNumber: '',
+            fineAmount: '',
+          }); }}>
+            <Plus size={18} /> {t('violations.add')}
+          </button>
+        </div>
       </div>
 
       <div className="card mb-md" style={{ padding: '0.75rem var(--space-md)' }}>
-        <div className="flex gap-sm" style={{ alignItems: 'end' }}>
-          <div className="form-group" style={{ marginBottom: 0, flex: 1, maxWidth: '300px' }}>
+        <div className="grid grid-4 gap-md" style={{ alignItems: 'end' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label">{t('violations.search')}</label>
-            <div className="flex gap-sm">
-              <input
-                className="form-input"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder={t('violations.search_placeholder')}
-              />
-            </div>
+            <input
+              className="form-input"
+              value={search}
+              onChange={(e) => setQuery({ search: e.target.value, page: 1 })}
+              placeholder={t('violations.search_placeholder')}
+            />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('violations.driver')}</label>
+            <select className="form-select" value={driverId} onChange={(e) => setQuery({ driverId: e.target.value, page: 1 })}>
+              <option value="">{t('common.select')}...</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('violations.vehicle')}</label>
+            <select className="form-select" value={vehicleId} onChange={(e) => setQuery({ vehicleId: e.target.value, page: 1 })}>
+              <option value="">{t('common.select')}...</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>{v.plateNumber}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setQuery({ search: '', driverId: '', vehicleId: '', startDate: '', endDate: '', page: 1 })}
+              disabled={!search && !driverId && !vehicleId && !startDate && !endDate}
+            >
+              {t('common.filters.clear')}
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-4 gap-md mt-md" style={{ alignItems: 'end' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('reports.filter.start')}</label>
+            <input type="date" className="form-input" value={startDate} onChange={(e) => setQuery({ startDate: e.target.value, page: 1 })} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('reports.filter.end')}</label>
+            <input type="date" className="form-input" value={endDate} onChange={(e) => setQuery({ endDate: e.target.value, page: 1 })} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.sort_by')}</label>
+            <select className="form-select" value={`${sortBy}:${sortOrder}`} onChange={(e) => {
+              const [sb, so] = String(e.target.value).split(':');
+              setQuery({ sortBy: sb, sortOrder: so, page: 1 });
+            }}>
+              <option value="date:desc">{t('violations.date')} ↓</option>
+              <option value="date:asc">{t('violations.date')} ↑</option>
+              <option value="fineAmount:desc">{t('violations.fine_amount')} ↓</option>
+              <option value="fineAmount:asc">{t('violations.fine_amount')} ↑</option>
+            </select>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError message={loadError} onRetry={() => setQuery({ page })} onClearFilters={() => setQuery({ search: '', driverId: '', vehicleId: '', startDate: '', endDate: '', page: 1 })} />
       ) : (
         <div className="table-container">
           <div className="table-responsive">
@@ -198,13 +320,13 @@ export default function ViolationsPage() {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('common.prev')}</button>
-          <span className="text-sm text-muted">{page} / {pagination.totalPages}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('common.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(nextPage) => setQuery({ page: nextPage })}
+        pageSize={limit}
+        onPageSizeChange={(nextLimit) => setQuery({ limit: nextLimit, page: 1 })}
+      />
 
       {isEditing && (
         <div className="modal-overlay">

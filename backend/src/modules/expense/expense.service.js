@@ -101,7 +101,24 @@ async function createExpense(data, driverId, ipAddress) {
 /**
  * Get expenses with filters.
  */
-async function getExpenses({ page = 1, limit = 20, driverId, shiftId, tripId, status, tripSearch }) {
+async function getExpenses({
+  page = 1,
+  limit = 20,
+  driverId,
+  shiftId,
+  tripId,
+  status,
+  tripSearch,
+  categoryId,
+  startDate,
+  endDate,
+  minAmount,
+  maxAmount,
+  hasReceipt,
+  sortBy,
+  sortOrder,
+  expenseId,
+}) {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
@@ -117,17 +134,48 @@ async function getExpenses({ page = 1, limit = 20, driverId, shiftId, tripId, st
     ]
     : [];
 
+  const createdAt = {};
+  if (startDate) {
+    const d = new Date(startDate);
+    if (!Number.isNaN(d.getTime())) createdAt.gte = d;
+  }
+  if (endDate) {
+    const d = new Date(endDate);
+    if (!Number.isNaN(d.getTime())) createdAt.lte = d;
+  }
+
+  const amount = {};
+  if (minAmount !== undefined && minAmount !== null && minAmount !== '') {
+    const n = Number(minAmount);
+    if (Number.isFinite(n)) amount.gte = n;
+  }
+  if (maxAmount !== undefined && maxAmount !== null && maxAmount !== '') {
+    const n = Number(maxAmount);
+    if (Number.isFinite(n)) amount.lte = n;
+  }
+
   const where = {
+    ...(expenseId && { id: expenseId }),
     ...(driverId && { driverId }),
     ...(shiftId && { shiftId }),
     ...(tripId && { tripId }),
+    ...(categoryId && { categoryId }),
     ...(status && { status }),
+    ...(Object.keys(createdAt).length ? { createdAt } : {}),
+    ...(Object.keys(amount).length ? { amount } : {}),
+    ...(hasReceipt === true || hasReceipt === 'true' ? { receiptUrl: { not: null } } : {}),
+    ...(hasReceipt === false || hasReceipt === 'false' ? { receiptUrl: null } : {}),
     ...(tripSearch && {
       trip: {
         OR: tripSearchFilters,
       },
     }),
   };
+
+  const SORT_ALLOWLIST = new Set(['createdAt', 'amount', 'status']);
+  const normalizedSortBy = SORT_ALLOWLIST.has(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const normalizedSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy = { [normalizedSortBy]: normalizedSortOrder };
 
   const [expenses, total] = await Promise.all([
     prisma.expense.findMany({
@@ -138,7 +186,7 @@ async function getExpenses({ page = 1, limit = 20, driverId, shiftId, tripId, st
         driver: { select: { id: true, name: true } },
         reviewer: { select: { id: true, name: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.expense.count({ where }),
   ]);
@@ -146,6 +194,82 @@ async function getExpenses({ page = 1, limit = 20, driverId, shiftId, tripId, st
   const signedExpenses = await FileService.signExpenses(expenses);
 
   return { expenses: signedExpenses, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) };
+}
+
+/**
+ * Admin bulk approves or rejects expenses.
+ */
+async function reviewExpensesBulk({ expenseIds, action, rejectionReason }, adminId, ipAddress) {
+  const ids = Array.isArray(expenseIds) ? expenseIds.filter(Boolean) : [];
+  if (ids.length === 0) {
+    throw new ValidationError('No expenses selected', [{ path: 'expenseIds', msg: 'REQUIRED' }]);
+  }
+  if (ids.length > 200) {
+    throw new ValidationError('Too many expenses selected', [{ path: 'expenseIds', msg: 'TOO_MANY' }]);
+  }
+
+  const status = (action === 'approve' || action === 'approved') ? 'approved' : 'rejected';
+  if (status === 'rejected' && !rejectionReason) {
+    throw new ValidationError('Rejection reason is required', [{ path: 'rejectionReason', msg: 'REQUIRED' }]);
+  }
+
+  const expenses = await prisma.expense.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, status: true, driverId: true },
+  });
+
+  const pending = expenses.filter((e) => e.status === 'pending');
+  const pendingIds = pending.map((e) => e.id);
+
+  if (pendingIds.length === 0) {
+    return { updated: 0, skipped: ids };
+  }
+
+  await prisma.expense.updateMany({
+    where: { id: { in: pendingIds } },
+    data: {
+      status,
+      reviewedBy: adminId,
+      reviewedAt: new Date(),
+      rejectionReason: status === 'rejected' ? rejectionReason : null,
+    },
+  });
+
+  for (const id of pendingIds) {
+    await AuditService.log({
+      actorId: adminId,
+      actionType: `expense.${status}`,
+      entityType: 'expense',
+      entityId: id,
+      previousState: { status: 'pending' },
+      newState: { status, rejectionReason: status === 'rejected' ? rejectionReason : null },
+      ipAddress,
+    });
+  }
+
+  // Notifications: best-effort, batched by driver.
+  const byDriver = new Map();
+  for (const e of pending) {
+    if (!byDriver.has(e.driverId)) byDriver.set(e.driverId, []);
+    byDriver.get(e.driverId).push(e.id);
+  }
+  for (const [driverId, updatedIds] of byDriver.entries()) {
+    notifyDriver(driverId, {
+      type: 'expense_reviewed',
+      expenseIds: updatedIds,
+      status,
+      reason: status === 'rejected' ? rejectionReason : null,
+    });
+  }
+
+  notifyAdmins(
+    'expense_reviewed',
+    'Expense Review Updated',
+    `${pendingIds.length} expense(s) were ${status}.`,
+    { expenseIds: pendingIds, status, actorId: adminId },
+  );
+
+  return { updated: pendingIds.length, skipped: ids.filter((id) => !pendingIds.includes(id)) };
 }
 
 /**
@@ -294,5 +418,6 @@ async function updateCategory(id, data, adminId, ipAddress) {
 
 module.exports = {
   createExpense, getExpenses, updateExpense, reviewExpense,
+  reviewExpensesBulk,
   getCategories, createCategory, updateCategory,
 };

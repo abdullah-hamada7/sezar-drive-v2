@@ -99,28 +99,48 @@ async function createVehicle(data, adminId, ipAddress) {
 /**
  * Get all vehicles with filters.
  */
-async function getVehicles({ page = 1, limit = 20, status, search, availableOnly }) {
+async function getVehicles({ page = 1, limit = 20, status, search, availableOnly, startDate, endDate, sortBy, sortOrder }) {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
 
   const isAvailableOnly = availableOnly === 'true' || availableOnly === true;
 
+  const q = String(search || '').trim();
+  const isUuid = q && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(q);
+
+  const createdAt = {};
+  if (startDate) {
+    const d = new Date(startDate);
+    if (!Number.isNaN(d.getTime())) createdAt.gte = d;
+  }
+  if (endDate) {
+    const d = new Date(endDate);
+    if (!Number.isNaN(d.getTime())) createdAt.lte = d;
+  }
+
   const where = {
     isActive: true,
     ...(status && { status }),
     ...(isAvailableOnly && { status: 'available' }),
-    ...(search && {
+    ...(q && {
       OR: [
-        { plateNumber: { contains: search, mode: 'insensitive' } },
-        { model: { contains: search, mode: 'insensitive' } },
-        { qrCode: { contains: search, mode: 'insensitive' } },
+        { plateNumber: { contains: q, mode: 'insensitive' } },
+        { model: { contains: q, mode: 'insensitive' } },
+        { qrCode: { contains: q, mode: 'insensitive' } },
+        ...(isUuid ? [{ id: { equals: q } }] : []),
       ],
     }),
+    ...(Object.keys(createdAt).length ? { createdAt } : {}),
   };
 
+  const SORT_ALLOWLIST = new Set(['createdAt', 'plateNumber', 'status']);
+  const normalizedSortBy = SORT_ALLOWLIST.has(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const normalizedSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy = { [normalizedSortBy]: normalizedSortOrder };
+
   const [vehicles, total] = await Promise.all([
-    prisma.vehicle.findMany({ where, skip, take: limitNum, orderBy: { createdAt: 'desc' } }),
+    prisma.vehicle.findMany({ where, skip, take: limitNum, orderBy }),
     prisma.vehicle.count({ where }),
   ]);
 

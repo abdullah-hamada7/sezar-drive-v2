@@ -5,6 +5,8 @@ import { ToastContext } from '../../contexts/toastContext';
 import { Trash2, XCircle, Search, ShieldAlert, ShieldCheck, Plus, RefreshCw } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 import { EMAIL_REGEX, EGYPT_PHONE_REGEX } from '../../utils/validation';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
 
 export default function AdminsPage() {
   const { t } = useTranslation();
@@ -12,6 +14,7 @@ export default function AdminsPage() {
 
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', temporaryPassword: '', adminRole: 'ADMIN' });
@@ -27,6 +30,7 @@ export default function AdminsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const qs = new URLSearchParams({ page, limit: 10 });
       if (searchTerm) qs.append('search', searchTerm);
@@ -37,7 +41,9 @@ export default function AdminsPage() {
       setAdmins(res.data.admins || []);
       setPagination(res.data);
     } catch (err) {
-      addToast(err.message || t('common.error'), 'error');
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -154,7 +160,9 @@ export default function AdminsPage() {
       </div>
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError message={loadError} onRetry={load} onClearFilters={() => { setPage(1); setSearchInput(''); setSearchTerm(''); }} />
       ) : (
         <div className="table-container">
           <table>
@@ -213,15 +221,11 @@ export default function AdminsPage() {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('common.pagination.prev')}</button>
-          <span className="text-sm text-muted">
-            {t('common.pagination.info', { current: page, total: pagination.totalPages })}
-          </span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('common.pagination.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(p) => setPage(p)}
+      />
 
       {showModal && (
         <div className="modal-overlay" onClick={closeModal}>

@@ -3,6 +3,7 @@ const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const tripService = require('./trip.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
+const { sendCsv } = require('../../utils/csv');
 const { requireIdempotencyKey } = require('../../middleware/idempotency');
 const { ValidationError } = require('../../errors');
 
@@ -350,6 +351,12 @@ router.get(
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('status').optional().isIn(['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
     query('driverId').optional().isUUID(),
+    query('date').optional().isISO8601(),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('search').optional().isString().trim().isLength({ min: 1, max: 200 }),
+    query('sortBy').optional().isIn(['createdAt', 'scheduledTime', 'price', 'status']),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req, res, next) => {
     try {
@@ -362,6 +369,42 @@ router.get(
       res.json(result);
     } catch (err) { next(err); }
   }
+);
+
+// ─── GET /api/v1/trips/export (CSV) ────────────────
+router.get(
+  '/export',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  async (req, res, next) => {
+    try {
+      const query = {
+        ...req.query,
+        page: 1,
+        limit: Math.min(Math.max(parseInt(req.query.limit) || 5000, 1), 10000),
+      };
+      const result = await tripService.getTrips(query);
+
+      sendCsv(res, {
+        filename: `trips-${new Date().toISOString().slice(0, 10)}.csv`,
+        columns: [
+          { header: 'id', value: (t) => t.id },
+          { header: 'created_at', value: (t) => t.createdAt?.toISOString?.() ?? t.createdAt },
+          { header: 'scheduled_time', value: (t) => (t.scheduledTime?.toISOString?.() ?? t.scheduledTime) || '' },
+          { header: 'status', value: (t) => t.status },
+          { header: 'driver', value: (t) => t.driver?.name || '' },
+          { header: 'vehicle', value: (t) => t.vehicle?.plateNumber || '' },
+          { header: 'pickup', value: (t) => t.pickupLocation || '' },
+          { header: 'dropoff', value: (t) => t.dropoffLocation || '' },
+          { header: 'price', value: (t) => t.price ?? '' },
+          { header: 'currency', value: () => 'EGP' },
+          { header: 'payment_method', value: (t) => t.paymentMethod || '' },
+        ],
+        rows: result.trips || [],
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 );
 
 // ─── GET /api/v1/trips/:id ────────────────────────

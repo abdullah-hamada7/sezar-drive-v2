@@ -1,40 +1,67 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { auditService as api } from '../../services/audit.service';
-import { Shield, Search, Filter, Eye, X, Calendar, User, Tag } from 'lucide-react';
+import { Eye, X, Calendar, User, Tag, Download, ExternalLink, Search } from 'lucide-react';
+import { ToastContext } from '../../contexts/toastContext';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
+import { downloadApiFile } from '../../utils/download';
 
 export default function AuditPage() {
   const { t, i18n } = useTranslation();
+  const { addToast } = useContext(ToastContext);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '25', 10) || 25;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const entityType = useMemo(() => String(searchParams.get('entityType') || ''), [searchParams]);
+  const actionType = useMemo(() => String(searchParams.get('actionType') || ''), [searchParams]);
+  const startDate = useMemo(() => String(searchParams.get('startDate') || ''), [searchParams]);
+  const endDate = useMemo(() => String(searchParams.get('endDate') || ''), [searchParams]);
+  const actorSearch = useMemo(() => String(searchParams.get('actorSearch') || ''), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [logs, setLogs] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState(null);
-
-  // Filters
-  const [filters, setFilters] = useState({
-    entityType: '',
-    actionType: '',
-    startDate: '',
-    endDate: '',
-    actorSearch: ''
-  });
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const params = new URLSearchParams({ page, limit: 25 });
-      if (filters.entityType) params.set('entityType', filters.entityType);
-      if (filters.actionType) params.set('actionType', filters.actionType);
-      if (filters.startDate) params.set('startDate', filters.startDate);
-      if (filters.endDate) params.set('endDate', filters.endDate);
-      if (filters.actorSearch) params.set('actorSearch', filters.actorSearch);
+      const params = new URLSearchParams({ page, limit });
+      if (entityType) params.set('entityType', entityType);
+      if (actionType) params.set('actionType', actionType);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (actorSearch) params.set('actorSearch', actorSearch);
       const res = await api.getAuditLogs(params.toString());
       setLogs(res.data.logs || []);
       setPagination(res.data || {});
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
+    }
     finally { setLoading(false); }
-  }, [page, filters]);
+  }, [actionType, actorSearch, addToast, endDate, entityType, limit, page, startDate, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -68,8 +95,43 @@ export default function AuditPage() {
 
   function handleFilterChange(e) {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-    setPage(1);
+    setQuery({ [name]: value, page: 1 });
+  }
+
+  function clearFilters() {
+    setQuery({ entityType: '', actionType: '', startDate: '', endDate: '', actorSearch: '', page: 1 });
+  }
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (entityType) params.set('entityType', entityType);
+      if (actionType) params.set('actionType', actionType);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (actorSearch) params.set('actorSearch', actorSearch);
+      await downloadApiFile({
+        endpoint: `/audit-logs/export?${params.toString()}`,
+        filename: `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`,
+      });
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function openEntity(entity, id) {
+    const e = String(entity || '').toLowerCase();
+    const entityId = String(id || '').trim();
+    if (!entityId) return;
+    if (e === 'trip') navigate(`/admin/trips?tripId=${encodeURIComponent(entityId)}`);
+    else if (e === 'driver') navigate(`/admin/drivers?search=${encodeURIComponent(entityId)}`);
+    else if (e === 'vehicle') navigate(`/admin/vehicles?search=${encodeURIComponent(entityId)}`);
+    else if (e === 'expense') navigate(`/admin/expenses?expenseId=${encodeURIComponent(entityId)}`);
+    else if (e === 'damage_report') navigate(`/admin/damage-reports?search=${encodeURIComponent(entityId)}`);
   }
 
   function formatDate(d) {
@@ -99,6 +161,11 @@ export default function AuditPage() {
           <h1 className="page-title">{t('audit.title')}</h1>
           <p className="page-subtitle">{t('audit.subtitle')}</p>
         </div>
+        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -106,7 +173,7 @@ export default function AuditPage() {
         <div className="grid grid-4" style={{ gap: '1rem' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label flex items-center gap-sm"><Tag size={14} /> {t('audit.filter.entity_type')}</label>
-            <select className="form-select" name="entityType" value={filters.entityType} onChange={handleFilterChange}>
+            <select className="form-select" name="entityType" value={entityType} onChange={handleFilterChange}>
               <option value="">{t('audit.filter.all_entities')}</option>
               {entities.filter(Boolean).map(e => (
                 <option key={e} value={e}>{t(`audit.entity.${e}`, e.toUpperCase())}</option>
@@ -115,26 +182,23 @@ export default function AuditPage() {
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label flex items-center gap-sm"><Search size={14} /> {t('audit.filter.action_type')}</label>
-            <input type="text" className="form-input" name="actionType" placeholder={t('audit.filter.action_ph')} value={filters.actionType} onChange={handleFilterChange} />
+            <input type="text" className="form-input" name="actionType" placeholder={t('audit.filter.action_ph')} value={actionType} onChange={handleFilterChange} />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label flex items-center gap-sm"><Calendar size={14} /> {t('audit.filter.from')}</label>
-            <input type="date" className="form-input" name="startDate" value={filters.startDate} onChange={handleFilterChange} />
+            <input type="date" className="form-input" name="startDate" value={startDate} onChange={handleFilterChange} />
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label className="form-label flex items-center gap-sm"><Calendar size={14} /> {t('audit.filter.to')}</label>
-            <input type="date" className="form-input" name="endDate" value={filters.endDate} onChange={handleFilterChange} />
+            <input type="date" className="form-input" name="endDate" value={endDate} onChange={handleFilterChange} />
           </div>
         </div>
         <div className="flex gap-sm mt-md">
           <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
             <label className="form-label flex items-center gap-sm"><User size={14} /> {t('audit.filter.actor_search')}</label>
-            <input type="text" className="form-input" name="actorSearch" placeholder={t('audit.filter.actor_ph')} value={filters.actorSearch} onChange={handleFilterChange} />
+            <input type="text" className="form-input" name="actorSearch" placeholder={t('audit.filter.actor_ph')} value={actorSearch} onChange={handleFilterChange} />
           </div>
-          <button className="btn btn-secondary" style={{ alignSelf: 'flex-end' }} onClick={() => {
-            setFilters({ entityType: '', actionType: '', startDate: '', endDate: '', actorSearch: '' });
-            setPage(1);
-          }}>{t('audit.filter.clear_btn')}</button>
+          <button className="btn btn-secondary" style={{ alignSelf: 'flex-end' }} onClick={clearFilters}>{t('audit.filter.clear_btn')}</button>
         </div>
       </div>
 
@@ -150,7 +214,9 @@ export default function AuditPage() {
       )}
 
       {loading ? (
-        <div className="loading-page" style={{ minHeight: '300px' }}><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError message={loadError} onRetry={load} onClearFilters={clearFilters} />
       ) : (
         <div className="table-container">
           <table>
@@ -191,7 +257,21 @@ export default function AuditPage() {
                     </span>
                   </td>
                   <td className="text-sm">{t(`audit.entity.${l.entityType?.toLowerCase()}`, l.entityType)}</td>
-                  <td className="text-sm text-muted" style={{ fontFamily: 'monospace' }} dir="ltr">{l.entityId?.slice(0, 8)}...</td>
+                  <td className="text-sm text-muted" style={{ fontFamily: 'monospace' }} dir="ltr">
+                    <div className="flex items-center gap-sm">
+                      <span>{l.entityId ? (l.entityId.length > 10 ? `${l.entityId.slice(0, 8)}...` : l.entityId) : '—'}</span>
+                      {l.entityId && (
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          title={t('common.view')}
+                          onClick={() => openEntity(l.entityType, l.entityId)}
+                        >
+                          <ExternalLink size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <button className="btn-icon" title={t('audit.table.details')} onClick={() => setSelected(l)}>
                       <Eye size={16} />
@@ -204,26 +284,13 @@ export default function AuditPage() {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination" style={{ marginTop: '1.5rem' }}>
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
-          <div className="flex items-center gap-sm">
-            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-              const p = i + 1;
-              return (
-                <button key={p} className={page === p ? 'active' : ''} onClick={() => setPage(p)}>{p}</button>
-              );
-            })}
-            {pagination.totalPages > 5 && <span className="text-muted">...</span>}
-            {pagination.totalPages > 5 && (
-              <button className={page === pagination.totalPages ? 'active' : ''} onClick={() => setPage(pagination.totalPages)}>
-                {pagination.totalPages}
-              </button>
-            )}
-          </div>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(p) => setQuery({ page: p })}
+        pageSize={limit}
+        onPageSizeChange={(size) => setQuery({ limit: size, page: 1 })}
+      />
 
       {/* Details Modal */}
       {selected && (
@@ -246,6 +313,11 @@ export default function AuditPage() {
                 <div className="text-sm">
                   {t(`audit.entity.${selected.entityType?.toLowerCase()}`, selected.entityType)}
                   <span className="text-xs text-muted" style={{ marginLeft: '0.5rem' }}>({selected.entityId})</span>
+                </div>
+                <div style={{ marginTop: '0.5rem' }}>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => openEntity(selected.entityType, selected.entityId)}>
+                    <ExternalLink size={14} /> {t('common.view')}
+                  </button>
                 </div>
               </div>
               <div className="card" style={{ padding: '0.75rem 1rem' }}>

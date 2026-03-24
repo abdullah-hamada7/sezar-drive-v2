@@ -8,6 +8,7 @@ const { EMAIL_REGEX, EGYPT_PHONE_REGEX } = require('../../utils/validation');
 const { createUploader } = require('../../middleware/upload');
 const fileService = require('../../services/FileService');
 const upload = createUploader();
+const { sendCsv } = require('../../utils/csv');
 
 const router = express.Router();
 
@@ -91,6 +92,10 @@ router.get(
     query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
     query('search').optional().trim().escape(),
     query('status').optional().isIn(['active', 'inactive', 'all']),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('sortBy').optional().isIn(['createdAt', 'name', 'email']),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
   ],
   async (req, res, next) => {
     try {
@@ -188,6 +193,38 @@ router.delete(
       res.json(result);
     } catch (err) { next(err); }
   }
+);
+
+// ─── GET /api/v1/drivers/export (CSV) ──────────────
+router.get(
+  '/export',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  async (req, res, next) => {
+    try {
+      const query = {
+        ...req.query,
+        page: 1,
+        limit: Math.min(Math.max(parseInt(req.query.limit) || 5000, 1), 10000),
+      };
+      const result = await driverService.getDrivers(query);
+      sendCsv(res, {
+        filename: `drivers-${new Date().toISOString().slice(0, 10)}.csv`,
+        columns: [
+          { header: 'id', value: (d) => d.id },
+          { header: 'name', value: (d) => d.name },
+          { header: 'email', value: (d) => d.email },
+          { header: 'phone', value: (d) => d.phone },
+          { header: 'license_number', value: (d) => d.licenseNumber || '' },
+          { header: 'active', value: (d) => (d.isActive ? 'true' : 'false') },
+          { header: 'identity_verified', value: (d) => (d.identityVerified ? 'true' : 'false') },
+          { header: 'created_at', value: (d) => d.createdAt?.toISOString?.() ?? d.createdAt },
+        ],
+        rows: result.drivers || [],
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
 );
 
 module.exports = router;

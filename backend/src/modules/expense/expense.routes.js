@@ -6,6 +6,7 @@ const { authenticate, enforcePasswordChanged, authorize } = require('../../middl
 const { createUploader } = require('../../middleware/upload');
 const fileService = require('../../services/FileService');
 const { ValidationError } = require('../../errors');
+const { sendCsv } = require('../../utils/csv');
 
 const router = express.Router();
 const receiptUpload = createUploader();
@@ -61,6 +62,16 @@ router.get(
     query('driverId').optional().isUUID(),
     query('shiftId').optional().isUUID(),
     query('tripId').optional().isUUID(),
+    query('categoryId').optional().isUUID(),
+    query('tripSearch').optional().isString().trim().isLength({ min: 1, max: 200 }),
+    query('startDate').optional().isISO8601(),
+    query('endDate').optional().isISO8601(),
+    query('minAmount').optional().isFloat({ min: 0 }).toFloat(),
+    query('maxAmount').optional().isFloat({ min: 0 }).toFloat(),
+    query('hasReceipt').optional().isBoolean().toBoolean(),
+    query('sortBy').optional().isIn(['createdAt', 'amount', 'status']),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
+    query('expenseId').optional().isUUID(),
   ],
   async (req, res, next) => {
     try {
@@ -70,6 +81,67 @@ router.get(
       res.json(result);
     } catch (err) { next(err); }
   }
+);
+
+// ─── GET /api/v1/expenses/export (CSV) ─────────────
+router.get(
+  '/export',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  async (req, res, next) => {
+    try {
+      const query = {
+        ...req.query,
+        page: 1,
+        limit: Math.min(Math.max(parseInt(req.query.limit) || 5000, 1), 10000),
+      };
+      const result = await expenseService.getExpenses(query);
+
+      sendCsv(res, {
+        filename: `expenses-${new Date().toISOString().slice(0, 10)}.csv`,
+        columns: [
+          { header: 'id', value: (e) => e.id },
+          { header: 'created_at', value: (e) => e.createdAt?.toISOString?.() ?? e.createdAt },
+          { header: 'status', value: (e) => e.status },
+          { header: 'amount', value: (e) => e.amount },
+          { header: 'currency', value: () => 'EGP' },
+          { header: 'driver', value: (e) => e.driver?.name || '' },
+          { header: 'category', value: (e) => e.category?.name || '' },
+          { header: 'trip_id', value: (e) => e.trip?.id || '' },
+          { header: 'pickup', value: (e) => e.trip?.pickupLocation || '' },
+          { header: 'dropoff', value: (e) => e.trip?.dropoffLocation || '' },
+          { header: 'description', value: (e) => e.description || '' },
+          { header: 'receipt', value: (e) => (e.receiptUrl ? 'yes' : 'no') },
+          { header: 'reviewer', value: (e) => e.reviewer?.name || '' },
+          { header: 'reviewed_at', value: (e) => (e.reviewedAt?.toISOString?.() ?? e.reviewedAt) || '' },
+          { header: 'rejection_reason', value: (e) => e.rejectionReason || '' },
+        ],
+        rows: result.expenses || [],
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ─── PUT /api/v1/expenses/review-bulk ──────────────
+router.put(
+  '/review-bulk',
+  authenticate, enforcePasswordChanged, authorize('admin'),
+  [
+    body('expenseIds').isArray({ min: 1, max: 200 }),
+    body('expenseIds.*').isUUID(),
+    body('action').isIn(['approve', 'reject', 'approved', 'rejected']),
+    body('rejectionReason').optional({ nullable: true }).isString().trim().isLength({ max: 500 }).escape(),
+  ],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const result = await expenseService.reviewExpensesBulk(req.body, req.user.id, req.clientIp);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
 );
 
 // ─── PUT /api/v1/expenses/:id ─────────────────────

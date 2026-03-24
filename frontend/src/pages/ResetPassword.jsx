@@ -71,6 +71,13 @@ export default function ResetPasswordPage() {
   if (validating) {
     return (
       <div className="login-page">
+        <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }}>
+          <LanguageSwitcher style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }} />
+        </div>
+        <div className="login-bg">
+          <div className="login-bg-shape shape-1"></div>
+          <div className="login-bg-shape shape-2"></div>
+        </div>
         <div className="login-card" style={{ textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '2rem auto' }}></div>
           <p>{t('common.loading')}</p>
@@ -82,6 +89,13 @@ export default function ResetPasswordPage() {
   if (!isValid && !success) {
     return (
       <div className="login-page">
+        <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 10 }}>
+          <LanguageSwitcher style={{ background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }} />
+        </div>
+        <div className="login-bg">
+          <div className="login-bg-shape shape-1"></div>
+          <div className="login-bg-shape shape-2"></div>
+        </div>
         <div className="login-card" style={{ textAlign: 'center' }}>
           <div className="login-header">
             <div className="login-logo" style={{ background: 'var(--error-bg)', color: 'var(--error-text)' }}>
@@ -109,9 +123,6 @@ export default function ResetPasswordPage() {
       </div>
       <div className="login-card glass-card">
         <div className="login-header">
-          <div className="login-logo glow-effect">
-            <BrandIcon size={32} />
-          </div>
           <h1 className="login-title text-gradient">{t('common.brand')}</h1>
           <p className="login-subtitle">
             {success ? t('auth.reset_success') : t('auth.reset_password_title')}

@@ -6,6 +6,7 @@ import { tripService } from '../../services/trip.service';
 import { Calendar, Users, Car, DollarSign, Route, Wallet, Download } from 'lucide-react';
 import PromptModal from '../../components/common/PromptModal';
 import { ToastContext } from '../../contexts/toastContext';
+import AnimatedCounter from '../../components/common/AnimatedCounter';
 
 export default function DriverStatsPage() {
   const { t, i18n } = useTranslation();
@@ -347,7 +348,9 @@ export default function DriverStatsPage() {
             <Users size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{stats.length}</div>
+            <div className="stat-value text-gradient">
+              <AnimatedCounter value={stats.length} />
+            </div>
             <div className="stat-label">{t('driver_stats.active_drivers')}</div>
           </div>
         </div>
@@ -356,7 +359,9 @@ export default function DriverStatsPage() {
             <Route size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{totalTrips}</div>
+            <div className="stat-value text-gradient">
+              <AnimatedCounter value={totalTrips} />
+            </div>
             <div className="stat-label">{t('driver_stats.total_trips')}</div>
           </div>
         </div>
@@ -365,7 +370,9 @@ export default function DriverStatsPage() {
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value" style={{ color: 'var(--color-danger)' }}>{formatMoney(totalFines)}</div>
+            <div className="stat-value text-gradient" style={{ color: 'var(--color-danger)' }}>
+              <AnimatedCounter value={Number(totalFines) || 0} suffix={` ${t('common.currency')}`} />
+            </div>
             <div className="stat-label">{t('driver_stats.total_fines')}</div>
           </div>
         </div>
@@ -374,7 +381,9 @@ export default function DriverStatsPage() {
             <Car size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{formatMoney(totalNet)}</div>
+            <div className="stat-value text-gradient">
+              <AnimatedCounter value={Number(totalNet) || 0} suffix={` ${t('common.currency')}`} />
+            </div>
             <div className="stat-label">{t('driver_stats.net_revenue')}</div>
           </div>
         </div>
@@ -386,7 +395,9 @@ export default function DriverStatsPage() {
             <Wallet size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{formatMoney(totalCashToCollect)}</div>
+            <div className="stat-value text-gradient">
+              <AnimatedCounter value={Number(totalCashToCollect) || 0} suffix={` ${t('common.currency')}`} />
+            </div>
             <div className="stat-label">{t('driver_stats.cash_to_collect_total')}</div>
           </div>
         </div>
@@ -396,7 +407,9 @@ export default function DriverStatsPage() {
             <Wallet size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value" style={{ color: 'var(--color-success)' }}>{formatMoney(totalCashCollected)}</div>
+            <div className="stat-value text-gradient" style={{ color: 'var(--color-success)' }}>
+              <AnimatedCounter value={Number(totalCashCollected) || 0} suffix={` ${t('common.currency')}`} />
+            </div>
             <div className="stat-label">{t('driver_stats.cash_collected_total')}</div>
           </div>
         </div>
@@ -406,7 +419,9 @@ export default function DriverStatsPage() {
             <Wallet size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value" style={{ color: totalUncollectedCash > 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>{formatMoney(totalUncollectedCash)}</div>
+            <div className="stat-value text-gradient" style={{ color: totalUncollectedCash > 0 ? 'var(--color-danger)' : 'var(--color-text)' }}>
+              <AnimatedCounter value={Number(totalUncollectedCash) || 0} suffix={` ${t('common.currency')}`} />
+            </div>
             <div className="stat-label">{t('driver_stats.uncollected_cash_total')}</div>
           </div>
         </div>
@@ -416,7 +431,9 @@ export default function DriverStatsPage() {
             <Route size={24} />
           </div>
           <div className="stat-content">
-            <div className="stat-value">{totalUncollectedTrips}</div>
+            <div className="stat-value text-gradient">
+              <AnimatedCounter value={totalUncollectedTrips} />
+            </div>
             <div className="stat-label">{t('driver_stats.uncollected_cash_trips')}</div>
           </div>
         </div>

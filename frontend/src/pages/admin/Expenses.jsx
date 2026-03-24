@@ -1,53 +1,112 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { expenseService as api } from '../../services/expense.service';
-import { Receipt, CheckCircle, XCircle, Eye, X } from 'lucide-react';
-import { useContext } from 'react';
+import { Receipt, CheckCircle, XCircle, Eye, Download } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import PromptModal from '../../components/common/PromptModal';
 import DetailModal from '../../components/common/DetailModal';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
+import { downloadApiFile } from '../../utils/download';
 
 const STATUS_BADGES = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger' };
 
 export default function ExpensesPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const statusFilter = useMemo(() => String(searchParams.get('status') || ''), [searchParams]);
+  const tripSearch = useMemo(() => String(searchParams.get('tripSearch') || ''), [searchParams]);
+  const categoryId = useMemo(() => String(searchParams.get('categoryId') || ''), [searchParams]);
+  const startDate = useMemo(() => String(searchParams.get('startDate') || ''), [searchParams]);
+  const endDate = useMemo(() => String(searchParams.get('endDate') || ''), [searchParams]);
+  const minAmount = useMemo(() => String(searchParams.get('minAmount') || ''), [searchParams]);
+  const maxAmount = useMemo(() => String(searchParams.get('maxAmount') || ''), [searchParams]);
+  const hasReceipt = useMemo(() => String(searchParams.get('hasReceipt') || ''), [searchParams]);
+  const sortBy = useMemo(() => String(searchParams.get('sortBy') || ''), [searchParams]);
+  const sortOrder = useMemo(() => String(searchParams.get('sortOrder') || ''), [searchParams]);
+  const expenseId = useMemo(() => String(searchParams.get('expenseId') || ''), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [expenses, setExpenses] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState('');
-  const [tripSearch, setTripSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [selected, setSelected] = useState(null);
   const [refresh, setRefresh] = useState(0);
-  const [promptData, setPromptData] = useState({ isOpen: false, expenseId: null });
+  const [promptData, setPromptData] = useState({ isOpen: false, expenseId: null, expenseIds: null });
   const statusLabel = statusFilter ? t(`admin_expenses.filter.${statusFilter}`) : t('admin_expenses.filter.all');
-  const [debouncedTripSearch, setDebouncedTripSearch] = useState('');
 
-  useEffect(() => {
-    const handle = window.setTimeout(() => {
-      setDebouncedTripSearch(tripSearch.trim());
-      setPage(1);
-    }, 300);
+  const [categories, setCategories] = useState([]);
+  const [exporting, setExporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [reviewingIds, setReviewingIds] = useState(() => new Set());
 
-    return () => window.clearTimeout(handle);
-  }, [tripSearch]);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const params = new URLSearchParams({ page, limit });
+      if (statusFilter) params.set('status', statusFilter);
+      if (tripSearch.trim()) params.set('tripSearch', tripSearch.trim());
+      if (categoryId) params.set('categoryId', categoryId);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (minAmount) params.set('minAmount', minAmount);
+      if (maxAmount) params.set('maxAmount', maxAmount);
+      if (hasReceipt) params.set('hasReceipt', hasReceipt);
+      if (sortBy) params.set('sortBy', sortBy);
+      if (sortOrder) params.set('sortOrder', sortOrder);
+      if (expenseId) params.set('expenseId', expenseId);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams({ page, limit: 15 });
-        if (statusFilter) params.set('status', statusFilter);
-        if (debouncedTripSearch) params.set('tripSearch', debouncedTripSearch);
-        const res = await api.getExpenses(params.toString());
-        setExpenses(res.data.expenses || []);
-        setPagination(res.data || {});
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+      const res = await api.getExpenses(params.toString());
+      const rows = res.data.expenses || [];
+      setExpenses(rows);
+      setPagination(res.data || {});
+      const rowIds = new Set(rows.map((e) => String(e.id)));
+      setSelectedIds((prev) => prev.filter((id) => rowIds.has(String(id))));
+    } catch (err) {
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, [page, statusFilter, debouncedTripSearch, refresh]);
+  }, [addToast, categoryId, endDate, expenseId, hasReceipt, limit, maxAmount, minAmount, page, sortBy, sortOrder, startDate, statusFilter, t, tripSearch]);
+
+  useEffect(() => { load(); }, [load, refresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.getExpenseCategories();
+        if (cancelled) return;
+        const cats = Array.isArray(res?.data) ? res.data : (res?.data?.categories || res?.data?.data || []);
+        setCategories(Array.isArray(cats) ? cats : []);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => setRefresh(r => r + 1);
@@ -65,17 +124,123 @@ export default function ExpensesPage() {
 
   async function handleReview(id, action, reason = null) {
     if (action === 'rejected' && !reason) {
-      setPromptData({ isOpen: true, expenseId: id });
+      setPromptData({ isOpen: true, expenseId: id, expenseIds: null });
       return;
     }
+    setReviewingIds((prev) => new Set([...prev, String(id)]));
     try {
       await api.reviewExpense(id, { action, rejectionReason: reason });
       setRefresh(r => r + 1);
       setSelected(null);
-    } catch (err) { addToast(err.message || t('common.error'), 'error'); }
+    } catch (err) {
+      addToast(err.message || t('common.error'), 'error');
+    } finally {
+      setReviewingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(String(id));
+        return next;
+      });
+    }
   }
 
-  function formatDate(d) { return d ? new Date(d).toLocaleDateString() : '—'; }
+  async function handleBulkApprove() {
+    if (!selectedIds.length) return;
+    setBulkLoading(true);
+    try {
+      await api.reviewExpensesBulk({ expenseIds: selectedIds, action: 'approved' });
+      setSelectedIds([]);
+      setRefresh((r) => r + 1);
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  function handleBulkRejectOpen() {
+    if (!selectedIds.length) return;
+    setPromptData({ isOpen: true, expenseId: null, expenseIds: selectedIds });
+  }
+
+  async function handleBulkReject(reason) {
+    if (!selectedIds.length) return;
+    setBulkLoading(true);
+    try {
+      await api.reviewExpensesBulk({ expenseIds: selectedIds, action: 'rejected', rejectionReason: reason });
+      setSelectedIds([]);
+      setRefresh((r) => r + 1);
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set('status', statusFilter);
+      if (tripSearch.trim()) params.set('tripSearch', tripSearch.trim());
+      if (categoryId) params.set('categoryId', categoryId);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (minAmount) params.set('minAmount', minAmount);
+      if (maxAmount) params.set('maxAmount', maxAmount);
+      if (hasReceipt) params.set('hasReceipt', hasReceipt);
+      if (sortBy) params.set('sortBy', sortBy);
+      if (sortOrder) params.set('sortOrder', sortOrder);
+      if (expenseId) params.set('expenseId', expenseId);
+
+      await downloadApiFile({
+        endpoint: `/expenses/export?${params.toString()}`,
+        filename: `expenses-${new Date().toISOString().slice(0, 10)}.csv`,
+      });
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const numberFmt = useMemo(() => new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), [i18n.language]);
+
+  function formatDate(d) {
+    return d ? new Date(d).toLocaleDateString(i18n.language) : '—';
+  }
+
+  function toggleSelect(id) {
+    const key = String(id);
+    setSelectedIds((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
+  }
+
+  function toggleSelectAllPendingOnPage() {
+    const pendingIds = expenses.filter((e) => e.status === 'pending').map((e) => String(e.id));
+    if (!pendingIds.length) return;
+    setSelectedIds((prev) => {
+      const hasAll = pendingIds.every((id) => prev.includes(id));
+      if (hasAll) return prev.filter((id) => !pendingIds.includes(id));
+      const next = new Set(prev);
+      pendingIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  }
+
+  const sortPreset = useMemo(() => {
+    const sBy = String(sortBy || '');
+    const sOrder = String(sortOrder || '');
+    if (!sBy && !sOrder) return 'created_desc';
+    if (sBy === 'createdAt' && sOrder === 'asc') return 'created_asc';
+    if (sBy === 'createdAt' && sOrder === 'desc') return 'created_desc';
+    if (sBy === 'amount' && sOrder === 'asc') return 'amount_asc';
+    if (sBy === 'amount' && sOrder === 'desc') return 'amount_desc';
+    if (sBy === 'status' && sOrder === 'asc') return 'status_asc';
+    if (sBy === 'status' && sOrder === 'desc') return 'status_desc';
+    return 'created_desc';
+  }, [sortBy, sortOrder]);
 
   return (
     <div>
@@ -85,9 +250,12 @@ export default function ExpensesPage() {
           <p className="page-subtitle">{t('admin_expenses.subtitle')}</p>
         </div>
         <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
+          </button>
           {['', 'pending', 'approved', 'rejected'].map(s => (
             <button key={s} className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => { setStatusFilter(s); setPage(1); }}>
+              onClick={() => setQuery({ status: s, page: 1 })}>
               {s ? t(`admin_expenses.filter.${s}`) : t('admin_expenses.filter.all')}
             </button>
           ))}
@@ -95,24 +263,129 @@ export default function ExpensesPage() {
       </div>
 
       <div className="card mb-md" style={{ padding: '0.75rem var(--space-md)' }}>
-        <div className="grid grid-2 gap-md" style={{ alignItems: 'end' }}>
+        <div className="grid grid-4 gap-md" style={{ alignItems: 'end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Trip</label>
+            <label className="form-label">{t('admin_expenses.filters.trip_search_label')}</label>
             <input
               className="form-input"
               value={tripSearch}
-              onChange={(e) => setTripSearch(e.target.value)}
-              placeholder="Search by pickup, dropoff, or trip ID"
+              onChange={(e) => setQuery({ tripSearch: e.target.value, page: 1 })}
+              placeholder={t('admin_expenses.filters.trip_search_placeholder')}
             />
           </div>
-          <div className="flex gap-sm" style={{ justifyContent: 'flex-end' }}>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.date_from')}</label>
+            <input type="date" className="form-input" value={startDate} onChange={(e) => setQuery({ startDate: e.target.value, page: 1 })} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.date_to')}</label>
+            <input type="date" className="form-input" value={endDate} onChange={(e) => setQuery({ endDate: e.target.value, page: 1 })} />
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.category')}</label>
+            <select className="form-select" value={categoryId} onChange={(e) => setQuery({ categoryId: e.target.value, page: 1 })}>
+              <option value="">{t('admin_expenses.filter.all')}</option>
+              {categories.filter((c) => c?.isActive !== false).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-4 gap-md mt-md" style={{ alignItems: 'end' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.min_amount')}</label>
+            <input type="number" className="form-input" value={minAmount} min="0" step="0.01" onChange={(e) => setQuery({ minAmount: e.target.value, page: 1 })} placeholder={t('common.amount_placeholder')} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.max_amount')}</label>
+            <input type="number" className="form-input" value={maxAmount} min="0" step="0.01" onChange={(e) => setQuery({ maxAmount: e.target.value, page: 1 })} placeholder={t('common.amount_placeholder')} />
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.has_receipt')}</label>
+            <select className="form-select" value={hasReceipt} onChange={(e) => setQuery({ hasReceipt: e.target.value, page: 1 })}>
+              <option value="">{t('admin_expenses.filter.all')}</option>
+              <option value="true">{t('common.yes')}</option>
+              <option value="false">{t('common.no')}</option>
+            </select>
+          </div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">{t('admin_expenses.filters.sort_by')}</label>
+            <select
+              className="form-select"
+              value={sortPreset}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === 'created_asc') setQuery({ sortBy: 'createdAt', sortOrder: 'asc', page: 1 });
+                else if (v === 'amount_desc') setQuery({ sortBy: 'amount', sortOrder: 'desc', page: 1 });
+                else if (v === 'amount_asc') setQuery({ sortBy: 'amount', sortOrder: 'asc', page: 1 });
+                else if (v === 'status_asc') setQuery({ sortBy: 'status', sortOrder: 'asc', page: 1 });
+                else if (v === 'status_desc') setQuery({ sortBy: 'status', sortOrder: 'desc', page: 1 });
+                else setQuery({ sortBy: 'createdAt', sortOrder: 'desc', page: 1 });
+              }}
+            >
+              <option value="created_desc">{t('common.sort.newest')}</option>
+              <option value="created_asc">{t('common.sort.oldest')}</option>
+              <option value="amount_desc">{t('common.sort.amount_desc')}</option>
+              <option value="amount_asc">{t('common.sort.amount_asc')}</option>
+              <option value="status_desc">{t('common.sort.status_desc')}</option>
+              <option value="status_asc">{t('common.sort.status_asc')}</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex gap-sm mt-md" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <div className="flex gap-sm" style={{ flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={toggleSelectAllPendingOnPage}
+              disabled={loading || expenses.filter((e) => e.status === 'pending').length === 0}
+            >
+              {t('common.select_all')}
+            </button>
+            {selectedIds.length > 0 && (
+              <span className="badge badge-neutral">{t('admin_expenses.filters.bulk_selected', { count: selectedIds.length })}</span>
+            )}
+          </div>
+
+          <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {selectedIds.length > 0 && (
+              <>
+                <button type="button" className="btn btn-success btn-sm" onClick={handleBulkApprove} disabled={bulkLoading}>
+                  {bulkLoading ? <span className="spinner" /> : <CheckCircle size={14} />} {t('admin_expenses.filters.bulk_approve')}
+                </button>
+                <button type="button" className="btn btn-danger btn-sm" onClick={handleBulkRejectOpen} disabled={bulkLoading}>
+                  {bulkLoading ? <span className="spinner" /> : <XCircle size={14} />} {t('admin_expenses.filters.bulk_reject')}
+                </button>
+              </>
+            )}
             <button
               className="btn btn-secondary btn-sm"
               type="button"
-              onClick={() => setTripSearch('')}
-              disabled={!tripSearch}
+              onClick={() => {
+                setSelectedIds([]);
+                setQuery({
+                  page: 1,
+                  status: '',
+                  tripSearch: '',
+                  categoryId: '',
+                  startDate: '',
+                  endDate: '',
+                  minAmount: '',
+                  maxAmount: '',
+                  hasReceipt: '',
+                  sortBy: '',
+                  sortOrder: '',
+                  expenseId: '',
+                });
+              }}
+              disabled={!(statusFilter || tripSearch || categoryId || startDate || endDate || minAmount || maxAmount || hasReceipt || sortBy || sortOrder || expenseId)}
             >
-              Clear
+              {t('common.filters.clear')}
             </button>
           </div>
         </div>
@@ -131,63 +404,133 @@ export default function ExpensesPage() {
       )}
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError
+          message={loadError}
+          onRetry={load}
+          onClearFilters={() => setQuery({
+            page: 1,
+            status: '',
+            tripSearch: '',
+            categoryId: '',
+            startDate: '',
+            endDate: '',
+            minAmount: '',
+            maxAmount: '',
+            hasReceipt: '',
+            sortBy: '',
+            sortOrder: '',
+            expenseId: '',
+          })}
+        />
       ) : (
         <div className="table-container">
           <div className="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>{t('admin_expenses.table.driver')}</th>
-                <th>{t('admin_expenses.table.category')}</th>
-                <th>Trip</th>
-                <th>{t('admin_expenses.table.amount')}</th>
-                <th>{t('admin_expenses.table.description')}</th>
-                <th>{t('admin_expenses.table.status')}</th>
-                <th>{t('admin_expenses.table.date')}</th>
-                <th>{t('admin_expenses.table.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.length === 0 ? (
-                <tr><td colSpan={8} className="empty-state">{t('admin_expenses.table.empty')}</td></tr>
-              ) : expenses.map(e => (
-                <tr key={e.id}>
-                  <td style={{ fontWeight: 500 }}>{e.driver?.name || '—'}</td>
-                  <td>{e.category?.name || '—'}</td>
-                  <td className="text-sm">
-                    {e.trip ? `${e.trip.pickupLocation} -> ${e.trip.dropoffLocation}` : '—'}
-                  </td>
-                  <td>{parseFloat(e.amount).toFixed(2)} EGP</td>
-                  <td className="text-sm">{e.description || '—'}</td>
-                  <td><span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`common.status.${e.status.toLowerCase()}`)}</span></td>
-                  <td className="text-sm text-muted">{formatDate(e.createdAt)}</td>
-                  <td>
-                    <div className="flex gap-sm">
-                      <button className="btn-icon" onClick={() => setSelected(e)} title={t('common.view')}><Eye size={16} /></button>
-                      {e.status === 'pending' && (
-                        <>
-                          <button className="btn-icon" onClick={() => handleReview(e.id, 'approved')} style={{ color: 'var(--color-success)' }} title={t('admin_expenses.modal.approve')}><CheckCircle size={16} /></button>
-                          <button className="btn-icon" onClick={() => handleReview(e.id, 'rejected')} style={{ color: 'var(--color-danger)' }} title={t('admin_expenses.modal.reject')}><XCircle size={16} /></button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: 44 }}>
+                    <input
+                      type="checkbox"
+                      onChange={toggleSelectAllPendingOnPage}
+                      checked={expenses.filter((e) => e.status === 'pending').every((e) => selectedIds.includes(String(e.id))) && expenses.some((e) => e.status === 'pending')}
+                      aria-label={t('common.select_all')}
+                    />
+                  </th>
+                  <th>{t('admin_expenses.table.driver')}</th>
+                  <th>{t('admin_expenses.table.category')}</th>
+                  <th>{t('admin_expenses.table.trip')}</th>
+                  <th>{t('admin_expenses.table.amount')}</th>
+                  <th>{t('admin_expenses.table.description')}</th>
+                  <th>{t('admin_expenses.table.status')}</th>
+                  <th>{t('admin_expenses.table.date')}</th>
+                  <th>{t('admin_expenses.table.actions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {expenses.length === 0 ? (
+                  <tr><td colSpan={9} className="empty-state">{t('admin_expenses.table.empty')}</td></tr>
+                ) : expenses.map(e => {
+                  const isSelected = selectedIds.includes(String(e.id));
+                  const isReviewing = reviewingIds.has(String(e.id));
+                  return (
+                    <tr key={e.id}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={e.status !== 'pending' || bulkLoading}
+                          onChange={() => toggleSelect(e.id)}
+                          aria-label={t('common.select')}
+                        />
+                      </td>
+                      <td style={{ fontWeight: 500 }}>{e.driver?.name || '—'}</td>
+                      <td>{e.category?.name || '—'}</td>
+                      <td className="text-sm">
+                        <div className="flex items-center gap-sm" style={{ justifyContent: 'space-between' }}>
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 360 }}>
+                            {e.trip ? `${e.trip.pickupLocation} -> ${e.trip.dropoffLocation}` : '—'}
+                          </span>
+                          {e.receiptUrl && (
+                            <button
+                              type="button"
+                              className="btn-icon"
+                              title={t('admin_expenses.modal.receipt')}
+                              onClick={() => window.open(e.receiptUrl, '_blank', 'noopener,noreferrer')}
+                            >
+                              <Receipt size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td>{numberFmt.format(parseFloat(e.amount || 0))} {t('common.currency')}</td>
+                      <td className="text-sm">{e.description || '—'}</td>
+                      <td><span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`common.status.${e.status.toLowerCase()}`)}</span></td>
+                      <td className="text-sm text-muted">{formatDate(e.createdAt)}</td>
+                      <td>
+                        <div className="flex gap-sm">
+                          <button className="btn-icon" onClick={() => setSelected(e)} title={t('common.view')} disabled={bulkLoading || isReviewing}><Eye size={16} /></button>
+                          {e.status === 'pending' && (
+                            <>
+                              <button
+                                className="btn-icon"
+                                onClick={() => handleReview(e.id, 'approved')}
+                                style={{ color: 'var(--color-success)' }}
+                                title={t('admin_expenses.modal.approve')}
+                                disabled={bulkLoading || isReviewing}
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                              <button
+                                className="btn-icon"
+                                onClick={() => handleReview(e.id, 'rejected')}
+                                style={{ color: 'var(--color-danger)' }}
+                                title={t('admin_expenses.modal.reject')}
+                                disabled={bulkLoading || isReviewing}
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
-          <span className="text-sm text-muted">{t('vehicles.pagination.info', { current: page, total: pagination.totalPages })}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(p) => setQuery({ page: p })}
+        pageSize={limit}
+        onPageSizeChange={(size) => setQuery({ limit: size, page: 1 })}
+      />
 
       {selected && (
         <DetailModal
@@ -203,12 +546,12 @@ export default function ExpensesPage() {
                 { label: t('admin_expenses.table.driver'), value: selected.driver?.name },
                 { label: t('admin_expenses.table.category'), value: selected.category?.name },
                 {
-                  label: 'Trip',
+                  label: t('admin_expenses.table.trip'),
                   value: selected.trip
                     ? `${selected.trip.pickupLocation} -> ${selected.trip.dropoffLocation}`
                     : '—'
                 },
-                { label: t('admin_expenses.table.amount'), value: `${parseFloat(selected.amount).toFixed(2)} EGP` },
+                { label: t('admin_expenses.table.amount'), value: `${numberFmt.format(parseFloat(selected.amount || 0))} ${t('common.currency')}` },
                 { label: t('admin_expenses.table.date'), value: formatDate(selected.createdAt) },
                 {
                   label: t('admin_expenses.table.status'),
@@ -244,8 +587,12 @@ export default function ExpensesPage() {
 
       <PromptModal
         isOpen={promptData.isOpen}
-        onClose={() => setPromptData({ isOpen: false, expenseId: null })}
-        onConfirm={(reason) => handleReview(promptData.expenseId, 'rejected', reason)}
+        onClose={() => setPromptData({ isOpen: false, expenseId: null, expenseIds: null })}
+        onConfirm={(reason) => {
+          if (promptData.expenseId) return handleReview(promptData.expenseId, 'rejected', reason);
+          if (Array.isArray(promptData.expenseIds) && promptData.expenseIds.length) return handleBulkReject(reason);
+          return undefined;
+        }}
         title={t('admin_expenses.modal.reject')}
         message={t('admin_expenses.modal.reject_prompt')}
         placeholder={t('admin_expenses.modal.reason_placeholder')}

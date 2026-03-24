@@ -131,14 +131,49 @@ async function reviewDamageReport(reportId, adminId, action, ipAddress) {
 /**
  * Get damage reports with filters.
  */
-async function getDamageReports({ page = 1, limit = 20, vehicleId, status }) {
+async function getDamageReports({
+  page = 1,
+  limit = 20,
+  vehicleId,
+  status,
+  search,
+  startDate,
+  endDate,
+  sortBy,
+  sortOrder,
+}) {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
+
+  const createdAt = {};
+  if (startDate) {
+    const d = new Date(startDate);
+    if (!Number.isNaN(d.getTime())) createdAt.gte = d;
+  }
+  if (endDate) {
+    const d = new Date(endDate);
+    if (!Number.isNaN(d.getTime())) createdAt.lte = d;
+  }
+
+  const q = String(search || '').trim();
   const where = {
     ...(vehicleId && { vehicleId }),
     ...(status && { status }),
+    ...(Object.keys(createdAt).length ? { createdAt } : {}),
+    ...(q && {
+      OR: [
+        { description: { contains: q, mode: 'insensitive' } },
+        { driver: { name: { contains: q, mode: 'insensitive' } } },
+        { vehicle: { plateNumber: { contains: q, mode: 'insensitive' } } },
+      ],
+    }),
   };
+
+  const SORT_ALLOWLIST = new Set(['createdAt', 'status']);
+  const normalizedSortBy = SORT_ALLOWLIST.has(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const normalizedSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy = { [normalizedSortBy]: normalizedSortOrder };
 
   const [reports, total] = await Promise.all([
     prisma.damageReport.findMany({
@@ -149,7 +184,7 @@ async function getDamageReports({ page = 1, limit = 20, vehicleId, status }) {
         vehicle: { select: { id: true, plateNumber: true } },
         reviewer: { select: { id: true, name: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.damageReport.count({ where }),
   ]);

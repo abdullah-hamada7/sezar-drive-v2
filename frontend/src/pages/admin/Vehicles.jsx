@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { vehicleService as api } from '../../services/vehicle.service';
 import { ToastContext } from '../../contexts/toastContext';
-import { Car, Plus, Search, Edit, Trash2, X, QrCode, Printer } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, X, QrCode, Download } from 'lucide-react';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { QRCodeCanvas } from 'qrcode.react';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
+import { downloadApiFile } from '../../utils/download';
 
 const STATUS_BADGES = {
   available: 'badge-success',
@@ -18,12 +22,29 @@ const STATUS_BADGES = {
 export default function VehiclesPage() {
   const { t } = useTranslation();
   const { addToast } = useContext(ToastContext);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const search = useMemo(() => String(searchParams.get('search') || ''), [searchParams]);
+  const availableOnly = useMemo(() => searchParams.get('availableOnly') === 'true', [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '' || v === false) next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [vehicles, setVehicles] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [search, setSearch] = useState('');
-  const [availableOnly, setAvailableOnly] = useState(false);
-  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrVehicle, setQrVehicle] = useState(null);
@@ -31,19 +52,26 @@ export default function VehiclesPage() {
   const [form, setForm] = useState({ plateNumber: '', model: '', year: 2024, capacity: 4, qrCode: '' });
   const [, setError] = useState('');
   const [confirmData, setConfirmData] = useState({ isOpen: false, vehicleId: null });
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
-      const params = new URLSearchParams({ page, limit: 15 });
+      const params = new URLSearchParams({ page, limit });
       if (search) params.set('search', search);
       if (availableOnly) params.set('availableOnly', 'true');
       const res = await api.getVehicles(params.toString());
       setVehicles(res.data.vehicles || []);
       setPagination(res.data || {});
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
+    }
     finally { setLoading(false); }
-  }, [page, search, availableOnly]);
+  }, [addToast, availableOnly, limit, page, search, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -95,6 +123,25 @@ export default function VehiclesPage() {
     }
   }
 
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({
+        search,
+        availableOnly: availableOnly ? 'true' : '',
+      });
+      await downloadApiFile({
+        endpoint: `/vehicles/export?${params.toString()}`,
+        filename: `vehicles-${new Date().toISOString().slice(0, 10)}.csv`,
+      });
+      addToast(t('common.success'), 'success');
+    } catch (err) {
+      addToast(err?.message || t('common.error'), 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   async function handleDelete(id) {
     setConfirmData({ isOpen: true, vehicleId: id });
   }
@@ -116,9 +163,14 @@ export default function VehiclesPage() {
           <h1 className="page-title">{t('vehicles.title')}</h1>
           <p className="page-subtitle">{t('vehicles.subtitle')}</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <Plus size={18} /> {t('vehicles.add_btn')}
-        </button>
+        <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button className="btn btn-secondary" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? <span className="spinner" /> : <Download size={18} />} {t('common.export_csv')}
+          </button>
+          <button className="btn btn-primary" onClick={openCreate}>
+            <Plus size={18} /> {t('vehicles.add_btn')}
+          </button>
+        </div>
       </div>
 
       <div className="card mb-md">
@@ -129,7 +181,7 @@ export default function VehiclesPage() {
             className="form-input"
             placeholder={t('vehicles.search_placeholder')}
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => setQuery({ search: e.target.value, page: 1 })}
             style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
           />
           <div className="flex items-center gap-sm" style={{ borderLeft: '1px solid var(--color-border)', paddingLeft: '1rem', marginLeft: 'auto' }}>
@@ -137,7 +189,7 @@ export default function VehiclesPage() {
               type="checkbox"
               id="availableOnly"
               checked={availableOnly}
-              onChange={e => { setAvailableOnly(e.target.checked); setPage(1); }}
+              onChange={e => setQuery({ availableOnly: e.target.checked ? 'true' : '', page: 1 })}
             />
             <label htmlFor="availableOnly" className="text-sm font-medium cursor-pointer" style={{ whiteSpace: 'nowrap' }}>{t('vehicles.available_only')}</label>
           </div>
@@ -157,7 +209,13 @@ export default function VehiclesPage() {
       )}
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError
+          message={loadError}
+          onRetry={load}
+          onClearFilters={() => setQuery({ search: '', availableOnly: '', page: 1 })}
+        />
       ) : (
         <div className="table-container">
           <table>
@@ -210,17 +268,13 @@ export default function VehiclesPage() {
       )
       }
 
-      {
-        pagination.totalPages > 1 && (
-          <div className="pagination">
-            <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
-            <span className="text-sm text-muted">
-              {t('vehicles.pagination.info', { current: page, total: pagination.totalPages })}
-            </span>
-            <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
-          </div>
-        )
-      }
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(nextPage) => setQuery({ page: nextPage })}
+        pageSize={limit}
+        onPageSizeChange={(nextLimit) => setQuery({ limit: nextLimit, page: 1 })}
+      />
 
       {
         showModal && (

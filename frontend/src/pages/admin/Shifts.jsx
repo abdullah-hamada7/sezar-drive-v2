@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shiftService as api } from '../../services/shift.service';
 import { inspectionService as inspApi } from '../../services/inspection.service';
 import { ClipboardCheck, X, XCircle, Check, AlertCircle, Calendar } from 'lucide-react';
-import { useContext } from 'react';
 import { ToastContext } from '../../contexts/toastContext';
 import PromptModal from '../../components/common/PromptModal';
+import Pagination from '../../components/common/Pagination';
+import { ListError, ListLoading } from '../../components/common/ListStates';
 
 const STATUS_BADGES = {
   PendingVerification: 'badge-warning',
@@ -40,6 +41,7 @@ export default function ShiftsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [promptData, setPromptData] = useState({ isOpen: false, shiftId: null });
   const [showInspections, setShowInspections] = useState(false);
   const [selectedShiftInspections, setSelectedShiftInspections] = useState([]);
@@ -48,14 +50,25 @@ export default function ShiftsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      setLoadError('');
       const params = new URLSearchParams({ page, limit: 15 });
       if (statusFilter) params.set('status', statusFilter);
       const res = await api.getShifts(params.toString());
       setShifts(res.data.shifts || []);
       setPagination(res.data || {});
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
+    }
     finally { setLoading(false); }
-  }, [page, statusFilter]);
+  }, [addToast, page, statusFilter, t]);
+
+  function clearFilters() {
+    setStatusFilter('');
+    setPage(1);
+  }
 
   useEffect(() => { load(); }, [load]);
 
@@ -161,7 +174,9 @@ export default function ShiftsPage() {
       </div>
 
       {loading ? (
-        <div className="loading-page"><div className="spinner"></div></div>
+        <ListLoading />
+      ) : loadError ? (
+        <ListError message={loadError} onRetry={load} onClearFilters={clearFilters} />
       ) : (
         <div className="table-container">
           <div className="table-responsive">
@@ -212,13 +227,11 @@ export default function ShiftsPage() {
         </div>
       )}
 
-      {pagination.totalPages > 1 && (
-        <div className="pagination">
-          <button onClick={() => setPage(p => p - 1)} disabled={page <= 1}>{t('vehicles.pagination.prev')}</button>
-          <span className="text-sm text-muted">{t('vehicles.pagination.info', { current: page, total: pagination.totalPages })}</span>
-          <button onClick={() => setPage(p => p + 1)} disabled={page >= pagination.totalPages}>{t('vehicles.pagination.next')}</button>
-        </div>
-      )}
+      <Pagination
+        page={page}
+        totalPages={pagination.totalPages}
+        onPageChange={(p) => setPage(p)}
+      />
 
       {showInspections && (
         <div className="modal-overlay" onClick={() => setShowInspections(false)}>

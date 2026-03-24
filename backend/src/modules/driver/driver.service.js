@@ -71,23 +71,44 @@ async function createDriver(data, adminId, ipAddress) {
 /**
  * Get all drivers with pagination.
  */
-async function getDrivers({ page = 1, limit = 20, search = '', status = 'active' }) {
+async function getDrivers({ page = 1, limit = 20, search = '', status = 'active', startDate, endDate, sortBy, sortOrder }) {
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
+
+  const q = String(search || '').trim();
+  const isUuid = q && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(q);
+
+  const createdAt = {};
+  if (startDate) {
+    const d = new Date(startDate);
+    if (!Number.isNaN(d.getTime())) createdAt.gte = d;
+  }
+  if (endDate) {
+    const d = new Date(endDate);
+    if (!Number.isNaN(d.getTime())) createdAt.lte = d;
+  }
+
   const where = {
     role: 'driver',
-    ...(search && {
+    ...(q && {
       OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search } },
+        { name: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+        { phone: { contains: q } },
+        ...(isUuid ? [{ id: { equals: q } }] : []),
       ],
     }),
+    ...(Object.keys(createdAt).length ? { createdAt } : {}),
   };
 
   if (status === 'active') where.isActive = true;
   if (status === 'inactive') where.isActive = false;
+
+  const SORT_ALLOWLIST = new Set(['createdAt', 'name', 'email']);
+  const normalizedSortBy = SORT_ALLOWLIST.has(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const normalizedSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy = { [normalizedSortBy]: normalizedSortOrder };
 
   const [drivers, total] = await Promise.all([
     prisma.user.findMany({
@@ -100,7 +121,7 @@ async function getDrivers({ page = 1, limit = 20, search = '', status = 'active'
       },
       skip,
       take: limitNum,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.user.count({ where }),
   ]);

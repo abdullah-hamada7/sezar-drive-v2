@@ -311,10 +311,32 @@
     "submit": "إرسال",
     "search": "بحث",
     "select": "اختر",
+    "select_all": "تحديد الكل",
     "view": "عرض",
     "print": "طباعة",
     "prev": "السابق",
     "next": "التالي",
+    "retry": "إعادة المحاولة",
+    "export_csv": "تصدير CSV",
+    "filters": {
+      "clear": "مسح الفلاتر"
+    },
+    "pagination": {
+      "prev": "السابق",
+      "next": "التالي",
+      "info": "صفحة {{current}} من {{total}}",
+      "page_size": "حجم الصفحة",
+      "jump_to": "اذهب إلى",
+      "go": "اذهب"
+    },
+    "sort": {
+      "newest": "الأحدث",
+      "oldest": "الأقدم",
+      "amount_desc": "المبلغ (من الأعلى للأقل)",
+      "amount_asc": "المبلغ (من الأقل للأعلى)",
+      "status_desc": "الحالة (من ي إلى أ)",
+      "status_asc": "الحالة (من أ إلى ي)"
+    },
     "yes": "نعم",
     "no": "لا",
     "confirm_action_prompt": "هل تريد المتابعة بهذه العملية؟",
@@ -1069,12 +1091,29 @@
     "table": {
       "driver": "السائق",
       "category": "الفئة",
+      "trip": "الرحلة",
       "amount": "المبلغ",
       "description": "الوصف",
       "status": "الحالة",
       "date": "التاريخ",
       "actions": "الإجراءات",
       "empty": "لم يتم العثور على مصاريف"
+    },
+    "filters": {
+      "trip_search_label": "الرحلة",
+      "trip_search_placeholder": "ابحث بالاستلام/التوصيل أو رقم الرحلة",
+      "date_from": "من",
+      "date_to": "إلى",
+      "min_amount": "أقل مبلغ",
+      "max_amount": "أعلى مبلغ",
+      "driver": "السائق",
+      "category": "الفئة",
+      "has_receipt": "يوجد إيصال",
+      "sort_by": "ترتيب",
+      "clear": "مسح",
+      "bulk_selected": "{{count}} محدد",
+      "bulk_approve": "موافقة المحدد",
+      "bulk_reject": "رفض المحدد"
     },
     "modal": {
       "title": "تفاصيل المصروف",

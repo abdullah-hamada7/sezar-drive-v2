@@ -103,7 +103,7 @@ async function deleteViolation(id, adminId, ipAddress) {
   return { message: 'Violation deleted successfully' };
 }
 
-async function getViolations({ page = 1, limit = 15, driverId, vehicleId, startDate, endDate, search }) {
+async function getViolations({ page = 1, limit = 15, driverId, vehicleId, startDate, endDate, search, sortBy, sortOrder }) {
   const where = {};
 
   if (driverId) where.driverId = driverId;
@@ -119,8 +119,14 @@ async function getViolations({ page = 1, limit = 15, driverId, vehicleId, startD
       { violationNumber: { contains: search, mode: 'insensitive' } },
       { location: { contains: search, mode: 'insensitive' } },
       { driver: { name: { contains: search, mode: 'insensitive' } } },
+      { vehicle: { plateNumber: { contains: search, mode: 'insensitive' } } },
     ];
   }
+
+  const SORT_ALLOWLIST = new Set(['date', 'fineAmount', 'createdAt']);
+  const normalizedSortBy = SORT_ALLOWLIST.has(String(sortBy)) ? String(sortBy) : 'date';
+  const normalizedSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy = { [normalizedSortBy]: normalizedSortOrder };
 
   const [violations, total] = await Promise.all([
     prisma.trafficViolation.findMany({
@@ -129,7 +135,7 @@ async function getViolations({ page = 1, limit = 15, driverId, vehicleId, startD
         driver: { select: { id: true, name: true } },
         vehicle: { select: { id: true, plateNumber: true } },
       },
-      orderBy: { date: 'desc' },
+      orderBy,
       skip: (page - 1) * limit,
       take: limit,
     }),

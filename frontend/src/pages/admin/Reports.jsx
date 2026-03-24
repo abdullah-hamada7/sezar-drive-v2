@@ -157,7 +157,7 @@ export default function ReportsPage() {
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}><FileBarChart size={24} /></div>
               <div>
-                <div className="stat-value">{report.totalRevenue?.toFixed(2) || '0.00'} EGP</div>
+                <div className="stat-value">{report.totalRevenue?.toFixed(2) || '0.00'} {t('common.currency')}</div>
                 <div className="stat-label">{t('reports.stats.revenue')}</div>
               </div>
             </div>
@@ -171,14 +171,14 @@ export default function ReportsPage() {
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }}><Download size={24} /></div>
               <div>
-                <div className="stat-value">{report.totalExpenses?.toFixed(2) || '0.00'} EGP</div>
+                <div className="stat-value">{report.totalExpenses?.toFixed(2) || '0.00'} {t('common.currency')}</div>
                 <div className="stat-label">{t('reports.stats.expenses')}</div>
               </div>
             </div>
             <div className="stat-card">
               <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}><FileBarChart size={24} /></div>
               <div>
-                <div className="stat-value">{report.netRevenue?.toFixed(2) || '0.00'} EGP</div>
+                <div className="stat-value">{report.netRevenue?.toFixed(2) || '0.00'} {t('common.currency')}</div>
                 <div className="stat-label">{t('reports.stats.net')}</div>
               </div>
             </div>
@@ -205,9 +205,9 @@ export default function ReportsPage() {
                       <tr key={i}>
                         <td style={{ fontWeight: 500 }}>{d.driverName}</td>
                         <td>{d.tripCount}</td>
-                        <td>{d.totalRevenue?.toFixed(2)} EGP</td>
-                        <td>{d.totalExpenses?.toFixed(2)} EGP</td>
-                        <td>{d.netRevenue?.toFixed(2)} EGP</td>
+                        <td>{d.totalRevenue?.toFixed(2)} {t('common.currency')}</td>
+                        <td>{d.totalExpenses?.toFixed(2)} {t('common.currency')}</td>
+                        <td>{d.netRevenue?.toFixed(2)} {t('common.currency')}</td>
                       </tr>
                     ))}
                   </tbody>

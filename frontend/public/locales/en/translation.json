@@ -311,10 +311,32 @@
     "submit": "Submit",
     "search": "Search",
     "select": "Select",
+    "select_all": "Select all",
     "view": "View",
     "print": "Print",
     "prev": "Previous",
     "next": "Next",
+    "retry": "Retry",
+    "export_csv": "Export CSV",
+    "filters": {
+      "clear": "Clear filters"
+    },
+    "pagination": {
+      "prev": "Prev",
+      "next": "Next",
+      "info": "Page {{current}} of {{total}}",
+      "page_size": "Page size",
+      "jump_to": "Jump to",
+      "go": "Go"
+    },
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "amount_desc": "Amount (high to low)",
+      "amount_asc": "Amount (low to high)",
+      "status_desc": "Status (Z to A)",
+      "status_asc": "Status (A to Z)"
+    },
     "yes": "Yes",
     "no": "No",
     "confirm_action_prompt": "Do you want to continue with this operation?",
@@ -988,12 +1010,29 @@
     "table": {
       "driver": "Driver",
       "category": "Category",
+      "trip": "Trip",
       "amount": "Amount",
       "description": "Description",
       "status": "Status",
       "date": "Date",
       "actions": "Actions",
       "empty": "No expenses found"
+    },
+    "filters": {
+      "trip_search_label": "Trip",
+      "trip_search_placeholder": "Search by pickup, dropoff, or trip ID",
+      "date_from": "From",
+      "date_to": "To",
+      "min_amount": "Min amount",
+      "max_amount": "Max amount",
+      "driver": "Driver",
+      "category": "Category",
+      "has_receipt": "Has receipt",
+      "sort_by": "Sort",
+      "clear": "Clear",
+      "bulk_selected": "{{count}} selected",
+      "bulk_approve": "Approve selected",
+      "bulk_reject": "Reject selected"
     },
     "modal": {
       "title": "Expense Details",

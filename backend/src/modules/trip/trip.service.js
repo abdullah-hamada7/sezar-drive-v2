@@ -609,23 +609,67 @@ async function overrideTrip(tripId, nextStatus, reason, adminId, ipAddress) {
 /**
  * Get trips with filters.
  */
-async function getTrips({ page = 1, limit = 20, driverId, status, date }) {
+async function getTrips({
+  page = 1,
+  limit = 20,
+  driverId,
+  status,
+  date,
+  startDate,
+  endDate,
+  search,
+  sortBy,
+  sortOrder,
+}) {
   await expireOverdueAssignedTrips(driverId || null);
 
   const pageNum = parseInt(page) || 1;
   const limitNum = parseInt(limit) || 20;
   const skip = (pageNum - 1) * limitNum;
   
+  const createdAt = {};
+  if (date) {
+    const start = new Date(date);
+    if (!Number.isNaN(start.getTime())) {
+      const end = new Date(start);
+      end.setDate(end.getDate() + 1);
+      createdAt.gte = start;
+      createdAt.lt = end;
+    }
+  } else {
+    if (startDate) {
+      const d = new Date(startDate);
+      if (!Number.isNaN(d.getTime())) createdAt.gte = d;
+    }
+    if (endDate) {
+      const d = new Date(endDate);
+      if (!Number.isNaN(d.getTime())) createdAt.lte = d;
+    }
+  }
+
+  const q = String(search || '').trim();
+  const isUuid = q && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(q);
+
   const where = {
     ...(driverId && { driverId }),
     ...(status && { status }),
-    ...(date && {
-      createdAt: {
-        gte: new Date(date),
-        lt: new Date(new Date(date).setDate(new Date(date).getDate() + 1)),
-      },
+    ...(Object.keys(createdAt).length ? { createdAt } : {}),
+    ...(q && {
+      OR: [
+        ...(isUuid ? [{ id: { equals: q } }] : []),
+        { pickupLocation: { contains: q, mode: 'insensitive' } },
+        { dropoffLocation: { contains: q, mode: 'insensitive' } },
+        { driver: { name: { contains: q, mode: 'insensitive' } } },
+        { driver: { email: { contains: q, mode: 'insensitive' } } },
+        { vehicle: { plateNumber: { contains: q, mode: 'insensitive' } } },
+      ],
     }),
   };
+
+  const SORT_ALLOWLIST = new Set(['createdAt', 'scheduledTime', 'price', 'status']);
+  const normalizedSortBy = SORT_ALLOWLIST.has(String(sortBy)) ? String(sortBy) : 'createdAt';
+  const normalizedSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const orderBy = { [normalizedSortBy]: normalizedSortOrder };
 
   const [trips, total] = await Promise.all([
     prisma.trip.findMany({
@@ -634,7 +678,7 @@ async function getTrips({ page = 1, limit = 20, driverId, status, date }) {
         driver: { select: { id: true, name: true, email: true } },
         vehicle: { select: { id: true, plateNumber: true, model: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     }),
     prisma.trip.count({ where }),
   ]);
