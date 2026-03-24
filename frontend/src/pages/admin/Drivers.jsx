@@ -218,7 +218,11 @@ export default function DriversPage() {
         setSubmitError(t('drivers.messages.validation_failed'));
         addToast(t('drivers.messages.validation_failed'), 'error');
       } else {
-        const msg = err?.message || t('drivers.messages.op_failed');
+        const code = err?.code;
+        const translated = code ? t(`errors.${code}`) : '';
+        const msg = (translated && translated !== `errors.${code}`)
+          ? translated
+          : (err?.message || t('drivers.messages.op_failed'));
         setSubmitError(msg);
         addToast(msg, 'error');
       }
