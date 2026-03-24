@@ -124,7 +124,7 @@ export default function ResetPasswordPage() {
       <div className="login-card glass-card">
         <div className="login-header">
           <div className="login-brand">
-            <BrandIcon variant="full" height={104} />
+            <BrandIcon variant="full" height={144} />
           </div>
           <p className="login-subtitle">
             {success ? t('auth.reset_success') : t('auth.reset_password_title')}
