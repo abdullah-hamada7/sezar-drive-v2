@@ -381,11 +381,39 @@ async function markCashCollected(tripId, actorId, actorRole, note, ipAddress) {
     throw new ConflictError('CASH_COLLECTION_NOT_ALLOWED', 'Cash collection is only allowed for in-progress or completed trips');
   }
 
+  const normalizedNote = normalizeCashCollectedNote(note);
+
+  // If already collected, allow adding a note once (no overwrites).
   if (trip.cashCollectedAt) {
+    if (normalizedNote && !trip.cashCollectedNote) {
+      const updateNote = await prisma.trip.updateMany({
+        where: {
+          id: tripId,
+          cashCollectedAt: { not: null },
+          cashCollectedNote: null,
+        },
+        data: {
+          cashCollectedNote: normalizedNote,
+          version: { increment: 1 },
+        },
+      });
+
+      if (updateNote.count > 0) {
+        const updated = await prisma.trip.findUnique({ where: { id: tripId } });
+        await AuditService.log({
+          actorId,
+          actionType: 'trip.cash_collected_note_added',
+          entityType: 'trip',
+          entityId: tripId,
+          previousState: { cashCollectedNote: null },
+          newState: { cashCollectedNote: updated.cashCollectedNote },
+          ipAddress,
+        });
+        return updated;
+      }
+    }
     return trip;
   }
-
-  const normalizedNote = normalizeCashCollectedNote(note);
   const now = new Date();
 
   const updateResult = await prisma.trip.updateMany({

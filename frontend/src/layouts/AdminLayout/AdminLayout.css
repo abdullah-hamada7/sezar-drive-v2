@@ -53,7 +53,8 @@
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35), var(--shadow-glow);
 }
 
-.brand-icon svg {
+.brand-icon svg,
+.brand-icon img {
   width: 20px;
   height: 20px;
   filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));

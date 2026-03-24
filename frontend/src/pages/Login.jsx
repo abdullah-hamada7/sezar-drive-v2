@@ -100,6 +100,9 @@ export default function LoginPage() {
 
       <div className="login-card glass-card">
         <div className="login-header">
+          <div className="login-logo">
+            <BrandIcon size={30} />
+          </div>
           <h1 className="login-title text-gradient">{t('common.brand')}</h1>
         </div>
 

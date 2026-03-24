@@ -139,8 +139,8 @@ export default function DeviceVerificationPage() {
 
       <div className="login-card glass-card">
         <div className="login-header">
-          <div className="login-logo shadow-glow">
-            <BrandIcon size={32} />
+          <div className="login-logo">
+            <BrandIcon size={30} />
           </div>
           <h1 className="login-title text-gradient">{t('auth.device_security_title')}</h1>
           <p className="login-subtitle">

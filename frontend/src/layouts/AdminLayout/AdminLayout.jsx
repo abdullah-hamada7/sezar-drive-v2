@@ -9,6 +9,7 @@ import {
   Menu, X, LogOut, ChevronRight, Bell, Info, UserCheck,
   Sun, Moon, AlertCircle
 } from 'lucide-react';
+import BrandIcon from '../../components/BrandIcon';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
@@ -206,6 +207,9 @@ export default function AdminLayout() {
 
       <header className="mobile-header">
         <div className="sidebar-brand">
+          <div className="brand-icon">
+            <BrandIcon size={20} />
+          </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
         <button className="btn-icon" onClick={() => setSidebarOpen(true)}>
@@ -217,6 +221,9 @@ export default function AdminLayout() {
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
+            <div className="brand-icon">
+              <BrandIcon size={20} />
+            </div>
             <span className="brand-text">{t('common.brand')}</span>
           </div>
           <button className="btn-icon sidebar-close-btn" onClick={() => setSidebarOpen(false)}>

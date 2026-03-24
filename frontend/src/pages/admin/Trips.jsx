@@ -727,6 +727,7 @@ export default function TripsPage() {
                 <th>{t('trips.table.dropoff')}</th>
                 <th>{t('trips.table.passengers')}</th>
                 <th>{t('trips.table.price')}</th>
+                <th>{t('trip.payment.cash')}</th>
                 <th>{t('trips.table.status')}</th>
                 <th>{t('trips.table.created')}</th>
                 <th>{t('trips.table.actions')}</th>
@@ -734,7 +735,7 @@ export default function TripsPage() {
             </thead>
             <tbody>
               {trips.length === 0 ? (
-                <tr><td colSpan={8} className="empty-state">{t('trips.table.empty')}</td></tr>
+                <tr><td colSpan={9} className="empty-state">{t('trips.table.empty')}</td></tr>
               ) : trips.map(t_obj => (
                 <tr key={t_obj.id}>
                   <td style={{ fontWeight: 500 }}>{t_obj.driver?.name || '—'}</td>
@@ -746,6 +747,22 @@ export default function TripsPage() {
                     ) : <span className="text-muted">—</span>}
                   </td>
                   <td><span className="flex items-center gap-sm"><DollarSign size={14} /> {t_obj.price} {t('common.currency')}</span></td>
+                  <td>
+                    {String(t_obj.paymentMethod || '').toUpperCase() === 'CASH' ? (
+                      <div className="flex flex-col" style={{ gap: 2 }}>
+                        <span className={t_obj.cashCollectedAt ? 'badge badge-success' : 'badge badge-danger'} style={{ width: 'fit-content' }}>
+                          {t_obj.cashCollectedAt ? formatDate(t_obj.cashCollectedAt) : '—'}
+                        </span>
+                        {t_obj.cashCollectedNote ? (
+                          <span className="text-xs text-muted" title={String(t_obj.cashCollectedNote)} style={{ maxWidth: 180, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {t('trip.payment.cash_collected_note')}: {String(t_obj.cashCollectedNote)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </td>
                   <td>
                     <span className={`badge badge-status ${STATUS_BADGES[t_obj.status] ?? STATUS_BADGES.DEFAULT}`}>
                       {t(`common.trip_status.${t_obj.status.toLowerCase()}`)}

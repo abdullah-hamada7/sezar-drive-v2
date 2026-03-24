@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import violationService from '../../services/violation.service';
@@ -6,7 +6,7 @@ import { useContext } from 'react';
 import { ToastContext } from '../../contexts/toastContext';
 import DetailModal from '../../components/common/DetailModal';
 import ConfirmModal from '../../components/common/ConfirmModal';
-import { Plus, Edit, Trash2, Eye, X, Download } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, X, Download, Camera } from 'lucide-react';
 import Pagination from '../../components/common/Pagination';
 import { ListError, ListLoading } from '../../components/common/ListStates';
 import { downloadApiFile } from '../../utils/download';
@@ -51,6 +51,7 @@ export default function ViolationsPage() {
   const [saving, setSaving] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreviewUrl, setPhotoPreviewUrl] = useState('');
+  const photoInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     driverId: '',
@@ -448,17 +449,46 @@ export default function ViolationsPage() {
                     <label className="form-label">{t('violations.photo_optional')}</label>
                     <input
                       type="file"
-                      className="form-input"
+                      ref={photoInputRef}
                       accept="image/*"
                       onChange={(e) => {
                         const file = e.target.files?.[0] || null;
+                        if (!file) return;
                         setPhotoFile(file);
+                        e.target.value = '';
                       }}
+                      style={{ display: 'none' }}
                     />
-                    <div className="text-xs text-muted" style={{ marginTop: 6 }}>
-                      {t('violations.photo_help')}
-                    </div>
-                    {photoPreviewUrl ? (
+
+                    {!photoPreviewUrl ? (
+                      <div
+                        className="empty-state"
+                        onClick={() => photoInputRef.current?.click()}
+                        style={{
+                          padding: 'var(--space-xl)',
+                          border: '2px dashed var(--color-border)',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: 'var(--color-bg-secondary)',
+                          cursor: 'pointer',
+                          transition: '0.2s',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <div style={{
+                          padding: 'var(--space-md)',
+                          borderRadius: '50%',
+                          background: 'var(--color-bg-tertiary)',
+                          marginBottom: 'var(--space-md)'
+                        }}>
+                          <Camera size={32} style={{ color: 'var(--color-text-muted)' }} />
+                        </div>
+                        <p className="text-sm font-medium" style={{ marginBottom: 'var(--space-xs)' }}>{t('violations.photo_empty_title')}</p>
+                        <p className="text-xs text-muted">{t('violations.photo_empty_cta')}</p>
+                      </div>
+                    ) : (
                       <div style={{ marginTop: '0.75rem' }}>
                         <a href={photoPreviewUrl} target="_blank" rel="noopener noreferrer" className="block" style={{ maxWidth: 280 }}>
                           <img
@@ -468,21 +498,33 @@ export default function ViolationsPage() {
                             style={{ borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}
                           />
                         </a>
-                        {photoFile ? (
+                        <div className="flex gap-sm" style={{ marginTop: 8, flexWrap: 'wrap' }}>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
-                            style={{ marginTop: 8 }}
-                            onClick={() => {
-                              setPhotoFile(null);
-                              setPhotoPreviewUrl(selected?.photoUrl || '');
-                            }}
+                            onClick={() => photoInputRef.current?.click()}
                           >
-                            {t('violations.photo_clear')}
+                            <Camera size={14} /> {t('violations.photo_empty_cta')}
                           </button>
-                        ) : null}
+                          {photoFile ? (
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              onClick={() => {
+                                setPhotoFile(null);
+                                setPhotoPreviewUrl(selected?.photoUrl || '');
+                              }}
+                            >
+                              {t('violations.photo_clear')}
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
-                    ) : null}
+                    )}
+
+                    <div className="text-xs text-muted" style={{ marginTop: 6 }}>
+                      {t('violations.photo_help')}
+                    </div>
                   </div>
                 </div>
               </div>

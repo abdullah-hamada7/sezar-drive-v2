@@ -134,7 +134,8 @@
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.3), inset 0 0 18px rgba(255, 255, 255, 0.08);
 }
 
-.login-logo svg {
+.login-logo svg,
+.login-logo img {
   width: 30px;
   height: 30px;
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.38));
