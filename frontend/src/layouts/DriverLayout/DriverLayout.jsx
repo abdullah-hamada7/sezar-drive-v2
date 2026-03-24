@@ -40,10 +40,7 @@ export default function DriverLayout() {
     <div className="driver-layout">
       <header className="driver-header">
         <div className="sidebar-brand">
-          <div className="brand-icon">
-            <BrandIcon size={20} />
-          </div>
-          <span className="brand-text">{t('common.brand')}</span>
+          <BrandIcon variant="full" height={28} />
         </div>
         <div className="driver-header-right">
           {pendingCount > 0 && (

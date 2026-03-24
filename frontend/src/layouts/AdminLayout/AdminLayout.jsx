@@ -207,10 +207,7 @@ export default function AdminLayout() {
 
       <header className="mobile-header">
         <div className="sidebar-brand">
-          <div className="brand-icon">
-            <BrandIcon size={20} />
-          </div>
-          <span className="brand-text">{t('common.brand')}</span>
+          <BrandIcon variant="full" height={28} />
         </div>
         <button className="btn-icon" onClick={() => setSidebarOpen(true)}>
           <Menu size={20} />
@@ -221,10 +218,7 @@ export default function AdminLayout() {
       <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : 'sidebar-collapsed'}`}>
         <div className="sidebar-header">
           <div className="sidebar-brand">
-            <div className="brand-icon">
-              <BrandIcon size={20} />
-            </div>
-            <span className="brand-text">{t('common.brand')}</span>
+            <BrandIcon variant={sidebarOpen ? 'full' : 'mark'} height={34} />
           </div>
           <button className="btn-icon sidebar-close-btn" onClick={() => setSidebarOpen(false)}>
             <X size={18} />

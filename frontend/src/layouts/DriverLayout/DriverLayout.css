@@ -47,39 +47,9 @@
   gap: var(--space-sm);
 }
 
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.24), transparent 52%),
-    linear-gradient(140deg, var(--color-primary), var(--color-primary-dark));
-  color: white;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35), var(--shadow-glow);
-}
-
-.brand-icon svg,
-.brand-icon img {
-  width: 20px;
-  height: 20px;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
-}
-
-[data-theme="light"] .brand-icon {
-  border-color: rgba(15, 23, 42, 0.18);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16), var(--shadow-glow);
-}
-
-.brand-text {
-  font-size: 1.125rem;
-  font-weight: 800;
-  font-family: var(--font-family-display);
-  text-transform: uppercase;
-  color: var(--color-text);
-  letter-spacing: -0.02em;
+/* Brand icon now renders the full SVG/PNG directly */
+.sidebar-brand img {
+  max-width: 220px;
 }
 
 .driver-header-right {

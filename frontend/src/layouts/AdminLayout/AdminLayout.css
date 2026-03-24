@@ -38,48 +38,9 @@
   gap: 0.75rem;
 }
 
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22), transparent 52%),
-    linear-gradient(140deg, var(--color-primary), var(--color-primary-dark));
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.35), var(--shadow-glow);
-}
-
-.brand-icon svg,
-.brand-icon img {
-  width: 20px;
-  height: 20px;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
-}
-
-[data-theme="light"] .brand-icon {
-  border-color: rgba(15, 23, 42, 0.18);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16), var(--shadow-glow);
-}
-
-.brand-text {
-  font-size: 1.25rem;
-  font-weight: 800;
-  font-family: var(--font-family-display);
-  letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #FFF 0%, #94A3B8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-[data-theme="light"] .brand-text {
-  background: linear-gradient(135deg, #0f172a 0%, #475569 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
+/* Brand icon now renders the full SVG/PNG directly */
+.sidebar-brand img {
+  max-width: 220px;
 }
 
 /* ── Navigation ── */
