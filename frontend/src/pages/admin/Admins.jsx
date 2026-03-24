@@ -1,5 +1,6 @@
-import { useEffect, useState, useContext, useCallback } from 'react';
+import { useEffect, useState, useContext, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { adminService } from '../../services/admin.service';
 import { ToastContext } from '../../contexts/toastContext';
 import { Trash2, XCircle, Search, ShieldAlert, ShieldCheck, Plus, RefreshCw } from 'lucide-react';
@@ -12,6 +13,19 @@ export default function AdminsPage() {
   const { t } = useTranslation();
   const { addToast } = useContext(ToastContext);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const search = useMemo(() => String(searchParams.get('search') || ''), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -21,9 +35,6 @@ export default function AdminsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchInput, setSearchInput] = useState('');
 
   const [promptData, setPromptData] = useState({ isOpen: false, adminId: null, actionType: null });
   const [resetPrompt, setResetPrompt] = useState({ isOpen: false, adminId: null });
@@ -33,7 +44,7 @@ export default function AdminsPage() {
     setLoadError('');
     try {
       const qs = new URLSearchParams({ page, limit: 10 });
-      if (searchTerm) qs.append('search', searchTerm);
+      if (search) qs.append('search', search);
 
       // Optionally modify getAdmins to return ALL admins if a super admin requests it, 
       // but assuming for now getAdmins returns all based on business requirements.
@@ -47,7 +58,7 @@ export default function AdminsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchTerm, addToast, t]);
+  }, [addToast, page, search, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -143,26 +154,21 @@ export default function AdminsPage() {
       <div className="card mb-md">
         <div className="flex items-center gap-md">
           <Search size={18} className="text-muted" />
-          <input
-            type="text"
-            className="form-input"
-            style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
-            placeholder={t('admins_page.search_placeholder')}
-            value={searchInput}
-            onChange={e => {
-              const value = e.target.value;
-              setSearchInput(value);
-              setPage(1);
-              setSearchTerm(value.trim());
-            }}
-          />
+            <input
+              type="text"
+              className="form-input"
+              style={{ flex: 1, border: 'none', background: 'transparent', padding: '0.25rem' }}
+              placeholder={t('admins_page.search_placeholder')}
+              value={search}
+              onChange={e => setQuery({ search: e.target.value, page: 1 })}
+            />
+          </div>
         </div>
-      </div>
 
       {loading ? (
         <ListLoading />
       ) : loadError ? (
-        <ListError message={loadError} onRetry={load} onClearFilters={() => { setPage(1); setSearchInput(''); setSearchTerm(''); }} />
+        <ListError message={loadError} onRetry={load} onClearFilters={() => setQuery({ page: 1, search: '' })} />
       ) : (
         <div className="table-container">
           <table>
@@ -224,7 +230,7 @@ export default function AdminsPage() {
       <Pagination
         page={page}
         totalPages={pagination.totalPages}
-        onPageChange={(p) => setPage(p)}
+        onPageChange={(p) => setQuery({ page: p })}
       />
 
       {showModal && (

@@ -401,7 +401,17 @@ async function reviewIdentity(id, adminId, action, rejectionReason, ipAddress) {
  * Get pending identity verifications (admin view).
  */
 async function getPendingVerifications(query = {}) {
-  const { sortBy = 'createdAt', sortOrder = 'asc', status, name } = query;
+  const {
+    page = 1,
+    limit = 15,
+    sortBy = 'createdAt',
+    sortOrder = 'asc',
+    status,
+    name,
+  } = query;
+
+  const safePage = Math.max(parseInt(page, 10) || 1, 1);
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 15, 1), 100);
 
   const validSortFields = ['createdAt', 'updatedAt'];
   const sortField = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
@@ -417,19 +427,49 @@ async function getPendingVerifications(query = {}) {
     };
   }
 
-  const verifications = await prisma.identityVerification.findMany({
-    where,
-    include: { driver: { select: { id: true, name: true, email: true, phone: true, avatarUrl: true, identityPhotoUrl: true, idCardFront: true, idCardBack: true } } },
-    orderBy: { [sortField]: order },
-  });
+  const skip = (safePage - 1) * safeLimit;
+
+  const [total, verifications] = await Promise.all([
+    prisma.identityVerification.count({ where }),
+    prisma.identityVerification.findMany({
+      where,
+      include: {
+        driver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatarUrl: true,
+            identityPhotoUrl: true,
+            idCardFront: true,
+            idCardBack: true,
+          },
+        },
+      },
+      orderBy: { [sortField]: order },
+      skip,
+      take: safeLimit,
+    }),
+  ]);
 
   // Sign URLs for all drivers in the list
-  const signed = await Promise.all(verifications.map(async v => {
-    if (v.driver) v.driver = await fileService.signDriverUrls(v.driver);
-    return v;
-  }));
+  const signed = await Promise.all(
+    verifications.map(async (v) => {
+      if (v.driver) v.driver = await fileService.signDriverUrls(v.driver);
+      return v;
+    })
+  );
 
-  return signed;
+  const totalPages = Math.max(Math.ceil(total / safeLimit), 1);
+
+  return {
+    verifications: signed,
+    page: safePage,
+    limit: safeLimit,
+    total,
+    totalPages,
+  };
 }
 
 // ─── Helpers ──────────────────────────────────

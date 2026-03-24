@@ -10,7 +10,11 @@ import Pagination from '../../components/common/Pagination';
 import { ListError, ListLoading } from '../../components/common/ListStates';
 import { downloadApiFile } from '../../utils/download';
 
-const STATUS_BADGES = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger' };
+const STATUS_BADGES = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger', DEFAULT: 'badge-neutral' };
+
+function statusKey(status) {
+  return String(status || '').toLowerCase();
+}
 
 export default function ExpensesPage() {
   const { t, i18n } = useTranslation();
@@ -217,12 +221,14 @@ export default function ExpensesPage() {
     setSelectedIds((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
   }
 
-  function toggleSelectAllPendingOnPage() {
-    const pendingIds = expenses.filter((e) => e.status === 'pending').map((e) => String(e.id));
+  function toggleSelectAllPendingOnPage(evt) {
+    const pendingIds = expenses.filter((e) => statusKey(e.status) === 'pending').map((e) => String(e.id));
     if (!pendingIds.length) return;
     setSelectedIds((prev) => {
       const hasAll = pendingIds.every((id) => prev.includes(id));
-      if (hasAll) return prev.filter((id) => !pendingIds.includes(id));
+      const shouldSelect = typeof evt?.target?.checked === 'boolean' ? evt.target.checked : !hasAll;
+
+      if (!shouldSelect) return prev.filter((id) => !pendingIds.includes(id));
       const next = new Set(prev);
       pendingIds.forEach((id) => next.add(id));
       return Array.from(next);
@@ -343,7 +349,7 @@ export default function ExpensesPage() {
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={toggleSelectAllPendingOnPage}
-              disabled={loading || expenses.filter((e) => e.status === 'pending').length === 0}
+              disabled={loading || bulkLoading || expenses.filter((e) => statusKey(e.status) === 'pending').length === 0}
             >
               {t('common.select_all')}
             </button>
@@ -434,7 +440,8 @@ export default function ExpensesPage() {
                     <input
                       type="checkbox"
                       onChange={toggleSelectAllPendingOnPage}
-                      checked={expenses.filter((e) => e.status === 'pending').every((e) => selectedIds.includes(String(e.id))) && expenses.some((e) => e.status === 'pending')}
+                      disabled={loading || bulkLoading || !expenses.some((e) => statusKey(e.status) === 'pending')}
+                      checked={expenses.filter((e) => statusKey(e.status) === 'pending').every((e) => selectedIds.includes(String(e.id))) && expenses.some((e) => statusKey(e.status) === 'pending')}
                       aria-label={t('common.select_all')}
                     />
                   </th>
@@ -453,6 +460,7 @@ export default function ExpensesPage() {
                   <tr><td colSpan={9} className="empty-state">{t('admin_expenses.table.empty')}</td></tr>
                 ) : expenses.map(e => {
                   const isSelected = selectedIds.includes(String(e.id));
+                  const sKey = statusKey(e.status);
                   const isReviewing = reviewingIds.has(String(e.id));
                   return (
                     <tr key={e.id}>
@@ -460,7 +468,7 @@ export default function ExpensesPage() {
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          disabled={e.status !== 'pending' || bulkLoading}
+                          disabled={sKey !== 'pending' || bulkLoading}
                           onChange={() => toggleSelect(e.id)}
                           aria-label={t('common.select')}
                         />
@@ -486,12 +494,12 @@ export default function ExpensesPage() {
                       </td>
                       <td>{numberFmt.format(parseFloat(e.amount || 0))} {t('common.currency')}</td>
                       <td className="text-sm">{e.description || '—'}</td>
-                      <td><span className={`badge badge-status ${STATUS_BADGES[e.status]}`}>{t(`common.status.${e.status.toLowerCase()}`)}</span></td>
+                      <td><span className={`badge badge-status ${STATUS_BADGES[sKey] ?? STATUS_BADGES.DEFAULT}`}>{t(`common.status.${sKey}`)}</span></td>
                       <td className="text-sm text-muted">{formatDate(e.createdAt)}</td>
                       <td>
                         <div className="flex gap-sm">
                           <button className="btn-icon" onClick={() => setSelected(e)} title={t('common.view')} disabled={bulkLoading || isReviewing}><Eye size={16} /></button>
-                          {e.status === 'pending' && (
+                          {sKey === 'pending' && (
                             <>
                               <button
                                 className="btn-icon"
@@ -555,9 +563,9 @@ export default function ExpensesPage() {
                 { label: t('admin_expenses.table.date'), value: formatDate(selected.createdAt) },
                 {
                   label: t('admin_expenses.table.status'),
-                  value: t(`common.status.${selected.status.toLowerCase()}`),
+                  value: t(`common.status.${statusKey(selected.status)}`),
                   type: 'badge',
-                  badgeClass: STATUS_BADGES[selected.status]
+                  badgeClass: STATUS_BADGES[statusKey(selected.status)] ?? STATUS_BADGES.DEFAULT
                 },
               ]
             },
@@ -572,7 +580,7 @@ export default function ExpensesPage() {
               data: [{ photoUrl: selected.receiptUrl, label: t('admin_expenses.modal.receipt') }]
             }
           ].filter(Boolean)}
-          actions={selected.status === 'pending' && (
+          actions={statusKey(selected.status) === 'pending' && (
             <div className="flex gap-sm">
               <button className="btn btn-success" onClick={() => handleReview(selected.id, 'approved')}>
                 <CheckCircle size={16} /> {t('admin_expenses.modal.approve')}

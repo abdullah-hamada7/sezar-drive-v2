@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useContext } from 'react';
+import { useMemo, useState, useEffect, useContext, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { statsService } from '../../services/stats.service';
@@ -7,16 +7,19 @@ import { Calendar, Users, Car, DollarSign, Route, Wallet, Download } from 'lucid
 import PromptModal from '../../components/common/PromptModal';
 import { ToastContext } from '../../contexts/toastContext';
 import AnimatedCounter from '../../components/common/AnimatedCounter';
+import { ListEmpty, ListError, ListLoading } from '../../components/common/ListStates';
 
 export default function DriverStatsPage() {
   const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
   const [stats, setStats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [showUncollectedOnly, setShowUncollectedOnly] = useState(false);
   const [cashExceptions, setCashExceptions] = useState(null);
   const [cashExceptionsLoading, setCashExceptionsLoading] = useState(false);
+  const [cashExceptionsError, setCashExceptionsError] = useState('');
   const [cashExceptionsActionLoading, setCashExceptionsActionLoading] = useState(false);
   const [cashCollectPrompt, setCashCollectPrompt] = useState({ isOpen: false, tripId: null });
 
@@ -25,28 +28,49 @@ export default function DriverStatsPage() {
   const [cashMinAgeMinutes, setCashMinAgeMinutes] = useState('');
   const [cashSort, setCashSort] = useState('amount_desc');
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const res = await statsService.getDailyReport(date);
-        setStats(res.data || []);
-      } catch (err) { console.error(err); }
-      finally { setLoading(false); }
+  const clearFilters = useCallback(() => {
+    const today = new Date().toISOString().split('T')[0];
+    setDate(today);
+    setShowUncollectedOnly(false);
+    setCashDriverQuery('');
+    setCashMinAmount('');
+    setCashMinAgeMinutes('');
+    setCashSort('amount_desc');
+  }, []);
+
+  const loadStats = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const res = await statsService.getDailyReport(date);
+      setStats(res.data || []);
+    } catch (err) {
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
+    } finally {
+      setLoading(false);
     }
-    load();
-  }, [date]);
+  }, [addToast, date, t]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
 
   useEffect(() => {
     async function loadExceptions() {
       setCashExceptionsLoading(true);
+      setCashExceptionsError('');
       try {
         const res = await statsService.getCashExceptions(date);
         setCashExceptions(res.data || null);
       } catch (err) {
         console.error(err);
         const code = err?.errorCode || err?.code;
-        addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+        const msg = code ? t(`errors.${code}`) : (err?.message || t('common.error'));
+        setCashExceptionsError(msg);
+        addToast(msg, 'error');
         setCashExceptions(null);
       } finally {
         setCashExceptionsLoading(false);
@@ -57,13 +81,16 @@ export default function DriverStatsPage() {
 
   async function refreshCashExceptions() {
     setCashExceptionsLoading(true);
+    setCashExceptionsError('');
     try {
       const res = await statsService.getCashExceptions(date);
       setCashExceptions(res.data || null);
     } catch (err) {
       console.error(err);
       const code = err?.errorCode || err?.code;
-      addToast(code ? t(`errors.${code}`) : (err?.message || t('common.error')), 'error');
+      const msg = code ? t(`errors.${code}`) : (err?.message || t('common.error'));
+      setCashExceptionsError(msg);
+      addToast(msg, 'error');
       setCashExceptions(null);
     } finally {
       setCashExceptionsLoading(false);
@@ -444,7 +471,11 @@ export default function DriverStatsPage() {
           <h3 className="card-title">{t('driver_stats.table_title')}</h3>
         </div>
         {loading ? (
-          <div className="loading-page"><div className="spinner"></div></div>
+          <ListLoading />
+        ) : loadError ? (
+          <div style={{ padding: 'var(--space-md)' }}>
+            <ListError message={loadError} onRetry={loadStats} onClearFilters={clearFilters} />
+          </div>
         ) : (
           <div className="table-container">
             <div className="table-responsive">
@@ -464,7 +495,11 @@ export default function DriverStatsPage() {
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
-                    <tr><td colSpan={9} className="empty-state">{t('driver_stats.empty')}</td></tr>
+                    <tr>
+                      <td colSpan={9} className="empty-state">
+                        <ListEmpty title={t('driver_stats.empty')} />
+                      </td>
+                    </tr>
                   ) : rows.map(s => (
                     <tr key={s.driverId}>
                       <td style={{ fontWeight: 500 }}>{s.driverName}</td>
@@ -529,9 +564,15 @@ export default function DriverStatsPage() {
         </div>
 
         {cashExceptionsLoading ? (
-          <div className="loading-page"><div className="spinner"></div></div>
+          <ListLoading />
+        ) : cashExceptionsError ? (
+          <div style={{ padding: 'var(--space-md)' }}>
+            <ListError message={cashExceptionsError} onRetry={refreshCashExceptions} onClearFilters={clearFilters} />
+          </div>
         ) : (cashExceptionsTotals.trips || 0) === 0 ? (
-          <div className="empty-state" style={{ padding: '1.25rem' }}>{t('driver_stats.cash_exceptions_empty')}</div>
+          <div style={{ padding: 'var(--space-md)' }}>
+            <ListEmpty title={t('driver_stats.cash_exceptions_empty')} />
+          </div>
         ) : (
           <div className="table-container">
             <div style={{ padding: 'var(--space-md)' }}>

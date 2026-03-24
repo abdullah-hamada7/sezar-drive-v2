@@ -332,6 +332,7 @@
     "sort": {
       "newest": "Newest",
       "oldest": "Oldest",
+      "updated_at": "Updated",
       "amount_desc": "Amount (high to low)",
       "amount_asc": "Amount (low to high)",
       "status_desc": "Status (Z to A)",
@@ -1079,6 +1080,13 @@
   "tracking": {
     "title": "Live Tracking",
     "subtitle": "Real-time driver locations",
+    "search_placeholder": "Search driver name or ID...",
+    "unknown_driver": "Unknown Driver",
+    "empty_filtered": "No drivers match your search.",
+    "showing": "Showing {{shown}} of {{total}}",
+    "focus": {
+      "none": "Focus: All drivers"
+    },
     "status": {
       "live": "Live",
       "disconnected": "Disconnected"

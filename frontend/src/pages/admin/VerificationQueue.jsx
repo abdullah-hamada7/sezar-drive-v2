@@ -1,35 +1,75 @@
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { authService as api } from '../../services/auth.service';
-import { Check, X, User, Image } from 'lucide-react';
+import { Check, X, Image } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import PromptModal from '../../components/common/PromptModal';
+import Pagination from '../../components/common/Pagination';
+import { ListEmpty, ListError, ListLoading } from '../../components/common/ListStates';
 
 export default function VerificationQueue() {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [pending, setPending] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 15, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const { addToast } = useContext(ToastContext);
 
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [status, setStatus] = useState('pending');
+  const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '15', 10) || 15, 1), 100);
+  const sortBy = searchParams.get('sortBy') || 'createdAt';
+  const sortOrder = searchParams.get('sortOrder') || 'desc';
+  const status = searchParams.get('status') || 'pending';
+  const name = searchParams.get('name') || '';
+
+  const setQuery = useCallback((next) => {
+    const merged = { page, limit, sortBy, sortOrder, status, name, ...next };
+    const params = new URLSearchParams();
+    Object.entries(merged).forEach(([k, v]) => {
+      if (v == null) return;
+      const s = String(v);
+      if (!s) return;
+      params.set(k, s);
+    });
+    setSearchParams(params, { replace: true });
+  }, [limit, name, page, setSearchParams, sortBy, sortOrder, status]);
+
+  const clearFilters = useCallback(() => {
+    setQuery({ page: 1, name: '', status: 'pending', sortBy: 'createdAt', sortOrder: 'desc', limit: 15 });
+  }, [setQuery]);
 
   const [confirmData, setConfirmData] = useState({ isOpen: false, item: null, action: null });
   const [promptData, setPromptData] = useState({ isOpen: false, item: null });
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   const loadPending = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
-      const query = new URLSearchParams({ sortBy, sortOrder, status }).toString();
-      const res = await api.getPendingVerifications(query);
-      setPending(res.data || []);
+      const query = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sortBy,
+        sortOrder,
+        status,
+      });
+      if (name) query.set('name', name);
+
+      const res = await api.getPendingVerifications(query.toString());
+      setPending(res.data?.verifications || []);
+      setPagination(res.data || { page, limit, totalPages: 1, total: 0 });
     } catch (err) {
-      addToast(err.message || t('common.error'), 'error');
+      console.error(err);
+      const msg = err?.message || t('common.error');
+      setLoadError(msg);
+      addToast(msg, 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast, sortBy, sortOrder, status, t]);
+  }, [addToast, limit, name, page, sortBy, sortOrder, status, t]);
 
   useEffect(() => {
     loadPending();
@@ -50,22 +90,18 @@ export default function VerificationQueue() {
   async function handleReview(id, decision, reason = '') {
     const action = decision.toLowerCase();
     try {
+      setActionLoadingId(id);
       await api.reviewIdentity(id, {
         action: action,
         rejectionReason: reason
       });
-      loadPending();
+      await loadPending();
     } catch (err) {
       addToast(err.message || t('common.error'), 'error');
+    } finally {
+      setActionLoadingId(null);
     }
   }
-
-  if (loading) return (
-    <div className="loading-page">
-      <div className="spinner"></div>
-      <p>{t('common.loading')}</p>
-    </div>
-  );
 
   return (
     <div className="verification-queue-page">
@@ -74,20 +110,32 @@ export default function VerificationQueue() {
           <h1 className="page-title">{t('verification.title')}</h1>
           <p className="page-subtitle">{t('verification.subtitle')}</p>
         </div>
-        <div className="flex gap-sm">
+        <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div className="flex gap-xs" style={{ alignItems: 'center' }}>
+            <input
+              className="form-input"
+              style={{ minWidth: 220 }}
+              placeholder={t('verification.search_driver_placeholder')}
+              value={name}
+              onChange={(e) => setQuery({ page: 1, name: e.target.value })}
+            />
+            <button type="button" className="btn btn-secondary btn-sm" onClick={clearFilters}>
+              {t('common.filters.clear')}
+            </button>
+          </div>
           <select
             className="form-select"
             value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
+            onChange={e => setQuery({ page: 1, sortBy: e.target.value })}
             style={{ width: 'auto' }}
           >
             <option value="createdAt">{t('verification.sort.date')}</option>
-            <option value="driverName">{t('drivers.table.name')}</option>
+            <option value="updatedAt">{t('common.sort.updated_at')}</option>
           </select>
           <select
             className="form-select"
             value={sortOrder}
-            onChange={e => setSortOrder(e.target.value)}
+            onChange={e => setQuery({ page: 1, sortOrder: e.target.value })}
             style={{ width: 'auto' }}
           >
             <option value="desc">{t('verification.sort.newest')}</option>
@@ -99,33 +147,35 @@ export default function VerificationQueue() {
       <div className="card mb-md glass-card" style={{ padding: '0.75rem var(--space-md)' }}>
         <div className="flex items-center justify-between">
           <div className="flex gap-xs">
-            {['pending', 'approved', 'rejected', 'all'].map((s) => (
-              <button
-                key={s}
-                className={`btn btn-sm ${status === s ? 'btn-primary' : 'btn-secondary'}`}
-                style={{
-                  borderRadius: 'var(--radius-sm)',
-                  border: status === s ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                  minWidth: '80px',
-                  textTransform: 'capitalize'
-                }}
-                onClick={() => { setStatus(s); setLoading(true); }}
-              >
-                {t(`verification.filter.${s.toLowerCase()}`)}
-              </button>
-            ))}
-          </div>
+             {['pending', 'approved', 'rejected', 'all'].map((s) => (
+               <button
+                 key={s}
+                 className={`btn btn-sm ${status === s ? 'btn-primary' : 'btn-secondary'}`}
+                 style={{
+                   borderRadius: 'var(--radius-sm)',
+                   border: status === s ? 'none' : '1px solid rgba(255,255,255,0.05)',
+                   minWidth: '80px',
+                   textTransform: 'capitalize'
+                 }}
+                 onClick={() => setQuery({ page: 1, status: s })}
+               >
+                 {t(`verification.filter.${s.toLowerCase()}`)}
+               </button>
+             ))}
+           </div>
           <p className="text-xs text-muted uppercase font-bold" style={{ letterSpacing: '0.05em' }}>
             {pending.length} {t('verification.title')}
           </p>
         </div>
       </div>
 
-      {pending.length === 0 ? (
-        <div className="card p-xl text-center glass-card" style={{ marginTop: '2rem' }}>
-          <div className="text-muted mb-md"><User size={48} style={{ opacity: 0.2, margin: '0 auto' }} /></div>
-          <p className="font-bold text-lg">{t('verification.card.empty')}</p>
-          <p className="text-sm text-muted">{t('verification.messages.no_pending_desc')}</p>
+      {loading ? (
+        <ListLoading />
+      ) : loadError ? (
+        <ListError message={loadError} onRetry={loadPending} onClearFilters={clearFilters} />
+      ) : pending.length === 0 ? (
+        <div style={{ marginTop: '1rem' }}>
+          <ListEmpty title={t('verification.card.empty')} subtitle={t('verification.messages.no_pending_desc')} />
         </div>
       ) : (
         <div className="grid gap-md">
@@ -182,6 +232,7 @@ export default function VerificationQueue() {
                 <button
                   className="btn btn-success btn-sm flex items-center gap-xs"
                   style={{ flex: 1 }}
+                  disabled={actionLoadingId === item.id}
                   onClick={() => setConfirmData({ isOpen: true, item: item, action: 'APPROVE' })}
                 >
                   <Check size={16} /> {t('verification.card.approve')}
@@ -189,6 +240,7 @@ export default function VerificationQueue() {
                 <button
                   className="btn btn-danger btn-sm flex items-center gap-xs"
                   style={{ flex: 1 }}
+                  disabled={actionLoadingId === item.id}
                   onClick={() => setPromptData({ isOpen: true, item: item })}
                 >
                   <X size={16} /> {t('verification.card.reject')}
@@ -198,6 +250,14 @@ export default function VerificationQueue() {
           ))}
         </div>
       )}
+
+      <Pagination
+        page={pagination.page || page}
+        totalPages={pagination.totalPages || 1}
+        pageSize={pagination.limit || limit}
+        onPageChange={(p) => setQuery({ page: p })}
+        onPageSizeChange={(s) => setQuery({ page: 1, limit: s })}
+      />
 
       <ConfirmModal
         isOpen={confirmData.isOpen}

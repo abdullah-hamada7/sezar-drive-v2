@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { shiftService as api } from '../../services/shift.service';
 import { inspectionService as inspApi } from '../../services/inspection.service';
 import { ClipboardCheck, X, XCircle, Check, AlertCircle, Calendar } from 'lucide-react';
@@ -36,10 +37,26 @@ const INSP_STATUS_BADGES = {
 export default function ShiftsPage() {
   const { t, i18n } = useTranslation();
   const { addToast } = useContext(ToastContext);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
+  const limit = useMemo(() => {
+    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
+    return Math.min(Math.max(n, 5), 100);
+  }, [searchParams]);
+  const statusFilter = useMemo(() => String(searchParams.get('status') || ''), [searchParams]);
+
+  const setQuery = useCallback((patch) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch || {}).forEach(([k, v]) => {
+      if (v === undefined || v === null || v === '') next.delete(k);
+      else next.set(k, String(v));
+    });
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [shifts, setShifts] = useState([]);
   const [pagination, setPagination] = useState({});
-  const [page, setPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [promptData, setPromptData] = useState({ isOpen: false, shiftId: null });
@@ -51,7 +68,7 @@ export default function ShiftsPage() {
     setLoading(true);
     try {
       setLoadError('');
-      const params = new URLSearchParams({ page, limit: 15 });
+      const params = new URLSearchParams({ page, limit });
       if (statusFilter) params.set('status', statusFilter);
       const res = await api.getShifts(params.toString());
       setShifts(res.data.shifts || []);
@@ -63,11 +80,10 @@ export default function ShiftsPage() {
       addToast(msg, 'error');
     }
     finally { setLoading(false); }
-  }, [addToast, page, statusFilter, t]);
+  }, [addToast, limit, page, statusFilter, t]);
 
   function clearFilters() {
-    setStatusFilter('');
-    setPage(1);
+    setQuery({ status: '', page: 1 });
   }
 
   useEffect(() => { load(); }, [load]);
@@ -166,7 +182,7 @@ export default function ShiftsPage() {
         <div className="flex gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           {['', 'PendingVerification', 'Active', 'Closed'].map(s => (
             <button key={s} className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => { setStatusFilter(s); setPage(1); }}>
+              onClick={() => setQuery({ status: s, page: 1 })}>
               {s === '' ? t('shifts.filter.all') : s === 'PendingVerification' ? t('shifts.filter.pending') : t(`shifts.filter.${s.toLowerCase()}`)}
             </button>
           ))}
@@ -230,7 +246,9 @@ export default function ShiftsPage() {
       <Pagination
         page={page}
         totalPages={pagination.totalPages}
-        onPageChange={(p) => setPage(p)}
+        onPageChange={(p) => setQuery({ page: p })}
+        pageSize={limit}
+        onPageSizeChange={(size) => setQuery({ limit: size, page: 1 })}
       />
 
       {showInspections && (

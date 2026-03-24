@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useContext, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Radio } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
@@ -8,6 +9,7 @@ import { ToastContext } from '../../contexts/toastContext';
 import { buildTrackingWsUrl } from '../../utils/trackingWs';
 import { evaluateRealtimeEvent, resetRealtimeStream } from '../../utils/realtimeGuard';
 import { http } from '../../services/http.service';
+import { ListEmpty, ListError, ListLoading } from '../../components/common/ListStates';
 
 // Fix Leaflet icon issue
 delete L.Icon.Default.prototype._getIconUrl;
@@ -108,13 +110,38 @@ function shortLabel(name, id) {
 
 export default function TrackingPage() {
   const { t, i18n } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { addToast } = useContext(ToastContext);
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [wsStatus, setWsStatus] = useState('disconnected');
   const [driverAddresses, setDriverAddresses] = useState({});
   const wsRef = useRef(null);
   const wsHadConnectionRef = useRef(false);
+
+  const q = searchParams.get('q') || '';
+  const selectedDriverId = searchParams.get('driverId') || '';
+
+  const setQuery = useCallback((next) => {
+    const merged = {
+      q,
+      driverId: selectedDriverId,
+      ...next,
+    };
+    const params = new URLSearchParams();
+    Object.entries(merged).forEach(([k, v]) => {
+      if (v == null) return;
+      const s = String(v);
+      if (!s) return;
+      params.set(k, s);
+    });
+    setSearchParams(params, { replace: true });
+  }, [q, selectedDriverId, setSearchParams]);
+
+  const clearFilters = useCallback(() => {
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }, [setSearchParams]);
 
   const geocodeCacheRef = useRef(new Map());
   const geocodeInFlightRef = useRef(new Set());
@@ -124,6 +151,8 @@ export default function TrackingPage() {
   const fallbackPollTimerRef = useRef(null);
 
   const loadInitialPositions = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
       const { trackingService: api } = await import('../../services/tracking.service');
       const res = await api.getActiveDrivers();
@@ -136,7 +165,10 @@ export default function TrackingPage() {
       }));
       setDrivers(formatted.filter(d => d.lat !== null));
     } catch (err) {
-      addToast(err.message || t('tracking.messages.load_failed'), 'error');
+      console.error(err);
+      const msg = err?.message || t('tracking.messages.load_failed');
+      setLoadError(msg);
+      addToast(msg, 'error');
     }
     finally { setLoading(false); }
   }, [addToast, t]);
@@ -344,7 +376,33 @@ export default function TrackingPage() {
     parsedCenter && parsedCenter.length === 2 && parsedCenter.every((n) => Number.isFinite(n))
       ? parsedCenter
       : [0, 0];
-  const activeCenter = drivers.length > 0 ? [drivers[0].lat, drivers[0].lng] : defaultCenter;
+  const selectedDriver = useMemo(() => {
+    if (!selectedDriverId) return null;
+    return drivers.find((d) => String(d.id) === String(selectedDriverId)) || null;
+  }, [drivers, selectedDriverId]);
+
+  const activeCenter = selectedDriver?.lat != null && selectedDriver?.lng != null
+    ? [selectedDriver.lat, selectedDriver.lng]
+    : (drivers.length > 0 ? [drivers[0].lat, drivers[0].lng] : defaultCenter);
+
+  const filteredDrivers = useMemo(() => {
+    const query = String(q || '').trim().toLowerCase();
+    if (!query) return drivers;
+    return drivers.filter((d) =>
+      String(d?.name || '').toLowerCase().includes(query) ||
+      String(d?.id || '').toLowerCase().includes(query)
+    );
+  }, [drivers, q]);
+
+  const mapDrivers = useMemo(() => {
+    const query = String(q || '').trim();
+    if (!query) return drivers;
+    // When filtering, only render filtered drivers on the map
+    // (keep selected driver visible if it exists but isn't in the filter result).
+    if (!selectedDriver) return filteredDrivers;
+    const hasSelected = filteredDrivers.some((d) => String(d.id) === String(selectedDriver.id));
+    return hasSelected ? filteredDrivers : [...filteredDrivers, selectedDriver];
+  }, [drivers, filteredDrivers, q, selectedDriver]);
 
   return (
     <div>
@@ -353,7 +411,19 @@ export default function TrackingPage() {
           <h1 className="page-title">{t('tracking.title')}</h1>
           <p className="page-subtitle">{t('tracking.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-sm">
+        <div className="flex items-center gap-sm" style={{ flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div className="flex gap-xs" style={{ alignItems: 'center' }}>
+            <input
+              className="form-input"
+              style={{ minWidth: 240 }}
+              placeholder={t('tracking.search_placeholder')}
+              value={q}
+              onChange={(e) => setQuery({ q: e.target.value })}
+            />
+            <button type="button" className="btn btn-secondary btn-sm" onClick={clearFilters}>
+              {t('common.filters.clear')}
+            </button>
+          </div>
           <span className={`status-led ${wsStatus === 'connected' ? 'status-led-online' : 'status-led-offline'}`} />
           <Radio size={16} className={wsStatus === 'connected' ? '' : 'text-muted'} style={{ color: wsStatus === 'connected' ? 'var(--color-success)' : undefined }} />
           <span className={`badge ${wsStatus === 'connected' ? 'badge-success' : 'badge-danger'}`}>
@@ -383,12 +453,12 @@ export default function TrackingPage() {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapRecenter center={activeCenter} />
-            {drivers.map(d => (
+            {mapDrivers.map(d => (
               d.lat != null && d.lng != null && (
                 <Marker key={d.id} position={[d.lat, d.lng]} icon={getDriverIcon(d)}>
                   <Popup>
                     <div style={{ color: 'var(--color-text)' }}>
-                      <strong>{d.name || t('verification.card.unknown')}</strong><br />
+                      <strong>{d.name || t('tracking.unknown_driver')}</strong><br />
                       <div style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35 }}>
                         {driverAddresses[d.id] || `${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}`}
                       </div>
@@ -407,28 +477,65 @@ export default function TrackingPage() {
             <span className="badge badge-info">{drivers.length}</span>
           </div>
 
+          <div style={{ padding: '0 var(--space-md) var(--space-sm)' }}>
+            <select
+              className="form-select"
+              value={selectedDriverId}
+              onChange={(e) => setQuery({ driverId: e.target.value })}
+            >
+              <option value="">{t('tracking.focus.none')}</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name || String(d.id).slice(0, 8)}
+                </option>
+              ))}
+            </select>
+            <div className="text-xs text-muted" style={{ marginTop: 6 }}>
+              {t('tracking.showing', { shown: filteredDrivers.length, total: drivers.length })}
+            </div>
+          </div>
+
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loading ? (
-              <div className="loading-page" style={{ minHeight: '200px' }}><div className="spinner"></div></div>
-            ) : drivers.length === 0 ? (
-              <div className="empty-state" style={{ padding: '2rem' }}>
-                <p className="text-muted">{t('tracking.card.empty')}</p>
+              <ListLoading label={t('common.loading')} />
+            ) : loadError ? (
+              <div style={{ padding: 'var(--space-md)' }}>
+                <ListError message={loadError} onRetry={loadInitialPositions} onClearFilters={clearFilters} />
+              </div>
+            ) : filteredDrivers.length === 0 ? (
+              <div style={{ padding: 'var(--space-md)' }}>
+                <ListEmpty title={t('tracking.card.empty')} subtitle={q ? t('tracking.empty_filtered') : undefined} />
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {drivers.map(d => (
-                  <div key={d.id} className="flex items-center gap-sm" style={{ padding: '0.5rem', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-tertiary)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0 var(--space-md) var(--space-md)' }}>
+                {filteredDrivers.map(d => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    className="flex items-center gap-sm"
+                    onClick={() => setQuery({ driverId: d.id })}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '0.5rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: String(d.id) === String(selectedDriverId) ? '1px solid var(--color-primary)' : '1px solid transparent',
+                      background: String(d.id) === String(selectedDriverId) ? 'rgba(59, 130, 246, 0.08)' : 'var(--color-bg-tertiary)',
+                      cursor: 'pointer',
+                      color: 'inherit'
+                    }}
+                  >
                     <span className={`status-led ${isDriverLive(d.lastUpdate) ? 'status-led-online' : 'status-led-offline'}`} />
                     <MapPin size={16} style={{ color: driverColorMap[d.id] || 'var(--color-success)' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="text-sm" style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {d.name || d.id.slice(0, 8)}
+                      <div className="text-sm" style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {d.name || String(d.id).slice(0, 8)}
                       </div>
-                      <div className="text-sm text-muted">
+                      <div className="text-sm text-muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {driverAddresses[d.id] || (d.lat != null && d.lng != null ? `${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}` : t('common.loading'))}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

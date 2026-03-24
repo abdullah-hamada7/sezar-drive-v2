@@ -332,6 +332,7 @@
     "sort": {
       "newest": "الأحدث",
       "oldest": "الأقدم",
+      "updated_at": "تم التحديث",
       "amount_desc": "المبلغ (من الأعلى للأقل)",
       "amount_asc": "المبلغ (من الأقل للأعلى)",
       "status_desc": "الحالة (من ي إلى أ)",
@@ -1160,6 +1161,13 @@
   "tracking": {
     "title": "التتبع المباشر",
     "subtitle": "مواقع السائقين في الوقت الفعلي",
+    "search_placeholder": "ابحث باسم السائق أو المعرّف...",
+    "unknown_driver": "سائق غير معروف",
+    "empty_filtered": "لا يوجد سائقون يطابقون البحث.",
+    "showing": "عرض {{shown}} من {{total}}",
+    "focus": {
+      "none": "تركيز: كل السائقين"
+    },
     "status": {
       "live": "مباشر",
       "disconnected": "منقطع"

@@ -1,5 +1,5 @@
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const authService = require('./auth.service');
 const rescueService = require('./rescue.service');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
@@ -200,8 +200,17 @@ router.get(
   authenticate,
   enforcePasswordChanged,
   authorize('admin'),
+  [
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
+    query('sortBy').optional().isIn(['createdAt', 'updatedAt']),
+    query('sortOrder').optional().isIn(['asc', 'desc']),
+    query('status').optional().isIn(['pending', 'approved', 'rejected', 'all']),
+    query('name').optional().trim().isLength({ min: 1, max: 255 }),
+  ],
   async (req, res, next) => {
     try {
+      handleValidation(req);
       const result = await authService.getPendingVerifications(req.query);
       res.json(result);
     } catch (err) {
