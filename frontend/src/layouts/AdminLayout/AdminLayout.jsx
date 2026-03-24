@@ -24,7 +24,6 @@ export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth > 1024);
   const [notifications, setNotifications] = useState([]);
   const [pendingCounts, setPendingCounts] = useState({
-    verification: 0,
     expenses: 0,
     damage: 0
   });
@@ -38,7 +37,6 @@ export default function AdminLayout() {
   const displayedCounts = useMemo(() => {
     return {
       ...pendingCounts,
-      verification: location.pathname === '/admin/verification' ? 0 : pendingCounts.verification,
       expenses: location.pathname === '/admin/expenses' ? 0 : pendingCounts.expenses,
       damage: location.pathname === '/admin/damage' ? 0 : pendingCounts.damage,
     };
@@ -52,10 +50,6 @@ export default function AdminLayout() {
     // Only increment if not currently on that page
     if (notif.type === 'expense_pending' && location.pathname !== '/admin/expenses') {
       setPendingCounts(prev => ({ ...prev, expenses: prev.expenses + 1 }));
-    } else if (notif.type === 'identity_upload' && location.pathname !== '/admin/verification') {
-      setPendingCounts(prev => ({ ...prev, verification: (prev.verification || 0) + 1 }));
-    } else if (notif.type === 'identity_reviewed' && location.pathname !== '/admin/verification') {
-      setPendingCounts(prev => ({ ...prev, verification: Math.max(0, (prev.verification || 0) - 1) }));
     } else if (notif.type === 'damage_reported' && location.pathname !== '/admin/damage') {
       setPendingCounts(prev => ({ ...prev, damage: prev.damage + 1 }));
     }
@@ -72,7 +66,6 @@ export default function AdminLayout() {
     { to: '/admin/drivers', icon: Users, label: t('nav.drivers') },
     { to: '/admin/vehicles', icon: Car, label: t('nav.vehicles') },
     { to: '/admin/shifts', icon: ClipboardCheck, label: t('nav.shifts') },
-    { to: '/admin/verification', icon: UserCheck, label: t('nav.verification'), countKey: 'verification' },
     { to: '/admin/trips', icon: Route, label: t('nav.trips') },
     { to: '/admin/expenses', icon: Receipt, label: t('nav.expenses'), countKey: 'expenses' },
     { to: '/admin/damage', icon: AlertTriangle, label: t('nav.damage_reports'), countKey: 'damage' },
@@ -89,7 +82,6 @@ export default function AdminLayout() {
       try {
         const res = await statsService.getSummaryStats();
         setPendingCounts({
-          verification: res.data.pendingVerifications || 0,
           expenses: res.data.pendingExpenses || 0,
           damage: res.data.pendingDamages || 0
         });

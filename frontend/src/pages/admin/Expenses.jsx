@@ -62,27 +62,37 @@ export default function ExpensesPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [reviewingIds, setReviewingIds] = useState(() => new Set());
 
+  const rowIdsOnPage = useMemo(
+    () => expenses.map((e) => String(e.id)),
+    [expenses]
+  );
+
   const pendingIdsOnPage = useMemo(
     () => expenses.filter((e) => statusKey(e.status) === 'pending').map((e) => String(e.id)),
     [expenses]
   );
 
-  const allPendingSelected = useMemo(
-    () => pendingIdsOnPage.length > 0 && pendingIdsOnPage.every((id) => selectedIds.includes(id)),
+  const selectedPendingIds = useMemo(
+    () => selectedIds.filter((id) => pendingIdsOnPage.includes(String(id))),
     [pendingIdsOnPage, selectedIds]
   );
 
-  const somePendingSelected = useMemo(
-    () => pendingIdsOnPage.some((id) => selectedIds.includes(id)),
-    [pendingIdsOnPage, selectedIds]
+  const allSelectedOnPage = useMemo(
+    () => rowIdsOnPage.length > 0 && rowIdsOnPage.every((id) => selectedIds.includes(id)),
+    [rowIdsOnPage, selectedIds]
+  );
+
+  const someSelectedOnPage = useMemo(
+    () => rowIdsOnPage.some((id) => selectedIds.includes(id)),
+    [rowIdsOnPage, selectedIds]
   );
 
   const selectAllRef = useRef(null);
 
   useEffect(() => {
     if (!selectAllRef.current) return;
-    selectAllRef.current.indeterminate = !allPendingSelected && somePendingSelected;
-  }, [allPendingSelected, somePendingSelected]);
+    selectAllRef.current.indeterminate = !allSelectedOnPage && someSelectedOnPage;
+  }, [allSelectedOnPage, someSelectedOnPage]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -170,10 +180,10 @@ export default function ExpensesPage() {
   }
 
   async function handleBulkApprove() {
-    if (!selectedIds.length) return;
+    if (!selectedPendingIds.length) return;
     setBulkLoading(true);
     try {
-      await api.reviewExpensesBulk({ expenseIds: selectedIds, action: 'approved' });
+      await api.reviewExpensesBulk({ expenseIds: selectedPendingIds, action: 'approved' });
       setSelectedIds([]);
       setRefresh((r) => r + 1);
       addToast(t('common.success'), 'success');
@@ -185,15 +195,15 @@ export default function ExpensesPage() {
   }
 
   function handleBulkRejectOpen() {
-    if (!selectedIds.length) return;
-    setPromptData({ isOpen: true, expenseId: null, expenseIds: selectedIds });
+    if (!selectedPendingIds.length) return;
+    setPromptData({ isOpen: true, expenseId: null, expenseIds: selectedPendingIds });
   }
 
   async function handleBulkReject(reason) {
-    if (!selectedIds.length) return;
+    if (!selectedPendingIds.length) return;
     setBulkLoading(true);
     try {
-      await api.reviewExpensesBulk({ expenseIds: selectedIds, action: 'rejected', rejectionReason: reason });
+      await api.reviewExpensesBulk({ expenseIds: selectedPendingIds, action: 'rejected', rejectionReason: reason });
       setSelectedIds([]);
       setRefresh((r) => r + 1);
       addToast(t('common.success'), 'success');
@@ -248,12 +258,12 @@ export default function ExpensesPage() {
     });
   }
 
-  function setAllPendingSelected(checked) {
-    if (!pendingIdsOnPage.length) return;
+  function setAllRowsSelected(checked) {
+    if (!rowIdsOnPage.length) return;
     setSelectedIds((prev) => {
-      if (!checked) return prev.filter((id) => !pendingIdsOnPage.includes(String(id)));
+      if (!checked) return prev.filter((id) => !rowIdsOnPage.includes(String(id)));
       const next = new Set(prev.map(String));
-      pendingIdsOnPage.forEach((id) => next.add(String(id)));
+      rowIdsOnPage.forEach((id) => next.add(String(id)));
       return Array.from(next);
     });
   }
@@ -371,8 +381,8 @@ export default function ExpensesPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => setAllPendingSelected(!allPendingSelected)}
-              disabled={loading || bulkLoading || pendingIdsOnPage.length === 0}
+              onClick={() => setAllRowsSelected(!allSelectedOnPage)}
+              disabled={loading || bulkLoading || rowIdsOnPage.length === 0}
             >
               {t('common.select_all')}
             </button>
@@ -382,7 +392,7 @@ export default function ExpensesPage() {
           </div>
 
           <div className="flex gap-sm" style={{ justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            {selectedIds.length > 0 && (
+            {selectedPendingIds.length > 0 && (
               <>
                 <button type="button" className="btn btn-success btn-sm" onClick={handleBulkApprove} disabled={bulkLoading}>
                   {bulkLoading ? <span className="spinner" /> : <CheckCircle size={14} />} {t('admin_expenses.filters.bulk_approve')}
@@ -463,9 +473,9 @@ export default function ExpensesPage() {
                     <input
                       ref={selectAllRef}
                       type="checkbox"
-                      onChange={(e) => setAllPendingSelected(Boolean(e.target.checked))}
-                      disabled={loading || bulkLoading || pendingIdsOnPage.length === 0}
-                      checked={allPendingSelected}
+                      onChange={(e) => setAllRowsSelected(Boolean(e.target.checked))}
+                      disabled={loading || bulkLoading || rowIdsOnPage.length === 0}
+                      checked={allSelectedOnPage}
                       aria-label={t('common.select_all')}
                     />
                   </th>
@@ -492,7 +502,7 @@ export default function ExpensesPage() {
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          disabled={sKey !== 'pending' || bulkLoading}
+                          disabled={bulkLoading}
                           onClick={(ev) => ev.stopPropagation()}
                           onChange={(ev) => {
                             ev.stopPropagation();

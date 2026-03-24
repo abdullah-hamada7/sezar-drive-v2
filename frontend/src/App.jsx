@@ -21,8 +21,6 @@ const ChangePasswordPage = lazy(() => import("./pages/ChangePassword"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPassword"));
 const DeviceVerificationPage = lazy(() => import("./pages/DeviceVerification"));
 
-const VerificationQueuePage = lazy(() => import("./pages/admin/VerificationQueue"));
-
 // Admin Pages
 const AdminsPage = lazy(() => import("./pages/admin/Admins"));
 const AdminLayout = lazy(() => import("./layouts/AdminLayout/AdminLayout"));
@@ -132,7 +130,6 @@ function AppRoutes() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="audit" element={<AuditLogsPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
-        <Route path="verification" element={<VerificationQueuePage />} />
         <Route path="violations" element={<ViolationsPage />} />
         <Route path="driver-stats" element={<DriverStatsPage />} />
       </Route>

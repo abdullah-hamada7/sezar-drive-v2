@@ -368,7 +368,7 @@ export default function DriversPage() {
                         <button
                           className="btn-icon text-success"
                           onClick={() => handleApprove(d)}
-                          title={t('nav.verification')}
+                          title={t('common.approve')}
                         >
                           <UserCheck size={16} />
                         </button>

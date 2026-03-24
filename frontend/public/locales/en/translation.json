@@ -11,7 +11,6 @@
     "tracking": "Live Tracking",
     "reports": "Reports",
     "audit_logs": "Audit Logs",
-    "verification": "Verification",
     "settings": "Settings",
     "logout": "Logout",
     "admins": "Admins",
@@ -953,49 +952,6 @@
     "modal": {
       "title": "Damage Report",
       "photos": "Photos"
-    }
-  },
-  "verification": {
-    "title": "Identity Verification Queue",
-    "subtitle": "Review and manage driver identities",
-    "search_driver_placeholder": "Search driver name...",
-    "sort": {
-      "label": "Sort By",
-      "date": "Date Submitted",
-      "oldest": "Oldest First",
-      "newest": "Newest First"
-    },
-    "card": {
-      "unknown": "Unknown Driver",
-      "submitted": "Submitted: {{date}}",
-      "selfie": "Selfie",
-      "shift_selfie": "Shift Selfie",
-      "profile_photo": "Profile Photo",
-      "id_front": "ID Front",
-      "id_back": "ID Back",
-      "id_short": "ID",
-      "zoom": "Zoom",
-      "no_photo": "No {{label}}",
-      "approve": "Approve",
-      "reject": "Reject",
-      "empty": "No pending verifications"
-    },
-    "filter": {
-      "pending": "Pending",
-      "approved": "Approved",
-      "rejected": "Rejected",
-      "all": "All"
-    },
-    "messages": {
-      "reject_prompt": "Enter rejection reason:",
-      "reject_reason_placeholder": "Reason for rejection",
-      "confirm_approve": "Are you sure you want to approve this verification?",
-      "confirm_reject": "Are you sure you want to reject this verification?",
-      "success_approve": "Verification approved",
-      "success_reject": "Verification rejected",
-      "review_failed": "Review failed",
-      "loading_queue": "Loading queue...",
-      "no_pending_desc": "All caught up! No verifications match your filter."
     }
   },
   "admin_expenses": {

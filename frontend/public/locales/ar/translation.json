@@ -11,7 +11,6 @@
     "tracking": "التتبع المباشر",
     "reports": "التقارير",
     "audit_logs": "سجلات التدقيق",
-    "verification": "التحقق",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
     "admins": "المشرفين",
@@ -1035,49 +1034,6 @@
     "modal": {
       "title": "تقرير الضرر",
       "photos": "الصور"
-    }
-  },
-  "verification": {
-    "title": "طابور التحقق من الهوية",
-    "subtitle": "مراجعة وإدارة هويات السائقين",
-    "search_driver_placeholder": "ابحث باسم السائق...",
-    "sort": {
-      "label": "ترتيب حسب",
-      "date": "تاريخ التقديم",
-      "oldest": "الأقدم أولاً",
-      "newest": "الأحدث أولاً"
-    },
-    "card": {
-      "unknown": "سائق غير معروف",
-      "submitted": "تم التقديم: {{date}}",
-      "selfie": "سيلفي",
-      "shift_selfie": "سيلفي المناوبة",
-      "profile_photo": "الصورة الشخصية",
-      "id_front": "البطاقة (أمام)",
-      "id_back": "البطاقة (خلف)",
-      "id_short": "المعرف",
-      "zoom": "تكبير",
-      "no_photo": "لا يوجد {{label}}",
-      "approve": "موافقة",
-      "reject": "رفض",
-      "empty": "لا توجد طلبات تحقق قيد الانتظار"
-    },
-    "filter": {
-      "pending": "قيد الانتظار",
-      "approved": "موافق عليه",
-      "rejected": "مرفوض",
-      "all": "الكل"
-    },
-    "messages": {
-      "reject_prompt": "أدخل سبب الرفض:",
-      "reject_reason_placeholder": "سبب الرفض",
-      "confirm_approve": "هل أنت متأكد من رغبتك في الموافقة على هذا التحقق؟",
-      "confirm_reject": "هل أنت متأكد من رغبتك في رفض هذا التحقق؟",
-      "success_approve": "تمت الموافقة على التحقق",
-      "success_reject": "تم رفض التحقق",
-      "review_failed": "فشلت المراجعة",
-      "loading_queue": "جارٍ تحميل قائمة التحقق...",
-      "no_pending_desc": "كل شيء محدث! لا توجد طلبات تحقق تطابق الفلاتر."
     }
   },
   "admin_expenses": {
