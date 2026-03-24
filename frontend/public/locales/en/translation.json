@@ -564,7 +564,6 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Fleet operations overview",
     "loading": "Loading dashboard...",
     "stats": {
       "drivers": "Total Drivers",
@@ -585,7 +584,7 @@
   },
   "vehicles": {
     "title": "Vehicles",
-    "subtitle": "Manage fleet vehicles",
+    "subtitle": "Manage vehicles",
     "add_btn": "Add Vehicle",
     "search_placeholder": "Search by plate, model, or QR...",
     "available_only": "Available Only",
@@ -633,7 +632,7 @@
   },
   "drivers": {
     "title": "Drivers",
-    "subtitle": "Manage fleet drivers",
+    "subtitle": "Manage drivers",
     "add_btn": "Add Driver",
     "search_placeholder": "Search by name, email, or phone...",
     "filters": {
@@ -1105,7 +1104,7 @@
   },
   "reports": {
     "title": "Reports",
-    "subtitle": "Generate revenue and fleet performance reports",
+    "subtitle": "Generate revenue and  performance reports",
     "filter": {
       "start": "Start Date",
       "end": "End Date",

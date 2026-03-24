@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useContext } from 'react';
+import { useState, useEffect, useMemo, useCallback, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { expenseService as api } from '../../services/expense.service';
@@ -61,6 +61,28 @@ export default function ExpensesPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [reviewingIds, setReviewingIds] = useState(() => new Set());
+
+  const pendingIdsOnPage = useMemo(
+    () => expenses.filter((e) => statusKey(e.status) === 'pending').map((e) => String(e.id)),
+    [expenses]
+  );
+
+  const allPendingSelected = useMemo(
+    () => pendingIdsOnPage.length > 0 && pendingIdsOnPage.every((id) => selectedIds.includes(id)),
+    [pendingIdsOnPage, selectedIds]
+  );
+
+  const somePendingSelected = useMemo(
+    () => pendingIdsOnPage.some((id) => selectedIds.includes(id)),
+    [pendingIdsOnPage, selectedIds]
+  );
+
+  const selectAllRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectAllRef.current) return;
+    selectAllRef.current.indeterminate = !allPendingSelected && somePendingSelected;
+  }, [allPendingSelected, somePendingSelected]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -216,21 +238,22 @@ export default function ExpensesPage() {
     return d ? new Date(d).toLocaleDateString(i18n.language) : '—';
   }
 
-  function toggleSelect(id) {
+  function setRowSelected(id, checked) {
     const key = String(id);
-    setSelectedIds((prev) => prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key]);
+    setSelectedIds((prev) => {
+      const has = prev.includes(key);
+      if (checked && !has) return [...prev, key];
+      if (!checked && has) return prev.filter((x) => x !== key);
+      return prev;
+    });
   }
 
-  function toggleSelectAllPendingOnPage(evt) {
-    const pendingIds = expenses.filter((e) => statusKey(e.status) === 'pending').map((e) => String(e.id));
-    if (!pendingIds.length) return;
+  function setAllPendingSelected(checked) {
+    if (!pendingIdsOnPage.length) return;
     setSelectedIds((prev) => {
-      const hasAll = pendingIds.every((id) => prev.includes(id));
-      const shouldSelect = typeof evt?.target?.checked === 'boolean' ? evt.target.checked : !hasAll;
-
-      if (!shouldSelect) return prev.filter((id) => !pendingIds.includes(id));
-      const next = new Set(prev);
-      pendingIds.forEach((id) => next.add(id));
+      if (!checked) return prev.filter((id) => !pendingIdsOnPage.includes(String(id)));
+      const next = new Set(prev.map(String));
+      pendingIdsOnPage.forEach((id) => next.add(String(id)));
       return Array.from(next);
     });
   }
@@ -348,8 +371,8 @@ export default function ExpensesPage() {
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={toggleSelectAllPendingOnPage}
-              disabled={loading || bulkLoading || expenses.filter((e) => statusKey(e.status) === 'pending').length === 0}
+              onClick={() => setAllPendingSelected(!allPendingSelected)}
+              disabled={loading || bulkLoading || pendingIdsOnPage.length === 0}
             >
               {t('common.select_all')}
             </button>
@@ -438,10 +461,11 @@ export default function ExpensesPage() {
                 <tr>
                   <th style={{ width: 44 }}>
                     <input
+                      ref={selectAllRef}
                       type="checkbox"
-                      onChange={toggleSelectAllPendingOnPage}
-                      disabled={loading || bulkLoading || !expenses.some((e) => statusKey(e.status) === 'pending')}
-                      checked={expenses.filter((e) => statusKey(e.status) === 'pending').every((e) => selectedIds.includes(String(e.id))) && expenses.some((e) => statusKey(e.status) === 'pending')}
+                      onChange={(e) => setAllPendingSelected(Boolean(e.target.checked))}
+                      disabled={loading || bulkLoading || pendingIdsOnPage.length === 0}
+                      checked={allPendingSelected}
                       aria-label={t('common.select_all')}
                     />
                   </th>
@@ -469,7 +493,11 @@ export default function ExpensesPage() {
                           type="checkbox"
                           checked={isSelected}
                           disabled={sKey !== 'pending' || bulkLoading}
-                          onChange={() => toggleSelect(e.id)}
+                          onClick={(ev) => ev.stopPropagation()}
+                          onChange={(ev) => {
+                            ev.stopPropagation();
+                            setRowSelected(e.id, Boolean(ev.target.checked));
+                          }}
                           aria-label={t('common.select')}
                         />
                       </td>

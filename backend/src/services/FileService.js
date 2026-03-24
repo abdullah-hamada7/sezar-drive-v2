@@ -67,6 +67,39 @@ class FileService {
   }
 
   /**
+   * Signs URLs for a single identity verification record.
+   * @param {Object} verification
+   * @returns {Promise<Object>} verification with signed URLs
+   */
+  async signIdentityVerification(verification) {
+    if (!verification) return verification;
+    const v = { ...verification };
+
+    try {
+      if (v.photoUrl) v.photoUrl = await this.getUrl(v.photoUrl);
+      if (v.idCardFront) v.idCardFront = await this.getUrl(v.idCardFront);
+      if (v.idCardBack) v.idCardBack = await this.getUrl(v.idCardBack);
+    } catch (err) {
+      console.error('Failed to sign identity verification URLs:', err.message);
+    }
+
+    if (v.driver) {
+      v.driver = await this.signDriverUrls(v.driver);
+    }
+
+    return v;
+  }
+
+  /**
+   * Signs URLs for multiple identity verification records.
+   * @param {Array} verifications
+   */
+  async signIdentityVerifications(verifications) {
+    if (!verifications || !Array.isArray(verifications)) return verifications;
+    return await Promise.all(verifications.map((v) => this.signIdentityVerification(v)));
+  }
+
+  /**
    * Signs URLs for a single damage report
    * @param {Object} report 
    */

@@ -137,7 +137,6 @@ export default function DashboardPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">{t('dashboard.title')}</h1>
-          <p className="page-subtitle">{t('dashboard.subtitle')}</p>
         </div>
       </div>
 

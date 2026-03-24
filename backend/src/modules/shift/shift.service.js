@@ -2,9 +2,25 @@ const prisma = require('../../config/database');
 const { ConflictError, ForbiddenError, NotFoundError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const { SHIFT_STATE_MACHINE } = require('../../services/state-machine');
+const FileService = require('../../services/FileService');
 const vehicleService = require('../vehicle/vehicle.service');
 const ShiftValidator = require('./shift.validator');
 const ShiftNotifier = require('./shift.notifier');
+
+async function signShiftStartSelfie(shift) {
+  if (!shift) return shift;
+  const s = { ...shift };
+
+  if (s.startSelfieUrl) {
+    try {
+      s.startSelfieUrl = await FileService.getUrl(s.startSelfieUrl);
+    } catch (err) {
+      console.error('Failed to sign shift selfie URL:', err.message);
+    }
+  }
+
+  return s;
+}
 
 /**
  * Validate shift state transition.
@@ -227,13 +243,15 @@ async function adminCloseShift(shiftId, adminId, reason, ipAddress) {
  * Get driver's active shift.
  */
 async function getActiveShift(driverId) {
-  return prisma.shift.findFirst({
+  const shift = await prisma.shift.findFirst({
     where: { driverId, status: { in: ['PendingVerification', 'Active'] } },
     include: {
       vehicle: true,
       assignments: { where: { active: true }, include: { vehicle: true } },
     },
   });
+
+  return await signShiftStartSelfie(shift);
 }
 
 /**
@@ -267,7 +285,9 @@ async function getShifts({ page = 1, limit = 20, driverId, status, date }) {
     prisma.shift.count({ where }),
   ]);
 
-  return { shifts, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) };
+  const signedShifts = await Promise.all(shifts.map(signShiftStartSelfie));
+
+  return { shifts: signedShifts, total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) };
 }
 
 /**
@@ -295,7 +315,11 @@ async function getShiftById(id, requestingUser = null) {
     }
   }
 
-  return shift;
+  const signedShift = await signShiftStartSelfie(shift);
+  signedShift.inspections = await FileService.signInspections(signedShift.inspections);
+  signedShift.expenses = await FileService.signExpenses(signedShift.expenses);
+
+  return signedShift;
 }
 
 module.exports = {

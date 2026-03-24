@@ -179,75 +179,89 @@ export default function VerificationQueue() {
         </div>
       ) : (
         <div className="grid gap-md">
-          {pending.map(item => (
-            <div key={item.id} className="card" style={{ padding: 'var(--space-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-              <div className="flex gap-md items-start" style={{ marginBottom: 'var(--space-sm)' }}>
-                <div style={{ flex: 1 }}>
-                  <h3 className="font-bold">{item.driver?.name || t('verification.card.unknown')}</h3>
-                  <p className="text-muted text-sm">{item.driver?.email} | {item.driver?.phone}</p>
-                  <p className="text-xs text-muted">{t('verification.card.submitted', { date: new Date(item.createdAt).toLocaleString() })}</p>
-                </div>
-                <span className={`badge badge-status ${item.status === 'approved' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
-                  {t(`common.status.${(item.status ?? 'pending').toLowerCase()}`)}
-                </span>
-              </div>
+          {pending.map((item) => {
+            const sKey = String(item.status ?? 'pending').toLowerCase();
+            const canReview = sKey === 'pending';
 
-              {/* Photos Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', margin: 'var(--space-md) 0' }}>
-                {[
-                  { url: item.photoUrl, label: t('verification.card.selfie') },
-                  { url: item.idCardFront || item.driver?.idCardFront, label: t('verification.card.id_front') },
-                  { url: item.idCardBack || item.driver?.idCardBack, label: t('verification.card.id_back') },
-                ].map(({ url, label }) => (
-                  <div key={label} style={{
-                    background: 'var(--color-bg-tertiary)',
-                    borderRadius: 'var(--radius-md)',
-                    overflow: 'hidden',
-                    aspectRatio: '4/3',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    border: '1px solid var(--color-border)'
-                  }}>
-                    {url && url !== 'manual_verification' ? (
-                      <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <>
-                        <Image size={20} style={{ color: 'var(--color-text-muted)' }} />
-                        <span className="text-xs text-muted" style={{ marginTop: 4 }}>{t('verification.card.no_photo', { label })}</span>
-                      </>
-                    )}
+            return (
+              <div
+                key={item.id}
+                className="card"
+                style={{ padding: 'var(--space-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}
+              >
+                <div className="flex gap-md items-start" style={{ marginBottom: 'var(--space-sm)' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 className="font-bold">{item.driver?.name || t('verification.card.unknown')}</h3>
+                    <p className="text-muted text-sm">{item.driver?.email} | {item.driver?.phone}</p>
+                    <p className="text-xs text-muted">{t('verification.card.submitted', { date: new Date(item.createdAt).toLocaleString() })}</p>
                   </div>
-                ))}
-              </div>
-              <div className="flex gap-xs mb-sm" style={{ justifyContent: 'center' }}>
-                <span className="text-xs text-muted">{t('verification.card.selfie')}</span>
-                <span className="text-xs text-muted" style={{ margin: '0 1.5rem' }}>{t('verification.card.id_front')}</span>
-                <span className="text-xs text-muted">{t('verification.card.id_back')}</span>
-              </div>
+                  <span className={`badge badge-status ${sKey === 'approved' ? 'badge-success' : sKey === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
+                    {t(`common.status.${sKey}`)}
+                  </span>
+                </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-sm" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-sm)' }}>
-                <button
-                  className="btn btn-success btn-sm flex items-center gap-xs"
-                  style={{ flex: 1 }}
-                  disabled={actionLoadingId === item.id}
-                  onClick={() => setConfirmData({ isOpen: true, item: item, action: 'APPROVE' })}
-                >
-                  <Check size={16} /> {t('verification.card.approve')}
-                </button>
-                <button
-                  className="btn btn-danger btn-sm flex items-center gap-xs"
-                  style={{ flex: 1 }}
-                  disabled={actionLoadingId === item.id}
-                  onClick={() => setPromptData({ isOpen: true, item: item })}
-                >
-                  <X size={16} /> {t('verification.card.reject')}
-                </button>
+                {/* Photos Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', margin: 'var(--space-md) 0' }}>
+                  {[
+                    { url: item.photoUrl, label: t('verification.card.selfie') },
+                    { url: item.idCardFront || item.driver?.idCardFront, label: t('verification.card.id_front') },
+                    { url: item.idCardBack || item.driver?.idCardBack, label: t('verification.card.id_back') },
+                  ].map(({ url, label }) => (
+                    <div
+                      key={label}
+                      style={{
+                        background: 'var(--color-bg-tertiary)',
+                        borderRadius: 'var(--radius-md)',
+                        overflow: 'hidden',
+                        aspectRatio: '4/3',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        border: '1px solid var(--color-border)'
+                      }}
+                    >
+                      {url && url !== 'manual_verification' ? (
+                        <img src={url} alt={label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <>
+                          <Image size={20} style={{ color: 'var(--color-text-muted)' }} />
+                          <span className="text-xs text-muted" style={{ marginTop: 4 }}>{t('verification.card.no_photo', { label })}</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-xs mb-sm" style={{ justifyContent: 'center' }}>
+                  <span className="text-xs text-muted">{t('verification.card.selfie')}</span>
+                  <span className="text-xs text-muted" style={{ margin: '0 1.5rem' }}>{t('verification.card.id_front')}</span>
+                  <span className="text-xs text-muted">{t('verification.card.id_back')}</span>
+                </div>
+
+                {/* Action Buttons (pending only) */}
+                {canReview ? (
+                  <div className="flex gap-sm" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 'var(--space-sm)' }}>
+                    <button
+                      className="btn btn-success btn-sm flex items-center gap-xs"
+                      style={{ flex: 1 }}
+                      disabled={actionLoadingId === item.id}
+                      onClick={() => setConfirmData({ isOpen: true, item, action: 'APPROVE' })}
+                    >
+                      <Check size={16} /> {t('verification.card.approve')}
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm flex items-center gap-xs"
+                      style={{ flex: 1 }}
+                      disabled={actionLoadingId === item.id}
+                      onClick={() => setPromptData({ isOpen: true, item })}
+                    >
+                      <X size={16} /> {t('verification.card.reject')}
+                    </button>
+                  </div>
+                ) : null}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

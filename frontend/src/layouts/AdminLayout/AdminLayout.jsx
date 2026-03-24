@@ -215,9 +215,6 @@ export default function AdminLayout() {
 
       <header className="mobile-header">
         <div className="sidebar-brand">
-          <div className="brand-icon">
-            <BrandIcon size={20} />
-          </div>
           <span className="brand-text">{t('common.brand')}</span>
         </div>
         <button className="btn-icon" onClick={() => setSidebarOpen(true)}>

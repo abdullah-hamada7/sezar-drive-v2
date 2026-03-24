@@ -40,9 +40,7 @@ export default function DriverLayout() {
     <div className="driver-layout">
       <header className="driver-header">
         <div className="sidebar-brand">
-          <div className="brand-icon">
-            <BrandIcon size={20} />
-          </div>
+
           <span className="brand-text">{t('common.brand')}</span>
         </div>
         <div className="driver-header-right">

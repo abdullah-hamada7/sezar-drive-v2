@@ -315,7 +315,7 @@ async function uploadIdentityPhoto(driverId, { photoUrl, idCardFront, idCardBack
   notifyAdmins('identity_upload', 'New Identity Verification', `Driver ${user.name} has uploaded a new identity photo for review.`, { driverId });
 
   return {
-    verification,
+    verification: await fileService.signIdentityVerification(verification),
     user: await fileService.signDriverUrls(sanitizeUser(updatedUser)),
   };
 }
@@ -394,7 +394,7 @@ async function reviewIdentity(id, adminId, action, rejectionReason, ipAddress) {
     { driverId: verification.driverId, status, actorId: adminId }
   );
 
-  return updated;
+  return await fileService.signIdentityVerification(updated);
 }
 
 /**
@@ -453,13 +453,7 @@ async function getPendingVerifications(query = {}) {
     }),
   ]);
 
-  // Sign URLs for all drivers in the list
-  const signed = await Promise.all(
-    verifications.map(async (v) => {
-      if (v.driver) v.driver = await fileService.signDriverUrls(v.driver);
-      return v;
-    })
-  );
+  const signed = await fileService.signIdentityVerifications(verifications);
 
   const totalPages = Math.max(Math.ceil(total / safeLimit), 1);
 
