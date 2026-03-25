@@ -11,9 +11,9 @@ export default function BrandIcon({
   const [failed, setFailed] = useState(false);
 
   const src = useMemo(() => {
-    if (failed) return '/favicon.png';
-    if (variant === 'mark') return '/brand-mark.svg';
-    return '/brand-full.svg';
+    if (failed) return '/favicon.png?v=5';
+    if (variant === 'mark') return '/brand-mark.svg?v=5';
+    return '/brand-full.svg?v=5';
   }, [failed, variant]);
 
   const imgStyle = {

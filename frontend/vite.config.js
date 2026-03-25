@@ -19,23 +19,23 @@ export default defineConfig({
         background_color: '#ffffff',
         icons: [
           {
-            src: 'icon-192.png',
+            src: 'icon-192.png?v=5',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'icon-512.png',
+            src: 'icon-512.png?v=5',
             sizes: '512x512',
             type: 'image/png'
           },
           {
-            src: 'sezar-drive-icon.svg',
+            src: 'sezar-drive-icon.svg?v=5',
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: 'icon-512.png',
+            src: 'icon-512.png?v=5',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'

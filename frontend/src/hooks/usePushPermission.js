@@ -36,8 +36,8 @@ export function showNativeNotification(title, body) {
   try {
     new Notification(title, {
       body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
+      icon: '/icon-192.png?v=5',
+      badge: '/icon-192.png?v=5',
       tag: `sezar-${Date.now()}`,
     });
   } catch {
