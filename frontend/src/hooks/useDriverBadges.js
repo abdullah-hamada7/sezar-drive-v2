@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { httpService } from '../services/http.service';
+import { http } from '../services/http.service';
 
 const DEFAULT = { trips: 0, shift: 0, inspection: 0, expenses: 0, damage: 0, violations: 0 };
 const POLL_MS = 30_000;
@@ -20,7 +20,7 @@ export function useDriverBadges() {
 
   const fetch = useCallback(async () => {
     try {
-      const res = await httpService.get('/drivers/badge-counts');
+      const res = await http.get('/drivers/badge-counts');
       if (mountedRef.current) {
         setBadges({
           trips:      res?.data?.trips      ?? 0,
