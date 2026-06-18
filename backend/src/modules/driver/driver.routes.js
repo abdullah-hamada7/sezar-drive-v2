@@ -9,6 +9,7 @@ const { createUploader } = require('../../middleware/upload');
 const fileService = require('../../services/FileService');
 const upload = createUploader();
 const { sendCsv } = require('../../utils/csv');
+const prisma = require('../../config/database');
 
 const router = express.Router();
 
@@ -16,6 +17,52 @@ function handleValidation(req) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) throw new ValidationError('Validation failed', errors.array());
 }
+
+// ─── GET /api/v1/drivers/badge-counts ─────────────
+// Returns live counts for each driver app tab (only for the logged-in driver).
+// Each count reflects items the admin created/assigned that require driver attention.
+router.get(
+  '/badge-counts',
+  authenticate,
+  enforcePasswordChanged,
+  async (req, res, next) => {
+    try {
+      const driverId = req.user.id;
+
+      const [
+        trips,       // ASSIGNED trips not yet accepted by driver
+        shift,       // Shifts in PendingVerification (need driver to start)
+        inspection,  // Pending inspections
+        expenses,    // Rejected expenses (need driver to fix)
+        damage,      // Open (reported) damage reports
+        violations,  // All violations (admin-assigned — driver must be aware)
+      ] = await Promise.all([
+        prisma.trip.count({
+          where: { driverId, status: 'ASSIGNED' },
+        }),
+        prisma.shift.count({
+          where: { driverId, status: 'PendingVerification' },
+        }),
+        prisma.inspection.count({
+          where: { driverId, status: 'pending' },
+        }),
+        prisma.expense.count({
+          where: { driverId, status: 'rejected' },
+        }),
+        prisma.damageReport.count({
+          where: { driverId, status: 'reported' },
+        }),
+        prisma.trafficViolation.count({
+          where: { driverId },
+        }),
+      ]);
+
+      res.json({ trips, shift, inspection, expenses, damage, violations });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // ─── PUT /api/v1/drivers/profile ──────────────────
 router.put(

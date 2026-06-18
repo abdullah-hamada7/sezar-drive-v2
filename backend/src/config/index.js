@@ -38,4 +38,9 @@ module.exports = {
     bucket: process.env.S3_BUCKET,
     region: process.env.S3_REGION || "us-east-1",
   },
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || "BCgUu9XJKVFPNcYtr2XW8GJ9-qmRqFhoRdWqmcRcRPs36l2Dgy9N92QuyEvQTnn16ncHE13Vor0f7mHva_II67U",
+    privateKey: process.env.VAPID_PRIVATE_KEY || "Zsy5BwtCb35o4w8ewJMlskff9lv_M2p8dO6b3gdiYUY",
+    subject: process.env.VAPID_SUBJECT || "mailto:admin@abdullahamada.me"
+  }
 };

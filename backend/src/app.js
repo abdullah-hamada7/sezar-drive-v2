@@ -56,6 +56,8 @@ const auditRoutes = require('./modules/audit/audit.routes');
 const trackingService = require('./modules/tracking/tracking.service');
 const adminRoutes = require('./modules/admin/admin.routes');
 const violationRoutes = require('./modules/violation/violation.routes');
+const pushRoutes = require('./modules/push/push.routes');
+const notificationRoutes = require('./modules/push/notification.routes');
 
 const app = express();
 
@@ -139,6 +141,8 @@ app.use('/api/v1/verify', biometricLimiter, verificationRoutes);
 app.use('/api/v1/audit-logs', auditRoutes);
 app.use('/api/v1/admins', adminRoutes);
 app.use('/api/v1/violations', violationRoutes);
+app.use('/api/v1/push', pushRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Spec-compatible aliases (existing modules reused)
 app.use('/api/v1/admin/drivers', driverRoutes);

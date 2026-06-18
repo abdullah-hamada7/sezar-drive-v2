@@ -51,6 +51,8 @@ model User {
   devices                 UserDevice[]
   rescueRequests          RescueRequest[]
   trafficViolations       TrafficViolation[]      @relation("TrafficViolationDriver")
+  pushSubscriptions       PushSubscription[]
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -422,4 +424,32 @@ model TrafficViolation {
 enum AdminRole {
   SUPER_ADMIN
   ADMIN
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @unique
+  keys      Json     // contains auth and p256dh keys
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String   @db.VarChar(255)
+  body      String   @db.VarChar(1000)
+  type      String   @db.VarChar(50) // e.g. 'trip_assigned', 'trip_cancelled'
+  entityId  String?  @map("entity_id") @db.VarChar(255) // tripId, shiftId, etc.
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
