@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useDriverTracking } from '../../hooks/useDriverTracking';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
-import { useContext, useState } from 'react';
+import { useEffect, useCallback, useState, useContext } from 'react';
 import { ThemeContext } from '../../contexts/theme';
 import {
   ClipboardCheck, Route, Receipt, AlertTriangle,
@@ -12,6 +12,7 @@ import BrandIcon from '../../components/BrandIcon';
 import { useLanguage } from '../../hooks/useLanguage';
 import { usePushPermission } from '../../hooks/usePushPermission';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { tripService } from '../../services/trip.service';
 import './DriverLayout.css';
 
 export default function DriverLayout() {
@@ -20,20 +21,60 @@ export default function DriverLayout() {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { isSyncing, pendingCount } = useOfflineSync();
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [assignedCount, setAssignedCount] = useState(0);
+
   usePushPermission();
   useDriverTracking();
+
+  const fetchAssignedCount = useCallback(async () => {
+    try {
+      const res = await tripService.getTrips('status=ASSIGNED');
+      const count = res?.data?.trips?.length || 0;
+      setAssignedCount(count);
+    } catch (err) {
+      console.error('Error fetching assigned trips count:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAssignedCount();
+
+    const handleUpdate = () => {
+      fetchAssignedCount();
+    };
+
+    window.addEventListener('ws:trip_assigned', handleUpdate);
+    window.addEventListener('ws:trip_accepted', handleUpdate);
+    window.addEventListener('ws:trip_cancelled', handleUpdate);
+    window.addEventListener('ws:trip_completed', handleUpdate);
+    window.addEventListener('ws:update', handleUpdate);
+    window.addEventListener('online', handleUpdate);
+
+    const interval = setInterval(handleUpdate, 15000);
+
+    return () => {
+      window.removeEventListener('ws:trip_assigned', handleUpdate);
+      window.removeEventListener('ws:trip_accepted', handleUpdate);
+      window.removeEventListener('ws:trip_cancelled', handleUpdate);
+      window.removeEventListener('ws:trip_completed', handleUpdate);
+      window.removeEventListener('ws:update', handleUpdate);
+      window.removeEventListener('online', handleUpdate);
+      clearInterval(interval);
+    };
+  }, [fetchAssignedCount]);
+
   const syncChipLabel = isSyncing
     ? t('common.offline.syncing_short')
     : t('common.offline.pending_short', { count: pendingCount });
 
   const navItems = [
-    { to: '/driver', icon: Home, label: t('nav_driver.home'), end: true },
-    { to: '/driver/shift', icon: ClipboardCheck, label: t('nav_driver.shift') },
-    { to: '/driver/trips', icon: Route, label: t('nav_driver.trips') },
-    { to: '/driver/inspection', icon: Camera, label: t('nav_driver.inspection') },
-    { to: '/driver/expenses', icon: Receipt, label: t('nav_driver.expenses') },
-    { to: '/driver/damage', icon: AlertTriangle, label: t('nav_driver.damage') },
-    { to: '/driver/violations', icon: AlertCircle, label: t('nav_driver.violations') },
+    { to: '/driver', icon: Home, label: t('nav_driver.home'), end: true, badge: assignedCount },
+    { to: '/driver/shift', icon: ClipboardCheck, label: t('nav_driver.shift'), badge: assignedCount },
+    { to: '/driver/trips', icon: Route, label: t('nav_driver.trips'), badge: assignedCount },
+    { to: '/driver/inspection', icon: Camera, label: t('nav_driver.inspection'), badge: assignedCount },
+    { to: '/driver/expenses', icon: Receipt, label: t('nav_driver.expenses'), badge: assignedCount },
+    { to: '/driver/damage', icon: AlertTriangle, label: t('nav_driver.damage'), badge: assignedCount },
+    { to: '/driver/violations', icon: AlertCircle, label: t('nav_driver.violations'), badge: assignedCount },
   ];
 
   return (
@@ -90,7 +131,14 @@ export default function DriverLayout() {
             end={item.end}
             className={({ isActive }) => `driver-nav-item ${isActive ? 'active' : ''}`}
           >
-            <item.icon size={20} />
+            <div style={{ position: 'relative', display: 'inline-flex' }}>
+              <item.icon size={20} />
+              {item.badge > 0 && (
+                <span className="driver-nav-badge">
+                  {item.badge}
+                </span>
+              )}
+            </div>
             <span>{item.label}</span>
           </NavLink>
         ))}
