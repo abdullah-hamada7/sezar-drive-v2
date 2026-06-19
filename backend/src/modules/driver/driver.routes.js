@@ -35,7 +35,7 @@ router.get(
         inspection,  // Pending inspections
         expenses,    // Rejected expenses (need driver to fix)
         damage,      // Open (reported) damage reports
-        violations,  // All violations (admin-assigned — driver must be aware)
+        violations,  // Unseen violations (seenAt IS NULL)
       ] = await Promise.all([
         prisma.trip.count({
           where: { driverId, status: 'ASSIGNED' },
@@ -53,11 +53,32 @@ router.get(
           where: { driverId, status: 'reported' },
         }),
         prisma.trafficViolation.count({
-          where: { driverId },
+          where: { driverId, seenAt: null },
         }),
       ]);
 
       res.json({ trips, shift, inspection, expenses, damage, violations });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ─── PATCH /api/v1/drivers/violations/mark-seen ────
+// Called when driver opens the Violations tab — stamps seenAt=now() on all
+// unseen violations for this driver so the badge clears to 0.
+router.patch(
+  '/violations/mark-seen',
+  authenticate,
+  enforcePasswordChanged,
+  async (req, res, next) => {
+    try {
+      const driverId = req.user.id;
+      const result = await prisma.trafficViolation.updateMany({
+        where: { driverId, seenAt: null },
+        data:  { seenAt: new Date() },
+      });
+      res.json({ success: true, marked: result.count });
     } catch (err) {
       next(err);
     }
