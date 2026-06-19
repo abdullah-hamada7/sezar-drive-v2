@@ -7,6 +7,7 @@ import { Receipt, Plus, X, Upload, CheckCircle } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { markTabViewed } from '../../services/tabBadge.service';
 
 const STATUS_BADGES = { pending: 'badge-warning', approved: 'badge-success', rejected: 'badge-danger' };
 
@@ -22,7 +23,12 @@ export default function DriverExpenses() {
   const [form, setForm] = useState({ tripId: '', categoryId: '', amount: '', description: '', receipt: null });
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
 
-  useEffect(() => { load(); loadCategories(); loadAcceptedTrips(); }, []);
+  useEffect(() => {
+    load();
+    loadCategories();
+    loadAcceptedTrips();
+    markTabViewed('expenses');
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {

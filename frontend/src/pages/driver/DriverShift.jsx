@@ -12,6 +12,7 @@ import QRScanner from '../../components/QRScanner';
 import { ClipboardCheck, Play, Square, Loader, ShieldCheck, Camera, QrCode, CheckCircle2 } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { markTabViewed } from '../../services/tabBadge.service';
 
 export default function DriverShift() {
   const { t, i18n } = useTranslation();
@@ -28,6 +29,7 @@ export default function DriverShift() {
 
   useEffect(() => {
     loadUser();
+    markTabViewed('shift');
   }, []);
 
   useEffect(() => {

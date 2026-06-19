@@ -7,6 +7,7 @@ import { AlertTriangle, Camera, CheckCircle, X } from 'lucide-react';
 import { useShift } from '../../contexts/ShiftContext';
 import { ToastContext } from '../../contexts/toastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { markTabViewed } from '../../services/tabBadge.service';
 
 export default function DriverDamage() {
   const { t } = useTranslation();
@@ -23,6 +24,7 @@ export default function DriverDamage() {
 
   useEffect(() => {
     loadContext();
+    markTabViewed('damage');
   }, []);
 
   useEffect(() => {

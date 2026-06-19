@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 import violationService from '../../services/violation.service';
-import { http } from '../../services/http.service';
+import { markTabViewed } from '../../services/tabBadge.service';
 
 export default function DriverViolationsPage() {
   const { t, i18n } = useTranslation();
@@ -17,9 +17,7 @@ export default function DriverViolationsPage() {
   // Mark all unseen violations as seen the moment the tab is opened,
   // then dispatch ws:update so useDriverBadges re-fetches and badge → 0.
   useEffect(() => {
-    http.request('/drivers/violations/mark-seen', { method: 'PATCH' })
-      .then(() => window.dispatchEvent(new Event('ws:update')))
-      .catch(() => {}); // non-critical — badge will clear on next 30s poll anyway
+    markTabViewed('violations');
   }, []);
 
   const params = useMemo(() => {

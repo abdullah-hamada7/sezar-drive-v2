@@ -53,6 +53,7 @@ model User {
   trafficViolations       TrafficViolation[]      @relation("TrafficViolationDriver")
   pushSubscriptions       PushSubscription[]
   notifications           Notification[]
+  driverTabViews          DriverTabView[]
 
   @@map("users")
 }
@@ -421,6 +422,16 @@ model TrafficViolation {
   @@index([date])
   @@index([driverId, seenAt])
   @@map("traffic_violations")
+}
+
+model DriverTabView {
+  driverId String   @map("driver_id") @db.Uuid
+  tabName  String   @map("tab_name") @db.VarChar(20)
+  viewedAt DateTime @map("viewed_at") @db.Timestamptz(6)
+  driver   User     @relation(fields: [driverId], references: [id])
+
+  @@id([driverId, tabName])
+  @@map("driver_tab_views")
 }
 
 enum AdminRole {

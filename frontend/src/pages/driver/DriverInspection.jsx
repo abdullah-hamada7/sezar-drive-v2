@@ -7,6 +7,7 @@ import { Camera, CheckCircle, Upload, ChevronRight, AlertCircle } from 'lucide-r
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import { markTabViewed } from '../../services/tabBadge.service';
 
 const DIRECTIONS = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
 const CHECKLIST_KEYS = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
@@ -63,6 +64,7 @@ export default function DriverInspection() {
 
   useEffect(() => {
     loadExisting();
+    markTabViewed('inspection');
   }, [loadExisting]);
 
   useEffect(() => {

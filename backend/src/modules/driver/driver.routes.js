@@ -18,9 +18,13 @@ function handleValidation(req) {
   if (!errors.isEmpty()) throw new ValidationError('Validation failed', errors.array());
 }
 
+// Valid tab names — matches the keys returned in badge-counts
+const VALID_TABS = ['trips', 'shift', 'inspection', 'expenses', 'damage', 'violations'];
+
 // ─── GET /api/v1/drivers/badge-counts ─────────────
-// Returns live counts for each driver app tab (only for the logged-in driver).
-// Each count reflects items the admin created/assigned that require driver attention.
+// Returns per-tab counts of NEW actionable items for the logged-in driver.
+// "New" means created (or updated for expenses) AFTER the driver last viewed that tab.
+// When the driver has never viewed a tab, ALL actionable items count.
 router.get(
   '/badge-counts',
   authenticate,
@@ -29,29 +33,41 @@ router.get(
     try {
       const driverId = req.user.id;
 
-      const [
-        trips,       // ASSIGNED trips not yet accepted by driver
-        shift,       // Shifts in PendingVerification (need driver to start)
-        inspection,  // Pending inspections
-        expenses,    // Rejected expenses (need driver to fix)
-        damage,      // Open (reported) damage reports
-        violations,  // Unseen violations (seenAt IS NULL)
-      ] = await Promise.all([
+      // Load all tab view timestamps in one query
+      const tabViews = await prisma.driverTabView.findMany({
+        where: { driverId },
+        select: { tabName: true, viewedAt: true },
+      });
+      const viewedAt = Object.fromEntries(tabViews.map(v => [v.tabName, v.viewedAt]));
+
+      // Helper: only apply the 'since' filter if the driver has ever viewed this tab
+      const since = (tab, field = 'createdAt') => {
+        const t = viewedAt[tab];
+        return t ? { [field]: { gt: t } } : {};
+      };
+
+      const [trips, shift, inspection, expenses, damage, violations] = await Promise.all([
+        // Trips: ASSIGNED and appeared after last trips-tab view
         prisma.trip.count({
-          where: { driverId, status: 'ASSIGNED' },
+          where: { driverId, status: 'ASSIGNED', ...since('trips') },
         }),
+        // Shift: PendingVerification and appeared after last shift-tab view
         prisma.shift.count({
-          where: { driverId, status: 'PendingVerification' },
+          where: { driverId, status: 'PendingVerification', ...since('shift') },
         }),
+        // Inspection: pending and appeared after last inspection-tab view
         prisma.inspection.count({
-          where: { driverId, status: 'pending' },
+          where: { driverId, status: 'pending', ...since('inspection') },
         }),
+        // Expenses: rejected — use updatedAt (expense was created earlier, rejected later)
         prisma.expense.count({
-          where: { driverId, status: 'rejected' },
+          where: { driverId, status: 'rejected', ...since('expenses', 'updatedAt') },
         }),
+        // Damage: reported and appeared after last damage-tab view
         prisma.damageReport.count({
-          where: { driverId, status: 'reported' },
+          where: { driverId, status: 'reported', ...since('damage') },
         }),
+        // Violations: seenAt IS NULL (still use per-record seenAt for accurate granularity)
         prisma.trafficViolation.count({
           where: { driverId, seenAt: null },
         }),
@@ -64,26 +80,46 @@ router.get(
   }
 );
 
-// ─── PATCH /api/v1/drivers/violations/mark-seen ────
-// Called when driver opens the Violations tab — stamps seenAt=now() on all
-// unseen violations for this driver so the badge clears to 0.
+// ─── PATCH /api/v1/drivers/tabs/:tab/mark-viewed ───
+// Called by any driver tab page on mount.
+// Upserts driver_tab_views so badge counts will exclude items seen before now.
+// For violations it also stamps seenAt=now() on all unseen records.
 router.patch(
-  '/violations/mark-seen',
+  '/tabs/:tab/mark-viewed',
   authenticate,
   enforcePasswordChanged,
   async (req, res, next) => {
     try {
+      const { tab } = req.params;
+      if (!VALID_TABS.includes(tab)) {
+        return res.status(400).json({ error: { message: `Invalid tab name. Must be one of: ${VALID_TABS.join(', ')}` } });
+      }
+
       const driverId = req.user.id;
-      const result = await prisma.trafficViolation.updateMany({
-        where: { driverId, seenAt: null },
-        data:  { seenAt: new Date() },
+      const now = new Date();
+
+      // Upsert the view timestamp
+      await prisma.driverTabView.upsert({
+        where: { driverId_tabName: { driverId, tabName: tab } },
+        create: { driverId, tabName: tab, viewedAt: now },
+        update: { viewedAt: now },
       });
-      res.json({ success: true, marked: result.count });
+
+      // For violations: also stamp seenAt on individual records
+      if (tab === 'violations') {
+        await prisma.trafficViolation.updateMany({
+          where: { driverId, seenAt: null },
+          data:  { seenAt: now },
+        });
+      }
+
+      res.json({ success: true });
     } catch (err) {
       next(err);
     }
   }
 );
+
 
 // ─── PUT /api/v1/drivers/profile ──────────────────
 router.put(

@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { tripService as api } from '../../services/trip.service';
+import { markTabViewed } from '../../services/tabBadge.service';
 import { Route, Play, CheckCircle, MapPin, Clock, Phone, User, AlertTriangle, X } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import { useShift } from '../../contexts/ShiftContext';
@@ -196,7 +197,10 @@ export default function DriverTrips() {
     addressOverridesRef.current = addressOverrides;
   }, [addressOverrides]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    markTabViewed('trips');
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
