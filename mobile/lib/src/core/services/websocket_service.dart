@@ -327,6 +327,7 @@ class WebSocketService {
         break;
       case WsEventType.identityUpdate:
         homeCubit?.fetchHomeData();
+        badgeCubit?.fetchCounts();
         break;
       case WsEventType.update:
         tripCubit?.fetchMyTrips();

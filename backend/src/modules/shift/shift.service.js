@@ -301,7 +301,7 @@ async function getShiftById(id, requestingUser = null) {
       vehicle: true,
       assignments: { include: { vehicle: true } },
       inspections: { include: { photos: true } },
-      trips: true,
+      trips: { orderBy: { createdAt: 'desc' }, take: 50 },
       expenses: { include: { category: true } },
     },
   });

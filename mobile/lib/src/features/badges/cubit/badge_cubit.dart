@@ -15,12 +15,15 @@ class BadgeCubit extends Cubit<BadgeState> {
   final TabBadgeService _badgeService;
   Timer? _pollTimer;
 
+  /// WS events refresh badges immediately; this is a slow fallback only.
+  static const Duration _fallbackPollInterval = Duration(seconds: 120);
+
   BadgeCubit(this._badgeService) : super(BadgeInitial());
 
   void startPolling() {
     fetchCounts();
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) => fetchCounts());
+    _pollTimer = Timer.periodic(_fallbackPollInterval, (_) => fetchCounts());
   }
 
   Future<void> fetchCounts() async {

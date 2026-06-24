@@ -1,32 +1,33 @@
 const prisma = require('../../config/database');
+const locationLogBuffer = require('../../services/locationLogBuffer.service');
+const cache = require('../../services/cache.service');
+const config = require('../../config');
 
 /**
  * Store a GPS location update from a driver.
+ * Updates live position immediately; batches history inserts.
  */
 async function updateLocation(driverId, data, shiftId, tripId) {
   const { latitude, longitude, speed, recordedAt } = data;
+  const recorded = new Date(recordedAt || Date.now());
 
-  // Update driver's last known position
   await prisma.user.update({
     where: { id: driverId },
     data: {
       lastKnownLat: latitude,
       lastKnownLng: longitude,
-      lastLocationAt: new Date(recordedAt || Date.now()),
+      lastLocationAt: recorded,
     },
   });
 
-  // Store in location log
-  await prisma.locationLog.create({
-    data: {
-      driverId,
-      shiftId,
-      tripId,
-      latitude,
-      longitude,
-      speed,
-      recordedAt: new Date(recordedAt || Date.now()),
-    },
+  await locationLogBuffer.enqueue({
+    driverId,
+    shiftId: shiftId || null,
+    tripId: tripId || null,
+    latitude,
+    longitude,
+    speed: speed ?? null,
+    recordedAt: recorded,
   });
 }
 
@@ -34,10 +35,12 @@ async function updateLocation(driverId, data, shiftId, tripId) {
  * Batch store multiple location updates.
  */
 async function batchUpdateLocations(driverId, locations, shiftId, tripId) {
+  if (!locations?.length) return;
+
   const data = locations.map((loc) => ({
     driverId,
-    shiftId,
-    tripId,
+    shiftId: shiftId || null,
+    tripId: tripId || null,
     latitude: loc.latitude,
     longitude: loc.longitude,
     speed: loc.speed || null,
@@ -46,7 +49,6 @@ async function batchUpdateLocations(driverId, locations, shiftId, tripId) {
 
   await prisma.locationLog.createMany({ data });
 
-  // Update last known from most recent
   const latest = locations[locations.length - 1];
   if (latest) {
     await prisma.user.update({
@@ -64,26 +66,30 @@ async function batchUpdateLocations(driverId, locations, shiftId, tripId) {
  * Get all active driver positions (for admin map).
  */
 async function getActiveDriverPositions() {
-  return prisma.user.findMany({
-    where: {
-      role: 'driver',
-      isActive: true,
-      lastKnownLat: { not: null },
-      shifts: { some: { status: 'Active' } },
-    },
-    select: {
-      id: true,
-      name: true,
-      lastKnownLat: true,
-      lastKnownLng: true,
-      lastLocationAt: true,
-      shifts: {
-        where: { status: 'Active' },
-        select: { id: true, vehicleId: true },
-        take: 1,
+  return cache.getOrSet(
+    'tracking:active-positions',
+    config.cacheTtl.activePositionsSeconds,
+    () => prisma.user.findMany({
+      where: {
+        role: 'driver',
+        isActive: true,
+        lastKnownLat: { not: null },
+        shifts: { some: { status: 'Active' } },
       },
-    },
-  });
+      select: {
+        id: true,
+        name: true,
+        lastKnownLat: true,
+        lastKnownLng: true,
+        lastLocationAt: true,
+        shifts: {
+          where: { status: 'Active' },
+          select: { id: true, vehicleId: true },
+          take: 1,
+        },
+      },
+    }),
+  );
 }
 
 /**
@@ -106,4 +112,9 @@ async function getLocationHistory({ driverId, shiftId, tripId, startDate, endDat
   });
 }
 
-module.exports = { updateLocation, batchUpdateLocations, getActiveDriverPositions, getLocationHistory };
+module.exports = {
+  updateLocation,
+  batchUpdateLocations,
+  getActiveDriverPositions,
+  getLocationHistory,
+};

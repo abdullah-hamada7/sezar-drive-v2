@@ -32,7 +32,11 @@ Future<void> setupLocator({bool testMode = false}) async {
   );
   getIt.registerLazySingleton<LocalNotificationService>(() => LocalNotificationService());
   getIt.registerLazySingleton<MobilePushService>(
-    () => MobilePushService(getIt<LocalNotificationService>(), getIt<DioClient>()),
+    () => MobilePushService(
+      getIt<LocalNotificationService>(),
+      getIt<DioClient>(),
+      getIt<SecureStorage>(),
+    ),
   );
   getIt.registerLazySingleton<WebSocketService>(
     () => WebSocketService(

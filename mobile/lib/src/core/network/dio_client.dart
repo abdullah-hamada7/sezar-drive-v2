@@ -55,38 +55,41 @@ class DioClient {
         onError: (DioException error, handler) async {
           // Silent token-refresh on 401 — mirrors web frontend tryRefresh()
           if (error.response?.statusCode == 401) {
-            final refreshToken = await _storage.getRefreshToken();
-            if (refreshToken != null) {
-              try {
-                final refreshResponse = await Dio().post(
-                  '$_baseUrl/auth/refresh',
-                  data: {'refreshToken': refreshToken},
-                );
-                final dynamic data = refreshResponse.data;
-                final String? newAccessToken;
-                if (data is Map) {
-                  newAccessToken = data['accessToken'] as String?;
-                } else if (data is String) {
-                  newAccessToken = jsonDecode(data)['accessToken'] as String?;
-                } else {
-                  newAccessToken = null;
+            final authHeader = error.requestOptions.headers['Authorization'];
+            if (authHeader != null && authHeader.toString().isNotEmpty) {
+              final refreshToken = await _storage.getRefreshToken();
+              if (refreshToken != null) {
+                try {
+                  final refreshResponse = await Dio().post(
+                    '$_baseUrl/auth/refresh',
+                    data: {'refreshToken': refreshToken},
+                  );
+                  final dynamic data = refreshResponse.data;
+                  final String? newAccessToken;
+                  if (data is Map) {
+                    newAccessToken = data['accessToken'] as String?;
+                  } else if (data is String) {
+                    newAccessToken = jsonDecode(data)['accessToken'] as String?;
+                  } else {
+                    newAccessToken = null;
+                  }
+                  if (newAccessToken != null) {
+                    await _storage.saveToken(newAccessToken);
+                    // Retry original request with fresh token
+                    final retryOptions = error.requestOptions;
+                    retryOptions.headers['Authorization'] =
+                        'Bearer $newAccessToken';
+                    final cloneReq = await _dio.fetch(retryOptions);
+                    return handler.resolve(cloneReq);
+                  }
+                } catch (_) {
+                  await _storage.clearSession();
+                  _sessionRevoked.revoke();
                 }
-                if (newAccessToken != null) {
-                  await _storage.saveToken(newAccessToken);
-                  // Retry original request with fresh token
-                  final retryOptions = error.requestOptions;
-                  retryOptions.headers['Authorization'] =
-                      'Bearer $newAccessToken';
-                  final cloneReq = await _dio.fetch(retryOptions);
-                  return handler.resolve(cloneReq);
-                }
-              } catch (_) {
+              } else {
                 await _storage.clearSession();
                 _sessionRevoked.revoke();
               }
-            } else {
-              await _storage.clearSession();
-              _sessionRevoked.revoke();
             }
           }
           return handler.next(error);

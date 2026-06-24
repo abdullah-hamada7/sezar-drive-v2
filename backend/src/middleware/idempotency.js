@@ -1,16 +1,7 @@
 const crypto = require('crypto');
+const cache = require('../services/cache.service');
 
-const CACHE_TTL_MS = 5 * 60 * 1000;
-const responseCache = new Map();
-
-function cleanupExpired() {
-  const now = Date.now();
-  for (const [key, entry] of responseCache.entries()) {
-    if (entry.expiresAt <= now) {
-      responseCache.delete(key);
-    }
-  }
-}
+const CACHE_TTL_SEC = 5 * 60;
 
 function buildCacheKey(req, rawKey) {
   const userPart = req.user?.id || 'anonymous';
@@ -18,10 +9,10 @@ function buildCacheKey(req, rawKey) {
     .createHash('sha1')
     .update(JSON.stringify(req.body || {}))
     .digest('hex');
-  return `${userPart}:${req.method}:${req.originalUrl}:${rawKey}:${fingerprint}`;
+  return `idempotency:${userPart}:${req.method}:${req.originalUrl}:${rawKey}:${fingerprint}`;
 }
 
-function requireIdempotencyKey(req, res, next) {
+async function requireIdempotencyKey(req, res, next) {
   const rawKey = req.get('Idempotency-Key');
   if (!rawKey) {
     return res.status(400).json({
@@ -32,9 +23,8 @@ function requireIdempotencyKey(req, res, next) {
     });
   }
 
-  cleanupExpired();
   const cacheKey = buildCacheKey(req, rawKey);
-  const cached = responseCache.get(cacheKey);
+  const cached = await cache.getJson(cacheKey);
 
   if (cached) {
     return res.status(cached.statusCode).json(cached.payload);
@@ -42,11 +32,10 @@ function requireIdempotencyKey(req, res, next) {
 
   const originalJson = res.json.bind(res);
   res.json = (payload) => {
-    responseCache.set(cacheKey, {
+    cache.setJson(cacheKey, {
       statusCode: res.statusCode,
       payload,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    });
+    }, CACHE_TTL_SEC).catch(() => {});
     return originalJson(payload);
   };
 

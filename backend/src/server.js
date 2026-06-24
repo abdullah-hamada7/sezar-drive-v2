@@ -37,7 +37,14 @@ async function startServer() {
     const app = require('./app');
     const config = require('./config');
     const prisma = require('./config/database');
+    const cache = require('./services/cache.service');
+    const locationLogBuffer = require('./services/locationLogBuffer.service');
+    const locationLogRetention = require('./jobs/locationLogRetention.job');
     const { initWebSocketServer } = require('./modules/tracking/tracking.ws');
+
+    await cache.connect();
+    locationLogBuffer.start();
+    locationLogRetention.startSchedule();
 
     // 4. Explicitly connect to database with retries
     let connected = false;
@@ -86,7 +93,7 @@ async function startServer() {
     });
 
     // Handle graceful shutdown
-    setupGracefulShutdown(server, prisma);
+    setupGracefulShutdown(server, prisma, cache, locationLogBuffer, locationLogRetention);
 
   } catch (error) {
     console.error('FAILED TO START SERVER:', error);
@@ -97,12 +104,16 @@ async function startServer() {
 /**
  * Setup process signal handlers for graceful shutdown
  */
-function setupGracefulShutdown(server, prisma) {
+function setupGracefulShutdown(server, prisma, cache, locationLogBuffer, locationLogRetention) {
   const shutdown = (signal) => {
     console.log(`${signal} received. Shutting down gracefully...`);
     server.close(() => {
       console.log('Server closed.');
       Promise.resolve()
+        .then(() => locationLogBuffer.flushAll())
+        .then(() => locationLogBuffer.stop())
+        .then(() => locationLogRetention.stopSchedule())
+        .then(() => cache.disconnect())
         .then(() => prisma?.$disconnect?.())
         .catch(() => { })
         .finally(() => process.exit(0));

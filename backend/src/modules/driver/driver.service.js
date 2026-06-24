@@ -337,6 +337,55 @@ async function deleteDriverPermanently(id, adminId, ipAddress) {
   return { message: 'Driver permanently deleted' };
 }
 
+/**
+ * Per-tab badge counts in a single round-trip.
+ * @param {string} driverId
+ * @param {Record<string, Date|null>} viewedAt tabName -> last viewed timestamp
+ */
+async function getBadgeCounts(driverId, viewedAt = {}) {
+  const tripsSince = viewedAt.trips || null;
+  const shiftSince = viewedAt.shift || null;
+  const inspectionSince = viewedAt.inspection || null;
+  const expensesSince = viewedAt.expenses || null;
+  const damageSince = viewedAt.damage || null;
+
+  const [row] = await prisma.$queryRaw`
+    SELECT
+      (SELECT COUNT(*)::int FROM trips
+        WHERE driver_id = ${driverId}::uuid
+          AND status = 'ASSIGNED'
+          AND (${tripsSince}::timestamptz IS NULL OR created_at > ${tripsSince})) AS trips,
+      (SELECT COUNT(*)::int FROM shifts
+        WHERE driver_id = ${driverId}::uuid
+          AND status = 'PendingVerification'
+          AND (${shiftSince}::timestamptz IS NULL OR created_at > ${shiftSince})) AS shift,
+      (SELECT COUNT(*)::int FROM inspections
+        WHERE driver_id = ${driverId}::uuid
+          AND status = 'pending'
+          AND (${inspectionSince}::timestamptz IS NULL OR created_at > ${inspectionSince})) AS inspection,
+      (SELECT COUNT(*)::int FROM expenses
+        WHERE driver_id = ${driverId}::uuid
+          AND status = 'rejected'
+          AND (${expensesSince}::timestamptz IS NULL OR updated_at > ${expensesSince})) AS expenses,
+      (SELECT COUNT(*)::int FROM damage_reports
+        WHERE driver_id = ${driverId}::uuid
+          AND status = 'reported'
+          AND (${damageSince}::timestamptz IS NULL OR created_at > ${damageSince})) AS damage,
+      (SELECT COUNT(*)::int FROM traffic_violations
+        WHERE driver_id = ${driverId}::uuid
+          AND seen_at IS NULL) AS violations
+  `;
+
+  return {
+    trips: Number(row?.trips) || 0,
+    shift: Number(row?.shift) || 0,
+    inspection: Number(row?.inspection) || 0,
+    expenses: Number(row?.expenses) || 0,
+    damage: Number(row?.damage) || 0,
+    violations: Number(row?.violations) || 0,
+  };
+}
+
 module.exports = {
   createDriver,
   getDrivers,
@@ -345,4 +394,5 @@ module.exports = {
   deactivateDriver,
   reactivateDriver,
   deleteDriverPermanently,
+  getBadgeCounts,
 };

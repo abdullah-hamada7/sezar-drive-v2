@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from 'react';
+import { useState, useEffect, useContext, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,8 +10,9 @@ import { ClipboardCheck, User } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 
 import DriverDetailsModal from '../../components/driver/DriverDetailsModal';
-import DailyEarningsChart from '../../components/driver/DailyEarningsChart';
 import RecentActivityList from '../../components/driver/RecentActivityList';
+
+const DailyEarningsChart = lazy(() => import('../../components/driver/DailyEarningsChart'));
 
 export default function DriverHome() {
   const { t } = useTranslation();
@@ -200,7 +201,9 @@ export default function DriverHome() {
 
       {/* Grid for Charts & Activity */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-        <DailyEarningsChart />
+        <Suspense fallback={<div className="card loading-page"><div className="spinner"></div></div>}>
+          <DailyEarningsChart />
+        </Suspense>
       </div>
 
       <div className="mt-md">

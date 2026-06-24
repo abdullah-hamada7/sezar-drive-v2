@@ -40,40 +40,8 @@ router.get(
       });
       const viewedAt = Object.fromEntries(tabViews.map(v => [v.tabName, v.viewedAt]));
 
-      // Helper: only apply the 'since' filter if the driver has ever viewed this tab
-      const since = (tab, field = 'createdAt') => {
-        const t = viewedAt[tab];
-        return t ? { [field]: { gt: t } } : {};
-      };
-
-      const [trips, shift, inspection, expenses, damage, violations] = await Promise.all([
-        // Trips: ASSIGNED and appeared after last trips-tab view
-        prisma.trip.count({
-          where: { driverId, status: 'ASSIGNED', ...since('trips') },
-        }),
-        // Shift: PendingVerification and appeared after last shift-tab view
-        prisma.shift.count({
-          where: { driverId, status: 'PendingVerification', ...since('shift') },
-        }),
-        // Inspection: pending and appeared after last inspection-tab view
-        prisma.inspection.count({
-          where: { driverId, status: 'pending', ...since('inspection') },
-        }),
-        // Expenses: rejected — use updatedAt (expense was created earlier, rejected later)
-        prisma.expense.count({
-          where: { driverId, status: 'rejected', ...since('expenses', 'updatedAt') },
-        }),
-        // Damage: reported and appeared after last damage-tab view
-        prisma.damageReport.count({
-          where: { driverId, status: 'reported', ...since('damage') },
-        }),
-        // Violations: seenAt IS NULL (still use per-record seenAt for accurate granularity)
-        prisma.trafficViolation.count({
-          where: { driverId, seenAt: null },
-        }),
-      ]);
-
-      res.json({ trips, shift, inspection, expenses, damage, violations });
+      const counts = await driverService.getBadgeCounts(driverId, viewedAt);
+      res.json(counts);
     } catch (err) {
       next(err);
     }

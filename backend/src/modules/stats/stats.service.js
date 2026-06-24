@@ -1,4 +1,6 @@
 const prisma = require('../../config/database');
+const cache = require('../../services/cache.service');
+const config = require('../../config');
 
 /**
  * Get revenue trends (daily revenue for the last 7 days).
@@ -48,26 +50,17 @@ async function getActivityStats() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Use groupBy/count to avoid fetching records
-  const activeCountResult = await prisma.shift.groupBy({
-    by: ['driverId'],
-    where: {
-      OR: [
-        { createdAt: { gte: today, lt: tomorrow } },
-        { closedAt: { gte: today, lt: tomorrow } },
-        {
-          createdAt: { lt: today },
-          closedAt: null
-        },
-        {
-          createdAt: { lt: today },
-          closedAt: { gt: today }
-        }
-      ]
-    },
-  });
-
-  const activeCount = activeCountResult.length;
+  const [{ active_count: activeCountRaw }] = await prisma.$queryRaw`
+    SELECT COUNT(DISTINCT driver_id)::int AS active_count
+    FROM shifts
+    WHERE (
+      (created_at >= ${today} AND created_at < ${tomorrow})
+      OR (closed_at >= ${today} AND closed_at < ${tomorrow})
+      OR (created_at < ${today} AND closed_at IS NULL)
+      OR (created_at < ${today} AND closed_at > ${today})
+    )
+  `;
+  const activeCount = Number(activeCountRaw) || 0;
 
   return [
     { name: 'Active Today', value: activeCount },
@@ -140,6 +133,14 @@ async function getDriverDailyStats(driverId) {
 }
 
 async function getSummaryStats() {
+  return cache.getOrSet(
+    'stats:summary',
+    config.cacheTtl.summaryStatsSeconds,
+    computeSummaryStats,
+  );
+}
+
+async function computeSummaryStats() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -216,28 +217,39 @@ async function getSummaryStats() {
  * Get shift performance breakdown for a specific driver.
  */
 async function getDriverShiftStats(driverId) {
-  const shift = await prisma.shift.findFirst({
-    where: { driverId, status: 'Active' },
-    include: { trips: true }
-  });
+  const rows = await prisma.$queryRaw`
+    SELECT
+      s.started_at AS "startedAt",
+      COALESCE(SUM(
+        CASE
+          WHEN t.status = 'COMPLETED'
+            AND t.actual_start_time IS NOT NULL
+            AND t.actual_end_time IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (t.actual_end_time - t.actual_start_time)) / 60.0
+          WHEN t.status = 'IN_PROGRESS'
+            AND t.actual_start_time IS NOT NULL
+            THEN EXTRACT(EPOCH FROM (NOW() - t.actual_start_time)) / 60.0
+          ELSE 0
+        END
+      ), 0)::float AS active_minutes
+    FROM shifts s
+    LEFT JOIN trips t ON t.shift_id = s.id
+    WHERE s.driver_id = ${driverId}::uuid
+      AND s.status = 'Active'
+    GROUP BY s.id, s.started_at
+    LIMIT 1
+  `;
 
-  if (!shift || !shift.startedAt) {
+  const row = rows[0];
+  if (!row?.startedAt) {
     return [
       { name: 'Active', value: 0, color: '#00E676' },
-      { name: 'Idle', value: 100, color: '#161B22' }
+      { name: 'Idle', value: 100, color: '#161B22' },
     ];
   }
 
-  const shiftDurationMinutes = (new Date() - new Date(shift.startedAt)) / (1000 * 60);
-
-  let activeMinutes = 0;
-  for (const trip of shift.trips) {
-    if (trip.status === 'COMPLETED' && trip.actualStartTime && trip.actualEndTime) {
-      activeMinutes += (new Date(trip.actualEndTime) - new Date(trip.actualStartTime)) / (1000 * 60);
-    } else if (trip.status === 'IN_PROGRESS' && trip.actualStartTime) {
-      activeMinutes += (new Date() - new Date(trip.actualStartTime)) / (1000 * 60);
-    }
-  }
+  const shiftDurationMinutes = (Date.now() - new Date(row.startedAt).getTime()) / (1000 * 60);
+  const activeMinutes = Number(row.active_minutes) || 0;
 
   const activePercent = shiftDurationMinutes > 0
     ? Math.min(100, Math.round((activeMinutes / shiftDurationMinutes) * 100))

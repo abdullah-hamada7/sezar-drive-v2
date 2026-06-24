@@ -46,5 +46,14 @@ module.exports = {
   firebase: {
     serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || null,
     serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || null,
-  }
+  },
+  redisUrl: process.env.REDIS_URL || null,
+  locationLogRetentionDays: parseInt(process.env.LOCATION_LOG_RETENTION_DAYS, 10) || 90,
+  locationLogBatchIntervalMs: parseInt(process.env.LOCATION_LOG_BATCH_INTERVAL_MS, 10) || 30_000,
+  locationLogBatchMaxSize: parseInt(process.env.LOCATION_LOG_BATCH_MAX_SIZE, 10) || 20,
+  cacheTtl: {
+    summaryStatsSeconds: parseInt(process.env.CACHE_SUMMARY_STATS_SECONDS, 10) || 60,
+    activePositionsSeconds: parseInt(process.env.CACHE_ACTIVE_POSITIONS_SECONDS, 10) || 5,
+    s3SignedUrlSeconds: parseInt(process.env.CACHE_S3_SIGNED_URL_SECONDS, 10) || 240,
+  },
 };

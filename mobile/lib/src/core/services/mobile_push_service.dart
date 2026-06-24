@@ -5,15 +5,17 @@ import 'package:flutter/foundation.dart';
 import '../../../firebase_options.dart';
 import '../../../firebase_background.dart';
 import '../network/dio_client.dart';
+import '../storage/secure_storage.dart';
 import 'local_notification_service.dart';
 
 class MobilePushService {
   final LocalNotificationService _local;
   final DioClient _client;
+  final SecureStorage _storage;
   String? _currentToken;
   bool _firebaseReady = false;
 
-  MobilePushService(this._local, this._client);
+  MobilePushService(this._local, this._client, this._storage);
 
   Future<void> init() async {
     await _local.init();
@@ -92,6 +94,11 @@ class MobilePushService {
 
   Future<void> _registerToken(String token) async {
     _currentToken = token;
+    final accessToken = await _storage.getToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      debugPrint('[MobilePush] Skip registering token: not logged in.');
+      return;
+    }
     try {
       final platform = Platform.isIOS ? 'ios' : 'android';
       await _client.dio.post(

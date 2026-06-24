@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/auth.service';
@@ -7,8 +7,8 @@ import { vehicleService } from '../../services/vehicle.service';
 import { tripService } from '../../services/trip.service';
 import { inspectionService } from '../../services/inspection.service';
 import { useShift } from '../../contexts/ShiftContext';
-import FaceCapture from '../../components/FaceCapture';
-import QRScanner from '../../components/QRScanner';
+const FaceCapture = lazy(() => import('../../components/FaceCapture'));
+const QRScanner = lazy(() => import('../../components/QRScanner'));
 import { ClipboardCheck, Play, Square, Loader, ShieldCheck, Camera, QrCode, CheckCircle2 } from 'lucide-react';
 import { ToastContext } from '../../contexts/toastContext';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -287,7 +287,9 @@ export default function DriverShift() {
       <div className="page-container">
         <h2 className="page-title">{t('shift.biometric_title')}</h2>
         <div className="card">
-          <FaceCapture onCapture={handleFaceCapture} onCancel={() => setActiveStep(null)} />
+          <Suspense fallback={<div className="loading-page"><div className="spinner"></div></div>}>
+            <FaceCapture onCapture={handleFaceCapture} onCancel={() => setActiveStep(null)} />
+          </Suspense>
         </div>
       </div>
     );
@@ -298,7 +300,9 @@ export default function DriverShift() {
       <div className="page-container">
         <h2 className="page-title">{t('shift.scan_vehicle')}</h2>
         <div className="card">
-          <QRScanner onScan={handleQRScan} onCancel={() => setActiveStep(null)} />
+          <Suspense fallback={<div className="loading-page"><div className="spinner"></div></div>}>
+            <QRScanner onScan={handleQRScan} onCancel={() => setActiveStep(null)} />
+          </Suspense>
         </div>
       </div>
     );
