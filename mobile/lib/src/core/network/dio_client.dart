@@ -55,6 +55,13 @@ class DioClient {
         onError: (DioException error, handler) async {
           // Silent token-refresh on 401 — mirrors web frontend tryRefresh()
           if (error.response?.statusCode == 401) {
+            final path = error.requestOptions.path;
+            // Push registration may run with a stale token during login/verify — must not logout.
+            if (path.contains('/push/register-device') ||
+                path.contains('/push/unregister-device')) {
+              return handler.next(error);
+            }
+
             final authHeader = error.requestOptions.headers['Authorization'];
             if (authHeader != null && authHeader.toString().isNotEmpty) {
               final refreshToken = await _storage.getRefreshToken();

@@ -13,7 +13,9 @@ class MobilePushService {
   final DioClient _client;
   final SecureStorage _storage;
   String? _currentToken;
+  String? _pendingFcmToken;
   bool _firebaseReady = false;
+  bool _allowServerRegistration = false;
 
   MobilePushService(this._local, this._client, this._storage);
 
@@ -27,7 +29,6 @@ class MobilePushService {
       if (DefaultFirebaseOptions.isConfigured) {
         await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       } else {
-        // Uses google-services.json on Android / GoogleService-Info.plist on iOS
         await Firebase.initializeApp();
       }
       final messaging = FirebaseMessaging.instance;
@@ -48,12 +49,17 @@ class MobilePushService {
         }
       });
 
-      messaging.onTokenRefresh.listen(_registerToken);
+      messaging.onTokenRefresh.listen((token) {
+        _pendingFcmToken = token;
+        if (_allowServerRegistration) {
+          _registerToken(token);
+        }
+      });
       _firebaseReady = true;
 
       final token = await messaging.getToken();
       if (token != null) {
-        await _registerToken(token);
+        _pendingFcmToken = token;
       }
     } catch (e) {
       debugPrint('[MobilePush] Firebase init failed: $e');
@@ -61,17 +67,28 @@ class MobilePushService {
     }
   }
 
+  /// Call after a full authenticated session exists (post login or verify-device).
   Future<void> registerAfterLogin() async {
     if (!_firebaseReady) return;
+    _allowServerRegistration = true;
     try {
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await _registerToken(token);
+      final token = _pendingFcmToken ?? await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _registerToken(token);
+      }
     } catch (e) {
       debugPrint('[MobilePush] registerAfterLogin failed: $e');
     }
   }
 
+  /// Call when session is cleared (logout or pending device verification).
+  void onSessionCleared() {
+    _allowServerRegistration = false;
+    _currentToken = null;
+  }
+
   Future<void> unregister() async {
+    onSessionCleared();
     if (_currentToken != null) {
       try {
         await _client.dio.post(
@@ -86,6 +103,7 @@ class MobilePushService {
     if (_firebaseReady) {
       try {
         await FirebaseMessaging.instance.deleteToken();
+        _pendingFcmToken = null;
       } catch (e) {
         debugPrint('[MobilePush] deleteToken failed: $e');
       }
@@ -93,12 +111,20 @@ class MobilePushService {
   }
 
   Future<void> _registerToken(String token) async {
-    _currentToken = token;
-    final accessToken = await _storage.getToken();
-    if (accessToken == null || accessToken.isEmpty) {
-      debugPrint('[MobilePush] Skip registering token: not logged in.');
+    if (!_allowServerRegistration) {
+      _pendingFcmToken = token;
       return;
     }
+
+    final accessToken = await _storage.getToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      _pendingFcmToken = token;
+      debugPrint('[MobilePush] Deferring token registration until authenticated.');
+      return;
+    }
+
+    _currentToken = token;
+    _pendingFcmToken = token;
     try {
       final platform = Platform.isIOS ? 'ios' : 'android';
       await _client.dio.post(

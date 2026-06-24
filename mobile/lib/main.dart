@@ -13,7 +13,6 @@ import 'src/core/services/idle_timer_service.dart';
 import 'src/core/services/connectivity_service.dart';
 import 'src/core/services/tab_badge_service.dart';
 import 'src/core/services/driver_tracking_service.dart';
-import 'src/core/services/mobile_push_service.dart';
 import 'src/core/services/session_revoked_notifier.dart';
 import 'src/features/auth/cubit/auth_cubit.dart';
 import 'src/features/auth/presentation/login_screen.dart';
@@ -281,10 +280,14 @@ class AppAuthGate extends StatelessWidget {
             isVerifying: true,
           );
         }
+        if (state is AuthLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         if (state is AuthUnauthenticated ||
             state is AuthError ||
-            state is AuthMustChangePassword ||
-            state is AuthLoading) {
+            state is AuthMustChangePassword) {
           return const LoginScreen();
         }
         return const Scaffold(
@@ -337,7 +340,6 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
 
     _listenToWebSocket();
     _startDriverServices();
-    getIt<MobilePushService>().registerAfterLogin();
     context.read<NotificationCubit>().fetchNotifications();
     _pendingOffline = getIt<OfflineQueueService>().pendingCount;
     _isOnline = getIt<ConnectivityService>().isOnline;

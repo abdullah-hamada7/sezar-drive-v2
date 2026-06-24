@@ -77,11 +77,13 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> handleSessionRevoked() async {
     if (isClosed || state is AuthUnauthenticated) return;
     await _storage.clearSession();
+    getIt<MobilePushService>().onSessionCleared();
     emit(AuthUnauthenticated());
   }
 
   Future<void> cancelDeviceVerification() async {
     await _storage.clearSession();
+    getIt<MobilePushService>().onSessionCleared();
     emit(AuthUnauthenticated());
   }
 
@@ -102,6 +104,7 @@ class AuthCubit extends Cubit<AuthState> {
         emit(AuthMustChangePassword(token));
       } else {
         emit(AuthAuthenticated(user));
+        await getIt<MobilePushService>().registerAfterLogin();
       }
     } catch (e) {
       if (_isAuthFailure(e)) {
@@ -114,6 +117,7 @@ class AuthCubit extends Cubit<AuthState> {
         try {
           final user = User.fromJson(jsonDecode(cached) as Map<String, dynamic>);
           emit(AuthAuthenticated(user));
+          await getIt<MobilePushService>().registerAfterLogin();
           return;
         } catch (_) {}
       }
@@ -142,6 +146,7 @@ class AuthCubit extends Cubit<AuthState> {
         final userId = data['userId'] as String? ?? email;
         final verificationToken = (data['verificationToken'] ?? data['verification_token']) as String? ?? '';
         await _storage.clearSession();
+        getIt<MobilePushService>().onSessionCleared();
         emit(AuthDeviceUnverified(userId, verificationToken));
         return;
       }
@@ -230,6 +235,7 @@ class AuthCubit extends Cubit<AuthState> {
       emit(AuthMustChangePassword(accessToken));
     } else {
       emit(AuthAuthenticated(user));
+      await getIt<MobilePushService>().registerAfterLogin();
     }
   }
 
