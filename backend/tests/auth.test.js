@@ -58,6 +58,37 @@ describe('Auth Module', () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe('POST /api/v1/auth/verify-device', () => {
+    it('should return 400 when verification token is missing', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/verify-device')
+        .field('userId', '00000000-0000-0000-0000-000000000001')
+        .field('deviceFingerprint', 'test-device-fp');
+
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 400 when photo is missing', async () => {
+      const res = await request(app)
+        .post('/api/v1/auth/verify-device')
+        .field('userId', '00000000-0000-0000-0000-000000000001')
+        .field('deviceFingerprint', 'test-device-fp')
+        .field('verificationToken', 'invalid-token');
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('POST /api/v1/push/register-device', () => {
+    it('should return 401 without token (route must exist)', async () => {
+      const res = await request(app)
+        .post('/api/v1/push/register-device')
+        .send({ token: 'fake-fcm-token', platform: 'android' });
+
+      expect(res.status).toBe(401);
+    });
+  });
 });
 
 describe('RBAC Enforcement', () => {

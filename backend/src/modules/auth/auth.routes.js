@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const { body, param, query } = require('express-validator');
 const authService = require('./auth.service');
 const rescueService = require('./rescue.service');
@@ -74,14 +75,16 @@ router.post(
   '/verify-device',
   identityUpload.single('photo'),
   [
-    body('userId').isString(), // Relaxed for debugging
+    body('userId').isUUID(),
     body('deviceFingerprint').notEmpty(),
+    body('verificationToken').optional().isString(),
   ],
   async (req, res, next) => {
     try {
-      console.log(`[VERIFY_LOG] Request Data: ${JSON.stringify({
-        body: req.body,
-        file: req.file ? { name: req.file.originalname, size: req.file.size } : 'Missing'
+      const requestId = req.headers['x-request-id'] || crypto.randomUUID?.() || `${Date.now()}`;
+      console.log(`[VERIFY_LOG] requestId=${requestId} data=${JSON.stringify({
+        body: { userId: req.body.userId, deviceFingerprint: req.body.deviceFingerprint, hasToken: Boolean(req.body.verificationToken) },
+        file: req.file ? { name: req.file.originalname, size: req.file.size } : 'Missing',
       })}`);
       handleValidation(req);
       if (!req.file) throw new ValidationError('Selfie photo is required');
@@ -90,8 +93,10 @@ router.post(
         req.body.userId,
         req.body.deviceFingerprint,
         req.file.buffer,
-        req.clientIp
+        req.clientIp,
+        req.body.verificationToken
       );
+      console.log(`[VERIFY_OK] requestId=${requestId} userId=${req.body.userId}`);
       if (result.refreshToken) {
         res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions(req));
       }
@@ -152,7 +157,8 @@ router.post(
 // ─── POST /api/v1/auth/logout ─────────────────────
 router.post('/logout', authenticate, async (req, res, next) => {
   try {
-    await authService.logout(req.user.id, req.clientIp);
+    const deviceFingerprint = req.headers['x-device-fingerprint'] || req.body?.deviceFingerprint;
+    await authService.logout(req.user.id, req.clientIp, deviceFingerprint);
     // Clear current and previous cookie paths for safe migration.
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/api/v1/auth' });
     res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });

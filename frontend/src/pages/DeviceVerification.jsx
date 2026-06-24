@@ -21,15 +21,16 @@ export default function DeviceVerificationPage() {
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
 
-  const { userId, deviceFingerprint } = location.state || {};
+  const { userId, deviceFingerprint, verificationToken } = location.state || {};
+  const hasVerificationToken = Boolean(verificationToken);
 
   // Debug logging to catch why validation might fail
   useEffect(() => {
-    console.log('Verification State:', { userId, deviceFingerprint });
+    console.log('Verification State:', { userId, deviceFingerprint, hasToken: hasVerificationToken });
     if (!userId || !deviceFingerprint) {
       console.warn('Missing userId or deviceFingerprint in location state');
     }
-  }, [userId, deviceFingerprint]);
+  }, [userId, deviceFingerprint, hasVerificationToken]);
 
   // Attach stream to video element whenever stream changes
   useEffect(() => {
@@ -96,6 +97,9 @@ export default function DeviceVerificationPage() {
       // Append text fields FIRST for robust multer parsing
       formData.append('userId', userId);
       formData.append('deviceFingerprint', deviceFingerprint);
+      if (verificationToken) {
+        formData.append('verificationToken', verificationToken);
+      }
       formData.append('photo', blob, 'selfie.jpg');
 
       const res = await api.verifyDevice(formData);

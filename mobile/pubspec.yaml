@@ -1,0 +1,69 @@
+name: sezar_driver
+description: Cross-platform mobile app for driver shift, trip, and fleet management (Sezar Drive V2)
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management & DI
+  flutter_bloc: ^9.1.1
+  get_it: ^9.2.1
+  equatable: ^2.0.7
+
+  # Networking
+  dio: ^5.4.0
+
+  # Local Database / Secure Storage
+  hive_flutter: ^1.1.0
+  hive: ^2.2.3
+  flutter_secure_storage: ^10.3.1
+
+  # Location, Maps & GPS
+  geolocator: ^14.0.3
+  flutter_map: ^8.3.0
+  latlong2: ^0.9.0
+
+  # Hardware integrations
+  camera: ^0.12.0+1
+  mobile_scanner: ^7.2.0
+  image_picker: ^1.0.7
+
+  # Utilities
+  uuid: ^4.3.3
+  intl: ^0.20.2
+  path_provider: ^2.1.2
+  permission_handler: ^12.0.3
+  workmanager: ^0.9.0+3
+  http_parser: ^4.0.0
+  google_fonts: ^8.1.0
+  connectivity_plus: ^7.1.1
+  logger: ^2.5.0
+  local_auth: ^2.3.0
+  pointycastle: ^3.9.1
+
+  # Real-time & notifications
+  web_socket_channel: ^3.0.1
+  flutter_local_notifications: ^19.3.0
+  firebase_core: ^3.15.1
+  firebase_messaging: ^15.2.9
+
+  # Links & URLs
+  url_launcher: ^6.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true

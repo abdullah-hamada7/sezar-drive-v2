@@ -33,32 +33,43 @@ async function login(email, password, ipAddress, deviceFingerprint) {
   // Device Security & Mandatory Biometric Check (Drivers only)
   let requiresVerification = false;
   if (user.role === 'driver') {
-    requiresVerification = true;
-
-    // Still track device used
-    if (deviceFingerprint) {
+    if (!deviceFingerprint) {
+      requiresVerification = true;
+    } else {
       const device = await prisma.userDevice.findUnique({
-        where: { userId_deviceFingerprint: { userId: user.id, deviceFingerprint } }
+        where: { userId_deviceFingerprint: { userId: user.id, deviceFingerprint } },
       });
 
       if (!device) {
         await prisma.userDevice.create({
-          data: { userId: user.id, deviceFingerprint, isVerified: false }
+          data: { userId: user.id, deviceFingerprint, isVerified: false },
         });
+        requiresVerification = true;
       } else {
         await prisma.userDevice.update({
           where: { id: device.id },
-          data: { lastUsedAt: new Date() }
+          data: { lastUsedAt: new Date() },
         });
+        // Trusted device: skip face verify. New/unverified device or post-logout requires verify.
+        requiresVerification = !device.isVerified;
       }
     }
   }
 
   if (requiresVerification) {
+    if (!deviceFingerprint) {
+      throw new ValidationError('Device fingerprint is required for driver verification');
+    }
+    const verificationToken = generateVerificationTicket(user.id, deviceFingerprint);
+    console.log('[AUTH] login requires device verification', {
+      userId: user.id,
+      hasFingerprint: true,
+    });
     return {
       requiresVerification: true,
       message: 'Face verification required to complete login.',
-      userId: user.id
+      userId: user.id,
+      verificationToken,
     };
   }
 
@@ -86,7 +97,13 @@ async function login(email, password, ipAddress, deviceFingerprint) {
 /**
  * Verify a new device using face comparison.
  */
-async function verifyDevice(userId, deviceFingerprint, selfieBuffer, ipAddress) {
+async function verifyDevice(userId, deviceFingerprint, selfieBuffer, ipAddress, verificationToken) {
+  if (verificationToken) {
+    assertVerificationTicket(verificationToken, userId, deviceFingerprint);
+  } else {
+    console.warn('[AUTH] verify-device without verification token (legacy client — deploy updated app)');
+  }
+
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new NotFoundError('User');
   if (!user.avatarUrl) throw new ValidationError('No profile photo (avatar) found for this user');
@@ -253,17 +270,26 @@ async function refreshAccessToken(refreshTokenValue) {
 /**
  * Logout — revoke all refresh tokens for user.
  */
-async function logout(userId, ipAddress) {
+async function logout(userId, ipAddress, deviceFingerprint) {
   await prisma.refreshToken.updateMany({
     where: { userId, revoked: false },
     data: { revoked: true },
   });
+
+  // Post-logout policy: require face verification on next login for this device.
+  if (deviceFingerprint) {
+    await prisma.userDevice.updateMany({
+      where: { userId, deviceFingerprint },
+      data: { isVerified: false },
+    });
+  }
 
   await AuditService.log({
     actorId: userId,
     actionType: 'auth.logout',
     entityType: 'auth',
     entityId: userId,
+    newState: deviceFingerprint ? { deviceFingerprint, deviceVerificationRevoked: true } : undefined,
     ipAddress,
   });
 }
@@ -481,6 +507,37 @@ function generateAccessToken(user) {
     config.jwtSecret,
     { expiresIn: config.jwtExpiresIn }
   );
+}
+
+function generateVerificationTicket(userId, deviceFingerprint) {
+  return jwt.sign(
+    {
+      type: 'device_verify',
+      userId,
+      deviceFingerprint,
+    },
+    config.jwtSecret,
+    { expiresIn: '5m' }
+  );
+}
+
+function assertVerificationTicket(token, userId, deviceFingerprint) {
+  if (!token) {
+    throw new ValidationError('Verification token is required');
+  }
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret);
+    if (decoded.type !== 'device_verify') {
+      throw new UnauthorizedError('Invalid verification token', 'INVALID_VERIFICATION_TOKEN');
+    }
+    if (decoded.userId !== userId || decoded.deviceFingerprint !== deviceFingerprint) {
+      throw new UnauthorizedError('Verification token mismatch', 'INVALID_VERIFICATION_TOKEN');
+    }
+    return decoded;
+  } catch (err) {
+    if (err instanceof ValidationError || err instanceof UnauthorizedError) throw err;
+    throw new UnauthorizedError('Invalid or expired verification token', 'INVALID_VERIFICATION_TOKEN');
+  }
 }
 
 async function generateRefreshToken(userId, sessionStartedAtMs = Date.now()) {

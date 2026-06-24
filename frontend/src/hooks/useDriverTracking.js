@@ -202,8 +202,9 @@ export function useDriverTracking() {
         } else {
           stopTracking();
         }
-      } catch {
-        stopTracking();
+      } catch (err) {
+        // Network/transient errors should not turn off geolocation tracking.
+        // Maintain last known tracking state during temporary dropout.
       }
     };
 

@@ -44,8 +44,9 @@ export default function LoginPage() {
         navigate('/verify-device', {
           state: {
             userId: result.userId,
-            deviceFingerprint: result.deviceFingerprint
-          }
+            deviceFingerprint: result.deviceFingerprint,
+            verificationToken: result.verificationToken,
+          },
         });
       }
     } catch (err) {

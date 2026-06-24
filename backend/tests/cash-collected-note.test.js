@@ -4,38 +4,39 @@ const {
 } = require('../src/modules/trip/cash-collected-note');
 
 describe('normalizeCashCollectedNote', () => {
-  test('returns null for undefined/null/empty', () => {
-    expect(normalizeCashCollectedNote(undefined)).toBe(null);
-    expect(normalizeCashCollectedNote(null)).toBe(null);
-    expect(normalizeCashCollectedNote('   ')).toBe(null);
+  test.each([
+    ['undefined input', undefined],
+    ['null input', null],
+    ['blank string', '   '],
+  ])('empty note (%s) returns null', (_label, note) => {
+    expect(normalizeCashCollectedNote(note)).toBe(null);
   });
 
-  test('trims and escapes', () => {
+  test('trimmed note is escaped for storage', () => {
     expect(normalizeCashCollectedNote('  hello  ')).toBe('hello');
     expect(normalizeCashCollectedNote('  <b>x</b>  ')).toBe('&lt;b&gt;x&lt;&#x2F;b&gt;');
   });
 
-  test('throws for non-string note', () => {
-    try {
-      normalizeCashCollectedNote(123);
-      throw new Error('Expected normalizeCashCollectedNote to throw');
-    } catch (err) {
-      expect(err.statusCode).toBe(400);
-      expect(err.code).toBe('CASH_COLLECT_NOTE_INVALID');
-    }
+  test('non_string_note_rejects_with_invalid_code', () => {
+    expect(() => normalizeCashCollectedNote(123)).toThrow(
+      expect.objectContaining({
+        statusCode: 400,
+        code: 'CASH_COLLECT_NOTE_INVALID',
+      })
+    );
   });
 
-  test('throws for too long note', () => {
+  test('note_over_max_length_rejects_with_too_long_code', () => {
     const note = 'a'.repeat(CASH_COLLECT_NOTE_MAX_LENGTH + 1);
 
-    try {
-      normalizeCashCollectedNote(note);
-      throw new Error('Expected normalizeCashCollectedNote to throw');
-    } catch (err) {
-      expect(err.statusCode).toBe(400);
-      expect(err.code).toBe('CASH_COLLECT_NOTE_TOO_LONG');
-      expect(Array.isArray(err.details)).toBe(true);
-      expect(err.details?.[0]?.max).toBe(CASH_COLLECT_NOTE_MAX_LENGTH);
-    }
+    expect(() => normalizeCashCollectedNote(note)).toThrow(
+      expect.objectContaining({
+        statusCode: 400,
+        code: 'CASH_COLLECT_NOTE_TOO_LONG',
+        details: expect.arrayContaining([
+          expect.objectContaining({ max: CASH_COLLECT_NOTE_MAX_LENGTH }),
+        ]),
+      })
+    );
   });
 });

@@ -42,8 +42,12 @@ export function AuthProvider({ children }) {
       const res = await authService.login({ email, password, deviceFingerprint });
 
       if (res.data.requiresVerification) {
-        // Return this so the Login page can navigate or show UI
-        return { requiresVerification: true, userId: res.data.userId, deviceFingerprint };
+        return {
+          requiresVerification: true,
+          userId: res.data.userId,
+          deviceFingerprint,
+          verificationToken: res.data.verificationToken,
+        };
       }
 
       const { user: userData, accessToken } = res.data;

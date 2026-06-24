@@ -1,6 +1,7 @@
 const webPush = require('web-push');
 const config = require('../config');
 const prisma = require('../config/database');
+const fcmService = require('./fcm.service');
 
 // Initialize Web Push with VAPID details
 webPush.setVapidDetails(
@@ -49,10 +50,7 @@ class PushService {
     }
   }
 
-  /**
-   * Send a push notification to all active subscriptions of a user
-   */
-  async sendNotificationToUser(userId, payload) {
+  async _sendWebPush(userId, payload) {
     const subscriptions = await prisma.pushSubscription.findMany({
       where: { userId },
     });
@@ -66,7 +64,6 @@ class PushService {
     let failureCount = 0;
 
     const promises = subscriptions.map(async (sub) => {
-      // Re-create the push subscription object as expected by web-push
       const pushSubscription = {
         endpoint: sub.endpoint,
         keys: sub.keys || {},
@@ -78,7 +75,6 @@ class PushService {
       } catch (error) {
         failureCount++;
         console.error('Web Push Send Error:', error);
-        // If the browser service reports 410 Gone or 404, the subscription is expired/revoked
         if (error.statusCode === 410 || error.statusCode === 404) {
           console.log(`Removing expired subscription: ${sub.endpoint}`);
           await this.removeSubscription(sub.endpoint);
@@ -93,6 +89,17 @@ class PushService {
       failure: failureCount,
       total: subscriptions.length,
     };
+  }
+
+  /**
+   * Send push to user via web-push (PWA) and FCM (mobile).
+   */
+  async sendNotificationToUser(userId, payload) {
+    const [web, fcm] = await Promise.all([
+      this._sendWebPush(userId, payload),
+      fcmService.sendToUser(userId, payload),
+    ]);
+    return { web, fcm };
   }
 }
 

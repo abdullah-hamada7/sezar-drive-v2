@@ -52,6 +52,7 @@ model User {
   rescueRequests          RescueRequest[]
   trafficViolations       TrafficViolation[]      @relation("TrafficViolationDriver")
   pushSubscriptions       PushSubscription[]
+  devicePushTokens        DevicePushToken[]
   notifications           Notification[]
   driverTabViews          DriverTabView[]
 
@@ -449,6 +450,19 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model DevicePushToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique @db.VarChar(512)
+  platform  String   @db.VarChar(20) // android | ios
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("device_push_tokens")
 }
 
 model Notification {

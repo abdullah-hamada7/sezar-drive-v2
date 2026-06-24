@@ -12,8 +12,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL != '' && vars.EXPO_PUBLIC_API_URL || 'https://abdullahamada.me/api/v1' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,62 +19,32 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: "zulu"
+          distribution: zulu
           java-version: "17"
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          node-version: 20
-          cache: "npm"
-          cache-dependency-path: apps/driver-mobile/package-lock.json
+          channel: stable
+          cache: true
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-cache: true
-
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/driver-mobile/android/**/*.gradle', 'apps/driver-mobile/android/gradle.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Install dependencies
-        working-directory: apps/driver-mobile
-        run: npm ci
-
-      - name: Prebuild Android
-        working-directory: apps/driver-mobile
-        run: npx expo prebuild --platform android --no-install
-
-      - name: Build Android App (Gradle)
-        working-directory: apps/driver-mobile/android
+      - name: Build release APK
+        working-directory: mobile
         run: |
-          chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
-
-      - name: Verify APK output
-        working-directory: apps/driver-mobile/android
-        run: |
-          test -d app/build/outputs/apk/release
-          ls -lah app/build/outputs/apk/release
+          flutter pub get
+          flutter build apk --release --dart-define=FLAVOR=prod
 
       - name: Generate checksums
-        working-directory: apps/driver-mobile/android
+        working-directory: mobile/build/app/outputs/flutter-apk
         run: |
-          sha256sum app/build/outputs/apk/release/*.apk > app/build/outputs/apk/release/SHA256SUMS.txt
+          sha256sum app-release.apk > SHA256SUMS.txt
+          ls -lah
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: driver-mobile-apk
+          name: sezar-driver-apk
           path: |
-            apps/driver-mobile/android/app/build/outputs/apk/release/*.apk
-            apps/driver-mobile/android/app/build/outputs/apk/release/SHA256SUMS.txt
+            mobile/build/app/outputs/flutter-apk/app-release.apk
+            mobile/build/app/outputs/flutter-apk/SHA256SUMS.txt
           if-no-files-found: error

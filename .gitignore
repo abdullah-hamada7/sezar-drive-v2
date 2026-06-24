@@ -21,7 +21,8 @@ coverage/
 out/
 build/
 .turbo/
-.vercel/
+backend/secrets/
+**/firebase*adminsdk*.json
 
 # Infrastructure (Terraform)
 .terraform/

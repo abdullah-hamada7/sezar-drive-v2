@@ -176,6 +176,14 @@ export default function DriverTrips() {
   const lastReverseRef = useRef({ at: 0, lat: null, lng: null });
   const addressOverridesRef = useRef({});
 
+  const getErrorMessage = (err) => {
+    const code = err.errorCode || err.code;
+    if (code && i18n.exists(`errors.${code}`)) {
+      return t(`errors.${code}`);
+    }
+    return err.message || t('common.error');
+  };
+
   function getScheduledStartGate(scheduledTime) {
     if (!scheduledTime) return { canStart: true, scheduledAt: null, availableAt: null, minutesUntil: 0 };
     const scheduledAt = new Date(scheduledTime);
@@ -371,7 +379,7 @@ export default function DriverTrips() {
       if (shouldRefreshTripsOnError(code)) {
         setConfirmAction({ isOpen: false, type: null, tripId: null });
       }
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      addToast(getErrorMessage(err), 'error');
     } finally {
       await load({ silent: true });
       setActionLoading(null);
@@ -388,7 +396,7 @@ export default function DriverTrips() {
       if (shouldRefreshTripsOnError(code)) {
         setConfirmAction({ isOpen: false, type: null, tripId: null });
       }
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      addToast(getErrorMessage(err), 'error');
     } finally {
       await load({ silent: true });
       setActionLoading(null);
@@ -405,7 +413,7 @@ export default function DriverTrips() {
       if (shouldRefreshTripsOnError(code)) {
         setConfirmAction({ isOpen: false, type: null, tripId: null });
       }
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      addToast(getErrorMessage(err), 'error');
     } finally {
       await load({ silent: true });
       setActionLoading(null);
@@ -423,7 +431,7 @@ export default function DriverTrips() {
       if (shouldRefreshTripsOnError(code)) {
         // fall through; always reload in finally
       }
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      addToast(getErrorMessage(err), 'error');
     } finally {
       await load({ silent: true });
       setActionLoading(null);
@@ -447,7 +455,7 @@ export default function DriverTrips() {
       if (shouldRefreshTripsOnError(code)) {
         setRejectPrompt({ isOpen: false, tripId: null });
       }
-      addToast(code ? t(`errors.${code}`) : (err.message || t('common.error')), 'error');
+      addToast(getErrorMessage(err), 'error');
     } finally {
       await load({ silent: true });
     }
