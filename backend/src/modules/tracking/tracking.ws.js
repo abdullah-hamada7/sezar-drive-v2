@@ -30,6 +30,13 @@ function extractWsToken(req) {
   return null;
 }
 
+function normalizeProtocols(protocols) {
+  if (!protocols) return [];
+  if (protocols instanceof Set) return [...protocols].map(String);
+  if (Array.isArray(protocols)) return protocols.map(String);
+  return String(protocols).split(',').map((part) => part.trim()).filter(Boolean);
+}
+
 function deliverToAdmins(message) {
   const payload = JSON.stringify(message);
   for (const [, ws] of adminClients) {
@@ -53,7 +60,7 @@ function initWebSocketServer(server) {
     server,
     path: '/ws/tracking',
     handleProtocols(protocols, req) {
-      const list = protocols.split(',').map((part) => part.trim());
+      const list = normalizeProtocols(protocols);
       if (list.includes('bearer') && extractWsToken(req)) {
         return 'bearer';
       }

@@ -6,6 +6,7 @@ const API_BASE =
   import.meta.env.VITE_API_URL || '/api/v1';
 
 const WRITE_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+const ACCESS_TOKEN_STORAGE_KEY = 'sezar_access_token';
 const CACHEABLE_GET_PATTERNS = [
   /^\/trips(?:$|\?|\/[^/?]+(?:\?|$))/,
   /^\/shifts\/active(?:$|\?)/,
@@ -46,17 +47,42 @@ function isBlockedOfflineWrite(method, endpoint) {
   );
 }
 
+function readStoredAccessToken() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredAccessToken(accessToken) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (accessToken) {
+      window.sessionStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken);
+    } else {
+      window.sessionStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // Storage can be unavailable in private browsing or locked-down WebViews.
+  }
+}
+
 class HttpService {
   constructor() {
-    this.accessToken = null;
+    this.accessToken = readStoredAccessToken();
+    this.refreshPromise = null;
   }
 
   setTokens(access) {
     this.accessToken = access;
+    writeStoredAccessToken(access);
   }
 
   clearTokens() {
     this.accessToken = null;
+    writeStoredAccessToken(null);
     localStorage.removeItem('user');
     readCache.clear().catch(() => {});
   }
@@ -223,17 +249,27 @@ class HttpService {
   }
 
   async tryRefresh() {
+    if (this.refreshPromise) return this.refreshPromise;
+
+    this.refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        this.setTokens(data.accessToken);
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+
     try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (!res.ok) return false;
-      const data = await res.json();
-      this.setTokens(data.accessToken);
-      return true;
-    } catch {
-      return false;
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = null;
     }
   }
 }

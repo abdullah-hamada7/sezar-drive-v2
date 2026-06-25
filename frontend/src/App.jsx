@@ -50,8 +50,9 @@ const DriverViolations = lazy(() => import("./pages/driver/DriverViolations"));
 const DriverOfflineQueue = lazy(() => import("./pages/driver/DriverOfflineQueue"));
 
 function ProtectedRoute({ children, requireAdmin, requireDriver }) {
-  const { isAuthenticated, isAdmin, isDriver, user } = useAuth();
+  const { isAuthenticated, isAdmin, isDriver, user, loading } = useAuth();
 
+  if (loading) return <PageLoader />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (user?.mustChangePassword)
     return <Navigate to="/change-password" replace />;
@@ -76,7 +77,7 @@ function ProtectedRoute({ children, requireAdmin, requireDriver }) {
 }
 
 function AppRoutes() {
-  const { isAuthenticated, isAdmin, user } = useAuth();
+  const { isAuthenticated, isAdmin, user, loading } = useAuth();
   const { i18n } = useTranslation();
 
   // Sync i18n with user preference on load
@@ -92,6 +93,8 @@ function AppRoutes() {
     document.documentElement.dir = dir;
     document.documentElement.lang = i18n.language;
   }, [i18n, i18n.language]);
+
+  if (loading) return <PageLoader />;
 
   return (
     <Routes>

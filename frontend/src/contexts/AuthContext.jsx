@@ -9,13 +9,19 @@ const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    try {
+      return JSON.parse(stored);
+    } catch {
+      localStorage.removeItem('user');
+      return null;
+    }
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem('user') && !http.getAccessToken()));
   const idleTimerRef = useRef(null);
   const navigate = useNavigate();
 
-  const getDeviceFingerprint = () => {
+  const getDeviceFingerprint = useCallback(() => {
     let fingerprint = localStorage.getItem('device_fingerprint');
     if (!fingerprint) {
       // crypto.randomUUID() requires a secure context (HTTPS)
@@ -33,7 +39,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('device_fingerprint', fingerprint);
     }
     return fingerprint;
-  };
+  }, []);
 
   const login = async (email, password) => {
     setLoading(true);
@@ -68,11 +74,19 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async (options = {}) => {
+    const localOnly = options?.localOnly === true;
+    if (!localOnly && http.getAccessToken()) {
+      try {
+        await authService.logout(getDeviceFingerprint());
+      } catch {
+        // Local logout must still complete if the server is unavailable.
+      }
+    }
     http.clearTokens();
     setUser(null);
     navigate('/login');
-  }, [navigate]);
+  }, [getDeviceFingerprint, navigate]);
 
   const resetIdleTimer = useCallback(() => {
     if (!user) return;
@@ -96,7 +110,7 @@ export function AuthProvider({ children }) {
   }, [navigate, user]);
 
   useEffect(() => {
-    const handleSessionExpired = () => logout();
+    const handleSessionExpired = () => logout({ localOnly: true });
     window.addEventListener('auth:session-expired', handleSessionExpired);
     return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
   }, [logout]);
@@ -105,21 +119,33 @@ export function AuthProvider({ children }) {
     let isCancelled = false;
 
     async function bootstrapSession() {
-      if (!user || http.getAccessToken()) return;
-
-      const refreshed = await http.tryRefresh();
-      if (!refreshed) {
-        if (!isCancelled) {
-          setUser(null);
-          localStorage.removeItem('user');
-          navigate('/login');
-        }
+      if (!user) {
+        setLoading(false);
         return;
       }
 
+      if (http.getAccessToken()) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       try {
+        const refreshed = await http.tryRefresh();
+        if (!refreshed) {
+          if (!isCancelled) {
+            setUser(null);
+            localStorage.removeItem('user');
+            navigate('/login');
+          }
+          return;
+        }
+
         const me = await authService.getMe();
         if (!isCancelled && me?.data?.user) {
+          if (me.data.accessToken) {
+            http.setTokens(me.data.accessToken);
+          }
           setUser(me.data.user);
           localStorage.setItem('user', JSON.stringify(me.data.user));
         }
@@ -129,6 +155,8 @@ export function AuthProvider({ children }) {
           localStorage.removeItem('user');
           navigate('/login');
         }
+      } finally {
+        if (!isCancelled) setLoading(false);
       }
     }
 

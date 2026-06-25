@@ -10,6 +10,14 @@ export const authService = {
   changePassword(data) {
     return http.request('/auth/change-password', { method: 'POST', body: data });
   },
+  logout(deviceFingerprint) {
+    return http.request('/auth/logout', {
+      method: 'POST',
+      body: deviceFingerprint ? { deviceFingerprint } : {},
+      headers: deviceFingerprint ? { 'x-device-fingerprint': deviceFingerprint } : {},
+      suppressToast: true,
+    });
+  },
   uploadIdentityPhoto(formData) {
     return http.request('/verify/identity', { method: 'POST', body: formData });
   },
