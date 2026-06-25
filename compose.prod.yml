@@ -71,9 +71,7 @@ services:
         max-file: "3"
 
   migrate:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: abdullahhamada7/sezar-drive-backend:latest
     container_name: fleet-backend-migrate
     profiles: ["ops"]
     env_file: .env
@@ -91,9 +89,7 @@ services:
     command: npm run prisma:migrate:prod
 
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: abdullahhamada7/sezar-drive-backend:latest
     container_name: fleet-backend-prod
     restart: unless-stopped
     env_file: .env
@@ -130,9 +126,7 @@ services:
         max-file: "3"
 
   frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
+    image: abdullahhamada7/sezar-drive-frontend:latest
     container_name: fleet-frontend-prod
     restart: unless-stopped
     depends_on:

@@ -52,7 +52,21 @@ flutter build apk --release
 ### Docker (full stack)
 
 ```bash
+# Local dev
 docker compose up -d
+
+# Production — build & push images to Docker Hub
+./scripts/build-and-push.sh
+./scripts/build-and-push.sh v1.0.0
+
+# Production — deploy on EC2 (copy compose.prod.yml, .env, Caddyfile)
+docker compose -f compose.prod.yml --profile ops run --rm migrate
+docker compose -f compose.prod.yml up -d
+docker compose -f compose.prod.yml run --rm backend npm run seed
+
+# Production — pull latest images and restart
+docker compose -f compose.prod.yml pull
+docker compose -f compose.prod.yml up -d
 ```
 
 ## Documentation
