@@ -35,9 +35,8 @@ class _LoginScreenState extends State<LoginScreen> {
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            AppFeedback.show(context, message: state.message, type: AppFeedbackType.error);
-          } else if (state is AuthMustChangePassword) {
-            _showChangePasswordDialog(context, state.tempToken);
+            AppFeedback.show(context,
+                message: state.message, type: AppFeedbackType.error);
           }
         },
         builder: (context, state) {
@@ -71,7 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       l10n.t('app_title'),
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.headlineMedium?.copyWith(fontSize: 28),
+                      style: theme.textTheme.headlineMedium
+                          ?.copyWith(fontSize: 28),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -93,6 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.trim().isEmpty) {
                           return l10n.t('validation_email_phone');
                         }
+                        final email = value.trim();
+                        if (!email.contains('@') || !email.contains('.')) {
+                          return l10n.t('validation_email_phone');
+                        }
                         return null;
                       },
                     ),
@@ -107,7 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: context.semanticColors.muted,
                           ),
                           onPressed: () {
@@ -134,7 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (_) => BlocProvider(
-                                      create: (_) => PasswordResetCubit(GetIt.I<DioClient>()),
+                                      create: (_) => PasswordResetCubit(
+                                          GetIt.I<DioClient>()),
                                       child: const PasswordResetScreen(),
                                     ),
                                   ),
@@ -163,103 +170,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showChangePasswordDialog(BuildContext context, String token) {
-    final l10n = AppLocalizations.of(context);
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    final dialogFormKey = GlobalKey<FormState>();
-    bool obscureNew = true;
-    bool obscureConfirm = true;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogCtx) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            title: Text(l10n.t('password_change_required')),
-            content: Form(
-              key: dialogFormKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(l10n.t('password_change_intro')),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: newPasswordController,
-                    obscureText: obscureNew,
-                    autocorrect: false,
-                    textCapitalization: TextCapitalization.none,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('new_password'),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          obscureNew ? Icons.visibility_off : Icons.visibility,
-                          color: context.semanticColors.muted,
-                        ),
-                        onPressed: () => setDialogState(() => obscureNew = !obscureNew),
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return l10n.t('validation_password');
-                      if (v.length < 8) return l10n.t('password_min_length');
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: confirmPasswordController,
-                    obscureText: obscureConfirm,
-                    autocorrect: false,
-                    textCapitalization: TextCapitalization.none,
-                    decoration: InputDecoration(
-                      labelText: l10n.t('confirm_new_password'),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          obscureConfirm ? Icons.visibility_off : Icons.visibility,
-                          color: context.semanticColors.muted,
-                        ),
-                        onPressed: () => setDialogState(() => obscureConfirm = !obscureConfirm),
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v != newPasswordController.text) return l10n.t('passwords_no_match');
-                      return null;
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  newPasswordController.dispose();
-                  confirmPasswordController.dispose();
-                  Navigator.pop(dialogCtx);
-                  context.read<AuthCubit>().logout();
-                },
-                child: Text(l10n.t('cancel')),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  if (dialogFormKey.currentState!.validate()) {
-                    final newPass = newPasswordController.text.trim();
-                    newPasswordController.dispose();
-                    confirmPasswordController.dispose();
-                    Navigator.pop(dialogCtx);
-                    context.read<AuthCubit>().changePassword('temporary_auth_flow', newPass);
-                  }
-                },
-                child: Text(l10n.t('save')),
-              ),
-            ],
           );
         },
       ),

@@ -10,11 +10,14 @@ import '../../../core/utils/parsers.dart';
 abstract class TripState {}
 
 class TripInitial extends TripState {}
+
 class TripLoading extends TripState {}
+
 class TripLoaded extends TripState {
   final List<Trip> trips;
   TripLoaded(this.trips);
 }
+
 class TripError extends TripState {
   final String message;
   TripError(this.message);
@@ -24,21 +27,23 @@ class TripCubit extends Cubit<TripState> {
   final DioClient _client;
   final ReadCacheService _cache;
 
-  TripCubit(this._client) : _cache = ReadCacheService(), super(TripInitial());
+  TripCubit(this._client)
+      : _cache = ReadCacheService(),
+        super(TripInitial());
 
   Options _idempotentOptions() => Options(
-    headers: {'Idempotency-Key': const Uuid().v4()},
-  );
+        headers: {'Idempotency-Key': const Uuid().v4()},
+      );
 
   Future<void> fetchMyTrips() async {
     emit(TripLoading());
     try {
       final response = await _client.dio.get('/trips?limit=20');
       final dataMap = parseResponseMap(response.data);
-      final List<dynamic> items =
-          dataMap['data'] as List? ?? dataMap['trips'] as List? ?? [];
+      final items = _extractTrips(dataMap);
       final list = items
-          .map((e) => Trip.fromJson(Map<String, dynamic>.from(e as Map)))
+          .whereType<Map>()
+          .map((e) => Trip.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       await _cache.set('/trips?limit=20', response.data);
       emit(TripLoaded(list));
@@ -46,8 +51,11 @@ class TripCubit extends Cubit<TripState> {
       final cached = await _cache.get('/trips?limit=20');
       if (cached != null) {
         final cachedMap = parseResponseMap(cached);
-        final List<dynamic> items = cachedMap['data'] as List? ?? cachedMap['trips'] as List? ?? [];
-        final list = items.map((e) => Trip.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        final items = _extractTrips(cachedMap);
+        final list = items
+            .whereType<Map>()
+            .map((e) => Trip.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
         emit(TripLoaded(list));
       } else {
         emit(TripError(apiError(e)));
@@ -76,7 +84,8 @@ class TripCubit extends Cubit<TripState> {
 
   Future<void> acceptTrip(String id) async {
     try {
-      await _client.dio.patch('/trips/$id/accept', options: _idempotentOptions());
+      await _client.dio
+          .patch('/trips/$id/accept', options: _idempotentOptions());
       await fetchMyTrips();
     } catch (e) {
       emit(TripError(apiError(e, fallback: 'Failed to accept trip.')));
@@ -101,13 +110,15 @@ class TripCubit extends Cubit<TripState> {
       await _client.dio.put('/trips/$id/start', options: _idempotentOptions());
       await fetchMyTrips();
     } catch (e) {
-      emit(TripError(apiError(e, fallback: 'Failed to start trip. Make sure shift is active.')));
+      emit(TripError(apiError(e,
+          fallback: 'Failed to start trip. Make sure shift is active.')));
     }
   }
 
   Future<void> completeTrip(String id) async {
     try {
-      await _client.dio.put('/trips/$id/complete', options: _idempotentOptions());
+      await _client.dio
+          .put('/trips/$id/complete', options: _idempotentOptions());
       await fetchMyTrips();
     } catch (e) {
       emit(TripError(apiError(e, fallback: 'Failed to complete trip.')));
@@ -136,7 +147,14 @@ class TripCubit extends Cubit<TripState> {
       );
       await fetchMyTrips();
     } catch (e) {
-      emit(TripError(apiError(e, fallback: 'Failed to mark payment as cash collected.')));
+      emit(TripError(
+          apiError(e, fallback: 'Failed to mark payment as cash collected.')));
     }
+  }
+
+  List<dynamic> _extractTrips(Map<String, dynamic> dataMap) {
+    if (dataMap['data'] is List) return dataMap['data'] as List;
+    if (dataMap['trips'] is List) return dataMap['trips'] as List;
+    return const [];
   }
 }

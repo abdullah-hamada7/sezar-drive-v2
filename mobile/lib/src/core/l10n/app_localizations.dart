@@ -9,7 +9,8 @@ class AppLocalizations {
         const AppLocalizations('en');
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   String t(String key, [Map<String, String> params = const {}]) {
     var value = (locale == 'ar' ? _ar : _en)[key] ?? _en[key] ?? key;
@@ -49,7 +50,8 @@ class AppLocalizations {
     'new_password': 'New password',
     'confirm_new_password': 'Confirm new password',
     'identity_required': 'Identity verification needed',
-    'identity_upload_hint': 'Upload your ID photo so an admin can approve your account.',
+    'identity_upload_hint':
+        'Upload your ID photo so an admin can approve your account.',
     'upload_identity': 'Upload ID photo',
     'upload': 'Upload',
     'login': 'Sign in',
@@ -59,13 +61,16 @@ class AppLocalizations {
     'validation_email_phone': 'Enter your email or phone number',
     'validation_password': 'Enter your password',
     'password_change_required': 'New password required',
-    'password_change_intro': 'Your administrator requires a new password before you can continue.',
+    'password_change_intro':
+        'Your administrator requires a new password before you can continue.',
     'password_min_length': 'Use at least 8 characters',
     'passwords_no_match': 'Passwords do not match',
     'new_device_title': 'Verify this device',
-    'new_device_message': 'Signing in on a new device requires a quick selfie check.',
+    'new_device_message':
+        'Signing in on a new device requires a quick selfie check.',
     'capture_selfie_btn': 'Take selfie',
-    'selfie_cancelled': 'Selfie cancelled — verification is required to continue.',
+    'selfie_cancelled':
+        'Selfie cancelled — verification is required to continue.',
     'dashboard': 'Dashboard',
     'my_trips': 'My trips',
     'no_trips': 'No trips yet',
@@ -115,6 +120,10 @@ class AppLocalizations {
     'bag_count': 'Bags: {count}',
     'view_map_route': 'View route',
     'trip_map_title': 'Route map',
+    'route_map_unavailable': 'Route map unavailable',
+    'route_coordinates_missing':
+        'Pickup or drop-off coordinates are missing for this trip.',
+    'open_directions': 'Open directions',
     'accept_trip_title': 'Accept this trip?',
     'accept_trip_message': 'Once accepted, you are expected to complete it.',
     'reject_trip_title': 'Reject assignment',
@@ -130,7 +139,7 @@ class AppLocalizations {
     'cash_note_label': 'Note (optional)',
     'confirm_received': 'Confirm received',
     'payment_label': 'Payment: {method}',
-    'collect_amount': 'Collect: {amount} USD',
+    'collect_amount': 'Collect: {amount} EGP',
     'no_active_shift': 'No active shift',
     'no_active_shift_hint': 'Start a shift to receive trip assignments.',
     'start_work_shift': 'Start shift',
@@ -145,7 +154,8 @@ class AppLocalizations {
     'vehicle_assigned': 'Vehicle: {plate}',
     'scan_vehicle_qr': 'Scan the QR code on the vehicle',
     'scan_vehicle_qr_title': 'Scan vehicle QR',
-    'scan_vehicle_qr_hint': 'Point the camera at the QR on the vehicle dashboard',
+    'scan_vehicle_qr_hint':
+        'Point the camera at the QR on the vehicle dashboard',
     'verified': 'Verified',
     'pending_verification': 'Pending verification',
     'phone': 'Phone',
@@ -166,18 +176,21 @@ class AppLocalizations {
     'qr_identifier': 'QR or vehicle ID',
     'assign': 'Assign',
     'shift_activated': 'Shift active — you can receive trips.',
-    'shift_inspection_required': 'Complete vehicle inspection before going online.',
-    'shift_post_inspection_required': 'Post-shift inspection required before ending shift.',
+    'shift_inspection_required':
+        'Complete vehicle inspection before going online.',
+    'shift_post_inspection_required':
+        'Post-shift inspection required before ending shift.',
     'shift_trip_blocked': 'Finish or cancel your active trip first.',
     'state_error': 'Something went wrong. Try again.',
     'shift_required_expense': 'Start a shift before logging expenses.',
     'no_accepted_trips': 'No accepted trips',
-    'no_accepted_trips_hint': 'Accept a trip first — expenses must link to a trip on your shift.',
+    'no_accepted_trips_hint':
+        'Accept a trip first — expenses must link to a trip on your shift.',
     'linked_trip': 'Linked trip',
     'select_trip_required': 'Select a trip',
     'expense_category': 'Category',
     'select_category_required': 'Select a category',
-    'amount_usd': 'Amount (USD)',
+    'amount_usd': 'Amount (EGP)',
     'enter_amount': 'Enter the amount',
     'invalid_amount': 'Enter a valid number',
     'description_purpose': 'Description',
@@ -189,7 +202,8 @@ class AppLocalizations {
     'load_failed_expenses': 'Could not load expenses.',
     'no_description': 'No description',
     'general_category': 'General',
-    'inspection_shift_required': 'Start a shift to inspect your assigned vehicle.',
+    'inspection_shift_required':
+        'Start a shift to inspect your assigned vehicle.',
     'step_checklist': 'Checklist',
     'step_photos': 'Photos',
     'step_review': 'Review',
@@ -212,7 +226,8 @@ class AppLocalizations {
     'inspection_submitted': 'Inspection submitted.',
     'damage_shift_required': 'Start a shift before reporting damage.',
     'damage_offline_queued': 'Offline — report will sync when connected.',
-    'damage_lock_warning': 'Submitting a damage report locks the vehicle until admin review.',
+    'damage_lock_warning':
+        'Submitting a damage report locks the vehicle until admin review.',
     'damage_description': 'What happened?',
     'damage_description_hint': 'Describe location and type of damage…',
     'damage_photos_label': 'Photos (1–3 required)',
@@ -223,11 +238,12 @@ class AppLocalizations {
     'damage_submitted': 'Report submitted. Vehicle locked pending review.',
     'violations_search_hint': 'Search violations…',
     'violations_empty': 'No violations on record',
-    'violations_empty_hint': 'Traffic violations linked to your account appear here.',
+    'violations_empty_hint':
+        'Traffic violations linked to your account appear here.',
     'violations_no_match': 'No matches for your filters',
     'clear_filters': 'Clear filters',
     'violation_number': 'Violation #{number}',
-    'fine_amount': 'Fine: {amount} USD',
+    'fine_amount': 'Fine: {amount} EGP',
     'location_label': 'Location: {value}',
     'date_label': 'Date: {value}',
     'time_label': 'Time: {value}',
@@ -237,7 +253,8 @@ class AppLocalizations {
     'mark_all_read': 'Mark all read',
     'load_failed_notifications': 'Could not load notifications.',
     'offline_queue_empty': 'Everything synced',
-    'offline_queue_empty_hint': 'Items saved offline while disconnected show up here.',
+    'offline_queue_empty_hint':
+        'Items saved offline while disconnected show up here.',
     'pending_items': 'Pending: {count}',
     'upload_queue': 'Upload now',
     'queued_at': 'Queued: {time}',
@@ -248,7 +265,8 @@ class AppLocalizations {
     'recovery_step_email': 'Request code',
     'recovery_step_verify': 'Verify code',
     'recovery_step_reset': 'Set password',
-    'recovery_email_intro': 'Enter the email on your driver account. We will send a recovery code.',
+    'recovery_email_intro':
+        'Enter the email on your driver account. We will send a recovery code.',
     'email_address': 'Email address',
     'enter_email': 'Enter your email',
     'send_recovery_code': 'Send code',
@@ -262,15 +280,16 @@ class AppLocalizations {
     'password_reset_success': 'Password reset. Sign in with your new password.',
     'identity_verification_title': 'Identity verification',
     'identity_upload_title': 'Upload ID photo',
-    'identity_upload_body': 'Use a clear photo of your driver license or government ID.',
+    'identity_upload_body':
+        'Use a clear photo of your driver license or government ID.',
     'tap_to_photo': 'Tap to take photo',
     'submit_verification': 'Submit for review',
     'skip_for_now': 'Not now',
     'identity_submitted': 'ID photo submitted for admin review.',
     'todays_cash': "Today's cash",
-    'uncollected_cash': 'Uncollected: {count} trips · \${amount}',
+    'uncollected_cash': 'Uncollected: {count} trips · {amount} EGP',
     'no_uncollected_cash': 'All cash trips collected',
-    'collected_cash': 'Collected: {count} trips · \${amount}',
+    'collected_cash': 'Collected: {count} trips · {amount} EGP',
     'go_to_trips': 'View trips',
     'daily_earnings': "Today's earnings",
     'recent_activity': 'Recent activity',
@@ -379,6 +398,10 @@ class AppLocalizations {
     'bag_count': 'حقائب: {count}',
     'view_map_route': 'عرض المسار',
     'trip_map_title': 'خريطة المسار',
+    'route_map_unavailable': 'خريطة المسار غير متاحة',
+    'route_coordinates_missing':
+        'إحداثيات نقطة الانطلاق أو الوجهة غير متوفرة لهذه الرحلة.',
+    'open_directions': 'فتح الاتجاهات',
     'accept_trip_title': 'قبول هذه الرحلة؟',
     'accept_trip_message': 'بعد القبول، يُتوقع إكمال الرحلة.',
     'reject_trip_title': 'رفض التعيين',
@@ -394,7 +417,7 @@ class AppLocalizations {
     'cash_note_label': 'ملاحظة (اختياري)',
     'confirm_received': 'تأكيد الاستلام',
     'payment_label': 'الدفع: {method}',
-    'collect_amount': 'تحصيل: {amount} USD',
+    'collect_amount': 'تحصيل: {amount} EGP',
     'no_active_shift': 'لا توجد وردية نشطة',
     'no_active_shift_hint': 'ابدأ وردية لاستقبال الرحلات.',
     'start_work_shift': 'بدء الوردية',
@@ -441,7 +464,7 @@ class AppLocalizations {
     'select_trip_required': 'اختر رحلة',
     'expense_category': 'الفئة',
     'select_category_required': 'اختر فئة',
-    'amount_usd': 'المبلغ (USD)',
+    'amount_usd': 'المبلغ (EGP)',
     'enter_amount': 'أدخل المبلغ',
     'invalid_amount': 'أدخل رقماً صالحاً',
     'description_purpose': 'الوصف',
@@ -491,7 +514,7 @@ class AppLocalizations {
     'violations_no_match': 'لا نتائج للفلاتر',
     'clear_filters': 'مسح الفلاتر',
     'violation_number': 'مخالفة #{number}',
-    'fine_amount': 'غرامة: {amount} USD',
+    'fine_amount': 'غرامة: {amount} EGP',
     'location_label': 'الموقع: {value}',
     'date_label': 'التاريخ: {value}',
     'time_label': 'الوقت: {value}',
@@ -532,9 +555,9 @@ class AppLocalizations {
     'skip_for_now': 'ليس الآن',
     'identity_submitted': 'تم إرسال الهوية للمراجعة.',
     'todays_cash': 'نقد اليوم',
-    'uncollected_cash': 'غير محصّل: {count} · \${amount}',
+    'uncollected_cash': 'غير محصّل: {count} · {amount} EGP',
     'no_uncollected_cash': 'تم تحصيل كل الرحلات النقدية',
-    'collected_cash': 'محصّل: {count} · \${amount}',
+    'collected_cash': 'محصّل: {count} · {amount} EGP',
     'go_to_trips': 'عرض الرحلات',
     'daily_earnings': 'أرباح اليوم',
     'recent_activity': 'النشاط الأخير',
@@ -548,7 +571,8 @@ class AppLocalizations {
   };
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override

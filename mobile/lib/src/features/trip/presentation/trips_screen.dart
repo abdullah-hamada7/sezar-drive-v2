@@ -57,7 +57,8 @@ class _TripsScreenState extends State<TripsScreen> {
       body: BlocConsumer<TripCubit, TripState>(
         listener: (context, state) {
           if (state is TripError) {
-            AppFeedback.show(context, message: state.message, type: AppFeedbackType.error);
+            AppFeedback.show(context,
+                message: state.message, type: AppFeedbackType.error);
           }
         },
         builder: (context, state) {
@@ -72,7 +73,9 @@ class _TripsScreenState extends State<TripsScreen> {
                 icon: Icons.route_outlined,
                 title: l10n.t('no_trips'),
                 message: l10n.t('no_trips_hint'),
-                actionLabel: widget.onNavigateToShift != null ? l10n.t('go_to_shift') : null,
+                actionLabel: widget.onNavigateToShift != null
+                    ? l10n.t('go_to_shift')
+                    : null,
                 onAction: widget.onNavigateToShift,
               );
             }
@@ -83,10 +86,14 @@ class _TripsScreenState extends State<TripsScreen> {
               itemBuilder: (context, index) => _TripCard(
                 trip: trips[index],
                 l10n: l10n,
-                onReject: () => _showRejectDialog(context, trips[index].id, l10n),
-                onCancel: () => _showCancelDialog(context, trips[index].id, l10n),
-                onCashCollected: () => _showCashCollectedDialog(context, trips[index].id, l10n),
-                onShowMap: () => _showMapDetailsModal(context, trips[index], l10n),
+                onReject: () =>
+                    _showRejectDialog(context, trips[index].id, l10n),
+                onCancel: () =>
+                    _showCancelDialog(context, trips[index].id, l10n),
+                onCashCollected: () =>
+                    _showCashCollectedDialog(context, trips[index].id, l10n),
+                onShowMap: () =>
+                    _showMapDetailsModal(context, trips[index], l10n),
               ),
             );
           }
@@ -102,7 +109,8 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
-  void _showCancelDialog(BuildContext context, String tripId, AppLocalizations l10n) {
+  void _showCancelDialog(
+      BuildContext context, String tripId, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -112,7 +120,9 @@ class _TripsScreenState extends State<TripsScreen> {
           decoration: InputDecoration(labelText: l10n.t('cancel_reason_label')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text(l10n.t('back'))),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(l10n.t('back'))),
           ElevatedButton(
             style: dangerButtonStyle(context),
             onPressed: () {
@@ -130,7 +140,8 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
-  void _showRejectDialog(BuildContext context, String tripId, AppLocalizations l10n) {
+  void _showRejectDialog(
+      BuildContext context, String tripId, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -140,7 +151,9 @@ class _TripsScreenState extends State<TripsScreen> {
           decoration: InputDecoration(labelText: l10n.t('reject_reason_label')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text(l10n.t('cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(l10n.t('cancel'))),
           ElevatedButton(
             onPressed: () {
               final reason = _reasonController.text.trim();
@@ -157,7 +170,8 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
-  void _showCashCollectedDialog(BuildContext context, String tripId, AppLocalizations l10n) {
+  void _showCashCollectedDialog(
+      BuildContext context, String tripId, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
@@ -167,11 +181,15 @@ class _TripsScreenState extends State<TripsScreen> {
           decoration: InputDecoration(labelText: l10n.t('cash_note_label')),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text(l10n.t('cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(l10n.t('cancel'))),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(dialogCtx);
-              context.read<TripCubit>().collectCashPayment(tripId, _noteController.text);
+              context
+                  .read<TripCubit>()
+                  .collectCashPayment(tripId, _noteController.text);
             },
             child: Text(l10n.t('confirm_received')),
           ),
@@ -180,9 +198,14 @@ class _TripsScreenState extends State<TripsScreen> {
     );
   }
 
-  void _showMapDetailsModal(BuildContext context, Trip trip, AppLocalizations l10n) {
+  void _showMapDetailsModal(
+      BuildContext context, Trip trip, AppLocalizations l10n) {
     final scheme = Theme.of(context).colorScheme;
     final semantic = context.semanticColors;
+    final pickupPoint = LatLng(trip.pickupLat, trip.pickupLng);
+    final dropoffPoint = LatLng(trip.dropoffLat, trip.dropoffLng);
+    final hasCoordinates = _hasRouteCoordinates(trip);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -201,7 +224,8 @@ class _TripsScreenState extends State<TripsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(l10n.t('trip_map_title'), style: Theme.of(context).textTheme.headlineMedium),
+                    Text(l10n.t('trip_map_title'),
+                        style: Theme.of(context).textTheme.headlineMedium),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(modalCtx),
@@ -212,41 +236,149 @@ class _TripsScreenState extends State<TripsScreen> {
                 Expanded(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: FlutterMap(
-                      options: MapOptions(
-                        initialCenter: LatLng(trip.pickupLat, trip.pickupLng),
-                        initialZoom: 13,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          subdomains: const ['a', 'b', 'c'],
-                        ),
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: LatLng(trip.pickupLat, trip.pickupLng),
-                              width: 30,
-                              height: 30,
-                              child: Icon(Icons.location_on, color: semantic.success, size: 30),
+                    child: hasCoordinates
+                        ? FlutterMap(
+                            options: MapOptions(
+                              initialCenter: pickupPoint,
+                              initialZoom: 13,
+                              initialCameraFit: CameraFit.bounds(
+                                bounds: LatLngBounds.fromPoints(
+                                    [pickupPoint, dropoffPoint]),
+                                padding: const EdgeInsets.all(48),
+                                maxZoom: 15,
+                              ),
                             ),
-                            Marker(
-                              point: LatLng(trip.dropoffLat, trip.dropoffLng),
-                              width: 30,
-                              height: 30,
-                              child: Icon(Icons.location_on, color: semantic.danger, size: 30),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                subdomains: const ['a', 'b', 'c'],
+                                userAgentPackageName: 'com.sezardrive.driver',
+                              ),
+                              PolylineLayer(
+                                polylines: [
+                                  Polyline(
+                                    points: [pickupPoint, dropoffPoint],
+                                    color: scheme.primary,
+                                    strokeWidth: 4,
+                                  ),
+                                ],
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: pickupPoint,
+                                    width: 36,
+                                    height: 36,
+                                    child: Icon(Icons.trip_origin,
+                                        color: semantic.success, size: 30),
+                                  ),
+                                  Marker(
+                                    point: dropoffPoint,
+                                    width: 36,
+                                    height: 36,
+                                    child: Icon(Icons.location_on,
+                                        color: semantic.danger, size: 34),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          )
+                        : _RouteUnavailablePanel(
+                            trip: trip,
+                            l10n: l10n,
+                            onOpenDirections: () => _openDirections(trip),
+                          ),
                   ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _openDirections(trip),
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(l10n.t('open_directions')),
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  bool _hasRouteCoordinates(Trip trip) {
+    return _isUsableCoordinate(trip.pickupLat, trip.pickupLng) &&
+        _isUsableCoordinate(trip.dropoffLat, trip.dropoffLng);
+  }
+
+  bool _isUsableCoordinate(double lat, double lng) {
+    final inRange = lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    return inRange && !(lat == 0 && lng == 0);
+  }
+
+  Future<void> _openDirections(Trip trip) async {
+    final hasCoordinates = _hasRouteCoordinates(trip);
+    final origin = hasCoordinates
+        ? '${trip.pickupLat},${trip.pickupLng}'
+        : trip.pickupLocation;
+    final destination = hasCoordinates
+        ? '${trip.dropoffLat},${trip.dropoffLng}'
+        : trip.dropoffLocation;
+    final uri = Uri.https('www.google.com', '/maps/dir/', {
+      'api': '1',
+      'origin': origin,
+      'destination': destination,
+      'travelmode': 'driving',
+    });
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+}
+
+class _RouteUnavailablePanel extends StatelessWidget {
+  const _RouteUnavailablePanel({
+    required this.trip,
+    required this.l10n,
+    required this.onOpenDirections,
+  });
+
+  final Trip trip;
+  final AppLocalizations l10n;
+  final VoidCallback onOpenDirections;
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = context.semanticColors;
+    return Container(
+      color: semantic.statusBackground(semantic.warning, opacity: 0.12),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.map_outlined, size: 56, color: semantic.warning),
+          const SizedBox(height: 16),
+          Text(
+            l10n.t('route_map_unavailable'),
+            style: Theme.of(context).textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.t('route_coordinates_missing'),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text('${l10n.t('pickup')}: ${trip.pickupLocation}'),
+          const SizedBox(height: 4),
+          Text('${l10n.t('dropoff')}: ${trip.dropoffLocation}'),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: onOpenDirections,
+            icon: const Icon(Icons.open_in_new),
+            label: Text(l10n.t('open_directions')),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -283,23 +415,36 @@ class _TripCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                StatusChip(label: AppStatus.tripStatusLabel(l10n, trip.status), color: statusColor),
-                Text('${trip.price.toStringAsFixed(2)} USD', style: Theme.of(context).textTheme.labelLarge),
+                StatusChip(
+                    label: AppStatus.tripStatusLabel(l10n, trip.status),
+                    color: statusColor),
+                Text('${trip.price.toStringAsFixed(2)} EGP',
+                    style: Theme.of(context).textTheme.labelLarge),
               ],
             ),
             const SizedBox(height: 16),
             _PaymentRow(trip: trip, l10n: l10n),
             const SizedBox(height: 16),
-            _LocationRow(icon: Icons.radio_button_checked, color: semantic.success, label: l10n.t('pickup'), value: trip.pickupLocation),
+            _LocationRow(
+                icon: Icons.radio_button_checked,
+                color: semantic.success,
+                label: l10n.t('pickup'),
+                value: trip.pickupLocation),
             const SizedBox(height: 8),
-            _LocationRow(icon: Icons.location_on, color: semantic.danger, label: l10n.t('dropoff'), value: trip.dropoffLocation),
+            _LocationRow(
+                icon: Icons.location_on,
+                color: semantic.danger,
+                label: l10n.t('dropoff'),
+                value: trip.dropoffLocation),
             if (trip.passengers != null && trip.passengers!.isNotEmpty) ...[
               const SizedBox(height: 16),
               const Divider(height: 1),
               const SizedBox(height: 12),
-              Text(l10n.t('passenger_info'), style: Theme.of(context).textTheme.labelLarge),
+              Text(l10n.t('passenger_info'),
+                  style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),
-              ...trip.passengers!.map((p) => _PassengerRow(passenger: p, l10n: l10n)),
+              ...trip.passengers!
+                  .map((p) => _PassengerRow(passenger: p, l10n: l10n)),
             ],
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -323,7 +468,11 @@ class _TripCard extends StatelessWidget {
 }
 
 class _LocationRow extends StatelessWidget {
-  const _LocationRow({required this.icon, required this.color, required this.label, required this.value});
+  const _LocationRow(
+      {required this.icon,
+      required this.color,
+      required this.label,
+      required this.value});
   final IconData icon;
   final Color color;
   final String label;
@@ -366,7 +515,9 @@ class _PassengerRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(passenger.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(
+                  child: Text(passenger.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600))),
               if (passenger.phone.isNotEmpty) ...[
                 IconButton(
                   icon: Icon(Icons.phone, size: 20, color: scheme.primary),
@@ -385,9 +536,14 @@ class _PassengerRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (passenger.phone.isNotEmpty)
-                Text(passenger.phone, style: Theme.of(context).textTheme.bodyMedium),
-              Text(l10n.t('companion_count', {'count': '${passenger.companionCount}'}), style: Theme.of(context).textTheme.bodyMedium),
-              Text(l10n.t('bag_count', {'count': '${passenger.bagCount}'}), style: Theme.of(context).textTheme.bodyMedium),
+                Text(passenger.phone,
+                    style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                  l10n.t('companion_count',
+                      {'count': '${passenger.companionCount}'}),
+                  style: Theme.of(context).textTheme.bodyMedium),
+              Text(l10n.t('bag_count', {'count': '${passenger.bagCount}'}),
+                  style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
         ],
@@ -423,16 +579,21 @@ class _PaymentRow extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(isCash ? Icons.payments : Icons.credit_card, size: 18, color: isCash ? semantic.warning : semantic.success),
+        Icon(isCash ? Icons.payments : Icons.credit_card,
+            size: 18, color: isCash ? semantic.warning : semantic.success),
         const SizedBox(width: 8),
-        Text(l10n.t('payment_label', {'method': label}), style: const TextStyle(fontSize: 13)),
+        Text(l10n.t('payment_label', {'method': label}),
+            style: const TextStyle(fontSize: 13)),
         const Spacer(),
         if (isCash && trip.status == 'COMPLETED')
           StatusChip(
             label: trip.cashCollectedAt != null
                 ? l10n.t('cash_collected')
-                : l10n.t('collect_amount', {'amount': trip.price.toStringAsFixed(2)}),
-            color: trip.cashCollectedAt != null ? semantic.success : semantic.danger,
+                : l10n.t('collect_amount',
+                    {'amount': trip.price.toStringAsFixed(2)}),
+            color: trip.cashCollectedAt != null
+                ? semantic.success
+                : semantic.danger,
           )
         else if (!isCash)
           StatusChip(label: l10n.t('paid'), color: semantic.success),
@@ -456,16 +617,23 @@ class _TripActions extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onCashCollected;
 
-  void _confirm(BuildContext context, {required String title, required String message, required VoidCallback onConfirm, required Color color}) {
+  void _confirm(BuildContext context,
+      {required String title,
+      required String message,
+      required VoidCallback onConfirm,
+      required Color color}) {
     showDialog(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: Text(title),
         content: Text(message),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text(l10n.t('cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(l10n.t('cancel'))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: color, foregroundColor: Colors.white),
             onPressed: () {
               Navigator.pop(dialogCtx);
               onConfirm();
@@ -502,7 +670,9 @@ class _TripActions extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton(
-              style: OutlinedButton.styleFrom(foregroundColor: semantic.danger, side: BorderSide(color: semantic.danger)),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: semantic.danger,
+                  side: BorderSide(color: semantic.danger)),
               onPressed: onReject,
               child: Text(l10n.t('reject')),
             ),
@@ -528,7 +698,9 @@ class _TripActions extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            style: OutlinedButton.styleFrom(foregroundColor: semantic.danger, side: BorderSide(color: semantic.danger)),
+            style: OutlinedButton.styleFrom(
+                foregroundColor: semantic.danger,
+                side: BorderSide(color: semantic.danger)),
             onPressed: onCancel,
             child: Text(l10n.t('cancel_trip')),
           ),
@@ -550,7 +722,9 @@ class _TripActions extends StatelessWidget {
       );
     }
 
-    if (trip.status == 'COMPLETED' && trip.paymentMethod == 'CASH' && trip.cashCollectedAt == null) {
+    if (trip.status == 'COMPLETED' &&
+        trip.paymentMethod == 'CASH' &&
+        trip.cashCollectedAt == null) {
       return ElevatedButton(
         style: warningButtonStyle(context),
         onPressed: onCashCollected,

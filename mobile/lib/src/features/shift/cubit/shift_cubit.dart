@@ -9,13 +9,17 @@ import '../../../core/utils/parsers.dart';
 abstract class ShiftState {}
 
 class ShiftInitial extends ShiftState {}
+
 class ShiftLoading extends ShiftState {}
+
 class ShiftLoaded extends ShiftState {
   final Shift? activeShift;
+
   /// True when the current shift has a completed inspection with all 6 directions.
   final bool preShiftInspectionComplete;
   ShiftLoaded(this.activeShift, {this.preShiftInspectionComplete = false});
 }
+
 class ShiftError extends ShiftState {
   final String message;
   ShiftError(this.message);
@@ -46,7 +50,12 @@ class ShiftCubit extends Cubit<ShiftState> {
   final DioClient _client;
 
   static const requiredInspectionDirections = [
-    'front', 'back', 'left', 'right', 'dashboard', 'tank',
+    'front',
+    'back',
+    'left',
+    'right',
+    'dashboard',
+    'tank',
   ];
 
   ShiftCubit(this._client) : super(ShiftInitial());
@@ -57,19 +66,28 @@ class ShiftCubit extends Cubit<ShiftState> {
       queryParameters: {'shiftId': shiftId},
     );
     final raw = response.data;
-    final List<dynamic> inspections = raw is List
+    final dataMap = parseResponseMap(raw);
+    final inspections = raw is List
         ? raw
-        : (raw['inspections'] as List? ?? raw['data'] as List? ?? []);
-    return inspections.cast<Map<String, dynamic>>();
+        : (dataMap['inspections'] is List
+            ? dataMap['inspections'] as List
+            : dataMap['data'] is List
+                ? dataMap['data'] as List
+                : const []);
+    return inspections
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   bool _inspectionHasAllDirections(Map<String, dynamic> insp) {
     final status = (insp['status'] as String? ?? '').toLowerCase();
     if (status != 'completed') return false;
 
-    final photos = insp['photos'] as List? ?? [];
+    final photos = insp['photos'] is List ? insp['photos'] as List : const [];
     final directions = photos
-        .map((p) => (p as Map<String, dynamic>)['direction'] as String?)
+        .whereType<Map>()
+        .map((p) => p['direction']?.toString())
         .whereType<String>()
         .toSet();
 
@@ -77,16 +95,18 @@ class ShiftCubit extends Cubit<ShiftState> {
   }
 
   /// [after] — when set, only inspections created after this timestamp count (post-shift).
-  Future<bool> _hasCompletedInspection(String shiftId, {DateTime? after}) async {
+  Future<bool> _hasCompletedInspection(String shiftId,
+      {DateTime? after}) async {
     try {
       final inspections = await _fetchInspections(shiftId);
       for (final insp in inspections) {
         if (!_inspectionHasAllDirections(insp)) continue;
 
         if (after != null) {
-          final createdAtRaw = insp['createdAt'] as String?;
+          final createdAtRaw = insp['createdAt']?.toString();
           if (createdAtRaw == null) continue;
-          final createdAt = DateTime.parse(createdAtRaw);
+          final createdAt = DateTime.tryParse(createdAtRaw);
+          if (createdAt == null) continue;
           if (!createdAt.isAfter(after)) continue;
         }
 
@@ -100,11 +120,15 @@ class ShiftCubit extends Cubit<ShiftState> {
 
   Future<bool> _hasInProgressTrip() async {
     try {
-      final response = await _client.dio.get('/trips', queryParameters: {'limit': 50});
-      final raw = response.data;
-      final List<dynamic> items =
-          raw['trips'] as List? ?? raw['data'] as List? ?? [];
-      return items.any((t) => (t as Map<String, dynamic>)['status'] == 'IN_PROGRESS');
+      final response =
+          await _client.dio.get('/trips', queryParameters: {'limit': 50});
+      final dataMap = parseResponseMap(response.data);
+      final items = dataMap['trips'] is List
+          ? dataMap['trips'] as List
+          : dataMap['data'] is List
+              ? dataMap['data'] as List
+              : const [];
+      return items.whereType<Map>().any((t) => t['status'] == 'IN_PROGRESS');
     } catch (_) {
       return false;
     }
@@ -119,11 +143,16 @@ class ShiftCubit extends Cubit<ShiftState> {
       if (shiftData == null) {
         emit(ShiftLoaded(null));
       } else {
-        final shift = Shift.fromJson(Map<String, dynamic>.from(shiftData as Map));
+        if (shiftData is! Map) {
+          emit(ShiftError('Unexpected active shift response.'));
+          return;
+        }
+        final shift = Shift.fromJson(Map<String, dynamic>.from(shiftData));
         final inspectionComplete = shift.status == 'PendingVerification'
             ? await _hasCompletedInspection(shift.id)
             : false;
-        emit(ShiftLoaded(shift, preShiftInspectionComplete: inspectionComplete));
+        emit(
+            ShiftLoaded(shift, preShiftInspectionComplete: inspectionComplete));
       }
     } catch (e) {
       emit(ShiftError(apiError(e)));
@@ -183,7 +212,8 @@ class ShiftCubit extends Cubit<ShiftState> {
       if (shift != null) {
         emit(ShiftInspectionRequired(shift));
       } else {
-        emit(ShiftError('Complete vehicle inspection (6 photos) before activating.'));
+        emit(ShiftError(
+            'Complete vehicle inspection (6 photos) before activating.'));
       }
       return;
     }
@@ -226,6 +256,7 @@ class ShiftCubit extends Cubit<ShiftState> {
 
   /// Re-emit loaded state after a blocked action.
   void restoreLoaded(Shift shift, {required bool preShiftInspectionComplete}) {
-    emit(ShiftLoaded(shift, preShiftInspectionComplete: preShiftInspectionComplete));
+    emit(ShiftLoaded(shift,
+        preShiftInspectionComplete: preShiftInspectionComplete));
   }
 }

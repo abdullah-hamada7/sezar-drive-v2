@@ -8,12 +8,15 @@ import '../../../core/utils/parsers.dart';
 abstract class ViolationState {}
 
 class ViolationInitial extends ViolationState {}
+
 class ViolationLoading extends ViolationState {}
+
 class ViolationLoaded extends ViolationState {
   final List<TrafficViolation> violations;
   final List<TrafficViolation> filtered;
   ViolationLoaded({required this.violations, required this.filtered});
 }
+
 class ViolationError extends ViolationState {
   final String message;
   ViolationError(this.message);
@@ -27,16 +30,19 @@ class ViolationCubit extends Cubit<ViolationState> {
   DateTime? _toDate;
   String _searchQuery = '';
 
-  ViolationCubit(this._client) : _cache = ReadCacheService(), super(ViolationInitial());
+  ViolationCubit(this._client)
+      : _cache = ReadCacheService(),
+        super(ViolationInitial());
 
   Future<void> fetchMyViolations() async {
     emit(ViolationLoading());
     try {
       final response = await _client.dio.get('/violations/my');
       final dataMap = parseResponseMap(response.data);
-      final List<dynamic> items = dataMap['data'] as List? ?? dataMap['violations'] as List? ?? [];
+      final items = _extractViolations(dataMap);
       final list = items
-          .map((e) => TrafficViolation.fromJson(Map<String, dynamic>.from(e as Map)))
+          .whereType<Map>()
+          .map((e) => TrafficViolation.fromJson(Map<String, dynamic>.from(e)))
           .toList();
       await _cache.set('/violations/my', response.data);
       _applyFilters(list);
@@ -44,8 +50,11 @@ class ViolationCubit extends Cubit<ViolationState> {
       final cached = await _cache.get('/violations/my');
       if (cached != null) {
         final cachedMap = parseResponseMap(cached);
-        final List<dynamic> items = cachedMap['data'] as List? ?? cachedMap['violations'] as List? ?? [];
-        final list = items.map((e) => TrafficViolation.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        final items = _extractViolations(cachedMap);
+        final list = items
+            .whereType<Map>()
+            .map((e) => TrafficViolation.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
         _applyFilters(list);
       } else {
         emit(ViolationError(apiError(e)));
@@ -89,7 +98,8 @@ class ViolationCubit extends Cubit<ViolationState> {
       filtered = filtered.where((v) => !v.date.isBefore(_fromDate!)).toList();
     }
     if (_toDate != null) {
-      final endOfDay = DateTime(_toDate!.year, _toDate!.month, _toDate!.day, 23, 59, 59);
+      final endOfDay =
+          DateTime(_toDate!.year, _toDate!.month, _toDate!.day, 23, 59, 59);
       filtered = filtered.where((v) => !v.date.isAfter(endOfDay)).toList();
     }
     if (_searchQuery.isNotEmpty) {
@@ -104,5 +114,11 @@ class ViolationCubit extends Cubit<ViolationState> {
     }
 
     emit(ViolationLoaded(violations: all, filtered: filtered));
+  }
+
+  List<dynamic> _extractViolations(Map<String, dynamic> dataMap) {
+    if (dataMap['data'] is List) return dataMap['data'] as List;
+    if (dataMap['violations'] is List) return dataMap['violations'] as List;
+    return const [];
   }
 }

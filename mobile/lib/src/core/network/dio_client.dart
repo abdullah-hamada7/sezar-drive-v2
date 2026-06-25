@@ -18,8 +18,10 @@ class DioClient {
 
     _dio.options
       ..baseUrl = _baseUrl
-      ..connectTimeout = const Duration(milliseconds: AppConfig.connectTimeoutMs)
-      ..receiveTimeout = const Duration(milliseconds: AppConfig.receiveTimeoutMs)
+      ..connectTimeout =
+          const Duration(milliseconds: AppConfig.connectTimeoutMs)
+      ..receiveTimeout =
+          const Duration(milliseconds: AppConfig.receiveTimeoutMs)
       ..headers = {'Accept': 'application/json'};
 
     // Log requests in non-production builds only
@@ -58,7 +60,10 @@ class DioClient {
             final path = error.requestOptions.path;
             // Push registration may run with a stale token during login/verify — must not logout.
             if (path.contains('/push/register-device') ||
-                path.contains('/push/unregister-device')) {
+                path.contains('/push/unregister-device') ||
+                path.contains('/auth/login') ||
+                path.contains('/auth/verify-device') ||
+                path.contains('/auth/change-password')) {
               return handler.next(error);
             }
 

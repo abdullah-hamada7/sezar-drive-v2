@@ -29,9 +29,8 @@ class RecentActivity {
       title: (json['title'] ?? '').toString(),
       amount: parseDouble(json['amount']),
       status: (json['status'] ?? '').toString(),
-      timestamp: json['timestamp'] != null
-          ? DateTime.parse(json['timestamp'] as String)
-          : DateTime.now(),
+      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -65,10 +64,14 @@ class DailyReport {
 
   factory DailyReport.fromJson(Map<String, dynamic> json) {
     return DailyReport(
-      uncollectedCashTotal: parseDoubleWithDefault(json['uncollectedCashTotal'], 0.0),
-      uncollectedCashTripsCount: parseIntWithDefault(json['uncollectedCashTripsCount'], 0),
-      cashCollectedTotal: parseDoubleWithDefault(json['cashCollectedTotal'], 0.0),
-      cashCollectedTripsCount: parseIntWithDefault(json['cashCollectedTripsCount'], 0),
+      uncollectedCashTotal:
+          parseDoubleWithDefault(json['uncollectedCashTotal'], 0.0),
+      uncollectedCashTripsCount:
+          parseIntWithDefault(json['uncollectedCashTripsCount'], 0),
+      cashCollectedTotal:
+          parseDoubleWithDefault(json['cashCollectedTotal'], 0.0),
+      cashCollectedTripsCount:
+          parseIntWithDefault(json['cashCollectedTripsCount'], 0),
     );
   }
 }
@@ -76,7 +79,9 @@ class DailyReport {
 abstract class HomeState {}
 
 class HomeInitial extends HomeState {}
+
 class HomeLoading extends HomeState {}
+
 class HomeLoaded extends HomeState {
   final User user;
   final Shift? activeShift;
@@ -94,6 +99,7 @@ class HomeLoaded extends HomeState {
     this.isStale = false,
   });
 }
+
 class HomeError extends HomeState {
   final String message;
   HomeError(this.message);
@@ -103,75 +109,147 @@ class HomeCubit extends Cubit<HomeState> {
   final DioClient _client;
   final ReadCacheService _cache;
 
-  HomeCubit(this._client) : _cache = ReadCacheService(), super(HomeInitial());
+  HomeCubit(this._client)
+      : _cache = ReadCacheService(),
+        super(HomeInitial());
 
   Future<void> fetchHomeData() async {
-    if (state is! HomeLoaded) emit(HomeLoading());
+    final previousHome = state is HomeLoaded ? state as HomeLoaded : null;
+    if (previousHome == null) emit(HomeLoading());
+
     try {
-      final results = await Future.wait([
-        _client.dio.get('/auth/me'),
-        _client.dio.get('/shifts/active'),
-        _client.dio.get('/stats/my-daily-report'),
-        _client.dio.get('/stats/my-activity', queryParameters: {'limit': 5}),
-        _client.dio.get('/stats/my-daily-revenue'),
-      ]);
-
-      final user = User.fromJson(results[0].data['user'] as Map<String, dynamic>);
-      final shiftData = results[1].data['shift'] as Map<String, dynamic>?;
-      final shift = shiftData != null ? Shift.fromJson(shiftData) : null;
-      final dailyReport = DailyReport.fromJson(results[2].data as Map<String, dynamic>);
-
-      final activityRaw = results[3].data;
-      final recentActivity = (activityRaw is List ? activityRaw : (activityRaw['data'] as List? ?? []))
-          .map((e) => RecentActivity.fromJson(e as Map<String, dynamic>))
-          .toList();
-
-      final earningsRaw = results[4].data;
-      final earningsHistory = (earningsRaw is List ? earningsRaw : (earningsRaw['data'] as List? ?? []))
-          .map((e) => EarningsPoint.fromJson(e as Map<String, dynamic>))
-          .toList();
-
-      await _cache.set('/stats/my-activity', activityRaw);
-      await _cache.set('/stats/my-daily-revenue', earningsRaw);
+      final user = await _readUser();
+      final activeShift = await _readActiveShift(previousHome?.activeShift);
+      final dailyReport = await _readDailyReport(previousHome?.dailyReport);
+      final recentActivity =
+          await _readRecentActivity(previousHome?.recentActivity ?? const []);
+      final earningsHistory =
+          await _readEarningsHistory(previousHome?.earningsHistory ?? const []);
 
       emit(HomeLoaded(
         user: user,
-        activeShift: shift,
-        dailyReport: dailyReport,
-        recentActivity: recentActivity,
-        earningsHistory: earningsHistory,
+        activeShift: activeShift.value,
+        dailyReport: dailyReport.value,
+        recentActivity: recentActivity.value,
+        earningsHistory: earningsHistory.value,
+        isStale: activeShift.stale ||
+            dailyReport.stale ||
+            recentActivity.stale ||
+            earningsHistory.stale,
       ));
     } catch (e) {
-      // Fall back to cached reads when offline.
-      try {
-        final cachedActivity = await _cache.get('/stats/my-activity');
-        final cachedEarnings = await _cache.get('/stats/my-daily-revenue');
-        if (cachedActivity != null || cachedEarnings != null) {
-          final activities = (cachedActivity is List ? cachedActivity : (cachedActivity?['data'] as List? ?? []))
-              .map((e) => RecentActivity.fromJson(e as Map<String, dynamic>))
-              .toList();
-          final earnings = (cachedEarnings is List ? cachedEarnings : (cachedEarnings?['data'] as List? ?? []))
-              .map((e) => EarningsPoint.fromJson(e as Map<String, dynamic>))
-              .toList();
-
-          if (state is HomeLoaded) {
-            final prev = state as HomeLoaded;
-            emit(HomeLoaded(
-              user: prev.user,
-              activeShift: prev.activeShift,
-              dailyReport: prev.dailyReport,
-              recentActivity: activities,
-              earningsHistory: earnings,
-              isStale: true,
-            ));
-          } else {
-            emit(HomeError('Offline — cached data only.'));
-          }
-          return;
-        }
-      } catch (_) {}
-
-      emit(HomeError(apiError(e)));
+      if (previousHome != null) {
+        emit(HomeLoaded(
+          user: previousHome.user,
+          activeShift: previousHome.activeShift,
+          dailyReport: previousHome.dailyReport,
+          recentActivity: previousHome.recentActivity,
+          earningsHistory: previousHome.earningsHistory,
+          isStale: true,
+        ));
+      } else {
+        emit(HomeError(apiError(e)));
+      }
     }
+  }
+
+  Future<User> _readUser() async {
+    final response = await _client.dio.get('/auth/me');
+    final userMap = _asMap(parseResponseMap(response.data)['user']);
+    if (userMap == null) throw StateError('Missing user profile');
+    return User.fromJson(userMap);
+  }
+
+  Future<({Shift? value, bool stale})> _readActiveShift(Shift? fallback) async {
+    try {
+      final response = await _client.dio.get('/shifts/active');
+      final shiftMap = _asMap(parseResponseMap(response.data)['shift']);
+      return (
+        value: shiftMap == null ? null : Shift.fromJson(shiftMap),
+        stale: false
+      );
+    } catch (_) {
+      return (value: fallback, stale: true);
+    }
+  }
+
+  Future<({DailyReport value, bool stale})> _readDailyReport(
+    DailyReport? fallback,
+  ) async {
+    try {
+      final response = await _client.dio.get('/stats/my-daily-report');
+      await _cache.set('/stats/my-daily-report', response.data);
+      return (
+        value: DailyReport.fromJson(parseResponseMap(response.data)),
+        stale: false
+      );
+    } catch (_) {
+      final cached = await _cache.get('/stats/my-daily-report');
+      final report = cached == null
+          ? fallback ?? const DailyReport()
+          : DailyReport.fromJson(parseResponseMap(cached));
+      return (value: report, stale: true);
+    }
+  }
+
+  Future<({List<RecentActivity> value, bool stale})> _readRecentActivity(
+    List<RecentActivity> fallback,
+  ) async {
+    try {
+      final response = await _client.dio.get(
+        '/stats/my-activity',
+        queryParameters: {'limit': 5},
+      );
+      await _cache.set('/stats/my-activity', response.data);
+      return (value: _parseRecentActivity(response.data), stale: false);
+    } catch (_) {
+      final cached = await _cache.get('/stats/my-activity');
+      return (
+        value: cached == null ? fallback : _parseRecentActivity(cached),
+        stale: true,
+      );
+    }
+  }
+
+  Future<({List<EarningsPoint> value, bool stale})> _readEarningsHistory(
+    List<EarningsPoint> fallback,
+  ) async {
+    try {
+      final response = await _client.dio.get('/stats/my-daily-revenue');
+      await _cache.set('/stats/my-daily-revenue', response.data);
+      return (value: _parseEarningsHistory(response.data), stale: false);
+    } catch (_) {
+      final cached = await _cache.get('/stats/my-daily-revenue');
+      return (
+        value: cached == null ? fallback : _parseEarningsHistory(cached),
+        stale: true,
+      );
+    }
+  }
+
+  List<RecentActivity> _parseRecentActivity(dynamic raw) {
+    final payload = raw is List ? raw : _asList(parseResponseMap(raw)['data']);
+    return payload
+        .whereType<Map>()
+        .map((e) => RecentActivity.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  List<EarningsPoint> _parseEarningsHistory(dynamic raw) {
+    final payload = raw is List ? raw : _asList(parseResponseMap(raw)['data']);
+    return payload
+        .whereType<Map>()
+        .map((e) => EarningsPoint.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  List<dynamic> _asList(dynamic value) {
+    if (value is List) return value;
+    return const [];
   }
 }

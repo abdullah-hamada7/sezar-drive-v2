@@ -64,7 +64,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               child: Text(
                 l10n.t('scan_vehicle_qr_hint'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -97,20 +98,30 @@ class DriverDetailsSheet extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 32,
-                backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
-                child: user.avatarUrl == null ? const Icon(Icons.person, size: 32) : null,
+                backgroundImage: user.avatarUrl != null
+                    ? NetworkImage(user.avatarUrl!)
+                    : null,
+                child: user.avatarUrl == null
+                    ? const Icon(Icons.person, size: 32)
+                    : null,
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                    Text(user.name,
+                        style: const TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.w600)),
                     Text(user.email, style: TextStyle(color: semantic.muted)),
                     const SizedBox(height: 4),
                     StatusChip(
-                      label: user.identityVerified ? l10n.t('verified') : l10n.t('pending_verification'),
-                      color: user.identityVerified ? semantic.success : semantic.warning,
+                      label: user.identityVerified
+                          ? l10n.t('verified')
+                          : l10n.t('pending_verification'),
+                      color: user.identityVerified
+                          ? semantic.success
+                          : semantic.warning,
                     ),
                   ],
                 ),
@@ -119,14 +130,16 @@ class DriverDetailsSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _DetailRow(label: l10n.t('phone'), value: user.phone),
-          if (user.licenseNumber != null) _DetailRow(label: l10n.t('license'), value: user.licenseNumber!),
+          if (user.licenseNumber != null)
+            _DetailRow(label: l10n.t('license'), value: user.licenseNumber!),
           const SizedBox(height: 16),
           if (!user.identityVerified)
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const IdentityVerificationScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const IdentityVerificationScreen()),
                 );
               },
               icon: const Icon(Icons.verified_user),
@@ -161,7 +174,8 @@ class DriverDetailsSheet extends StatelessWidget {
               TextField(
                 controller: currentController,
                 obscureText: true,
-                decoration: InputDecoration(labelText: l10n.t('current_password')),
+                decoration:
+                    InputDecoration(labelText: l10n.t('current_password')),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -172,14 +186,19 @@ class DriverDetailsSheet extends StatelessWidget {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text(l10n.t('cancel'))),
+            TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: Text(l10n.t('cancel'))),
             ElevatedButton(
               onPressed: () {
                 final current = currentController.text.trim();
                 final newPass = newController.text.trim();
                 if (current.isNotEmpty && newPass.length >= 8) {
                   Navigator.pop(dialogCtx);
-                  context.read<AuthCubit>().changePassword(current, newPass);
+                  context.read<AuthCubit>().changePassword(
+                        newPass,
+                        currentPassword: current,
+                      );
                 }
               },
               child: Text(l10n.t('save')),
@@ -203,7 +222,8 @@ class _DetailRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(width: 100, child: Text(label, style: TextStyle(color: muted))),
+          SizedBox(
+              width: 100, child: Text(label, style: TextStyle(color: muted))),
           Expanded(child: Text(value)),
         ],
       ),

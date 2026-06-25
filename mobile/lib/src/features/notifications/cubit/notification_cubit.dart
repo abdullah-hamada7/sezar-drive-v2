@@ -8,12 +8,15 @@ import '../../../core/utils/parsers.dart';
 abstract class NotificationState {}
 
 class NotificationInitial extends NotificationState {}
+
 class NotificationLoading extends NotificationState {}
+
 class NotificationLoaded extends NotificationState {
   final List<NotificationModel> notifications;
   final int unseenCount;
   NotificationLoaded(this.notifications, {this.unseenCount = 0});
 }
+
 class NotificationError extends NotificationState {
   final String message;
   NotificationError(this.message);
@@ -26,37 +29,93 @@ class NotificationCubit extends Cubit<NotificationState> {
   NotificationCubit(this._client) : super(NotificationInitial());
 
   Future<void> fetchNotifications() async {
-    emit(NotificationLoading());
+    final previous =
+        state is NotificationLoaded ? state as NotificationLoaded : null;
+    if (previous == null) emit(NotificationLoading());
     try {
-      final response = await _client.dio.get('/notifications');
-      // Backend returns { notifications: [...], total, unseenCount }
-      final raw = response.data;
-      final List<dynamic> items =
-          raw['notifications'] as List? ??
-          raw['items'] as List? ?? [];
+      final response = await _client.dio.get(
+        '/notifications',
+        queryParameters: {'limit': 30},
+      );
+      final notificationPayload = parseResponseMap(response.data);
+      final items = _extractNotifications(notificationPayload);
       final list = items
-          .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
+          .whereType<Map>()
+          .map((e) => NotificationModel.fromJson(Map<String, dynamic>.from(e)))
           .toList();
-      final unseenCount = parseIntWithDefault(raw['unseenCount'], 0);
+      final unseenCount =
+          parseIntWithDefault(notificationPayload['unseenCount'], 0);
       emit(NotificationLoaded(list, unseenCount: unseenCount));
     } catch (e) {
-      emit(NotificationError(apiError(e)));
+      if (previous != null) {
+        emit(previous);
+      } else {
+        emit(NotificationError(apiError(e)));
+      }
     }
   }
 
   Future<void> markAllAsRead() async {
+    final previous =
+        state is NotificationLoaded ? state as NotificationLoaded : null;
     try {
-      // ✅ Backend: PATCH /notifications/mark-all-read
       await _client.dio.patch('/notifications/mark-all-read');
-      await fetchNotifications();
+      if (previous != null) {
+        emit(NotificationLoaded(
+          previous.notifications.map(_asRead).toList(),
+          unseenCount: 0,
+        ));
+      } else {
+        await fetchNotifications();
+      }
     } catch (_) {}
   }
 
   Future<void> markAsRead(List<String> ids) async {
+    final previous =
+        state is NotificationLoaded ? state as NotificationLoaded : null;
     try {
-      // ✅ Backend: PATCH /notifications/mark-read with body { ids: [...] }
       await _client.dio.patch('/notifications/mark-read', data: {'ids': ids});
-      await fetchNotifications();
+      if (previous != null) {
+        final idSet = ids.toSet();
+        final updated = previous.notifications
+            .map((notification) => idSet.contains(notification.id)
+                ? _asRead(notification)
+                : notification)
+            .toList();
+        final unseenCount =
+            updated.where((notification) => !notification.isRead).length;
+        emit(NotificationLoaded(updated, unseenCount: unseenCount));
+      } else {
+        await fetchNotifications();
+      }
     } catch (_) {}
+  }
+
+  List<dynamic> _extractNotifications(
+      Map<String, dynamic> notificationPayload) {
+    if (notificationPayload['notifications'] is List) {
+      return notificationPayload['notifications'] as List;
+    }
+    if (notificationPayload['items'] is List) {
+      return notificationPayload['items'] as List;
+    }
+    if (notificationPayload['data'] is List) {
+      return notificationPayload['data'] as List;
+    }
+    return const [];
+  }
+
+  NotificationModel _asRead(NotificationModel notification) {
+    return NotificationModel(
+      id: notification.id,
+      userId: notification.userId,
+      title: notification.title,
+      body: notification.body,
+      type: notification.type,
+      entityId: notification.entityId,
+      isRead: true,
+      createdAt: notification.createdAt,
+    );
   }
 }

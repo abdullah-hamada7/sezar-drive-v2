@@ -43,7 +43,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     super.initState();
     context.read<ExpenseCubit>().fetchExpensesAndCategories();
     _markTabViewed();
-    _connSub = GetIt.I<ConnectivityService>().onConnectivityChanged.listen((online) {
+    _connSub =
+        GetIt.I<ConnectivityService>().onConnectivityChanged.listen((online) {
       if (mounted) setState(() => _isOnline = online);
     });
     GetIt.I<ConnectivityService>().checkNow().then((online) {
@@ -67,7 +68,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   }
 
   Future<void> _pickReceipt() async {
-    final image = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 70);
+    final image = await ImagePicker()
+        .pickImage(source: ImageSource.camera, imageQuality: 70);
     if (image != null) setState(() => _receiptFile = File(image.path));
   }
 
@@ -75,7 +77,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final shiftState = context.watch<ShiftCubit>().state;
-    final hasActiveShift = shiftState is ShiftLoaded && shiftState.activeShift != null;
+    final hasActiveShift =
+        shiftState is ShiftLoaded && shiftState.activeShift != null;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.t('expenses_log'))),
@@ -84,7 +87,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           if (state is ExpenseSuccess) {
             AppFeedback.show(
               context,
-              message: state.isOffline ? l10n.t('expense_queued') : l10n.t('expense_logged'),
+              message: state.isOffline
+                  ? l10n.t('expense_queued')
+                  : l10n.t('expense_logged'),
               type: AppFeedbackType.success,
             );
             _amountController.clear();
@@ -96,7 +101,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             });
             context.read<ExpenseCubit>().fetchExpensesAndCategories();
           } else if (state is ExpenseError) {
-            AppFeedback.show(context, message: state.message, type: AppFeedbackType.error);
+            AppFeedback.show(context,
+                message: state.message, type: AppFeedbackType.error);
           }
         },
         builder: (context, state) {
@@ -130,7 +136,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         const Divider(height: 1),
                         const SizedBox(height: 16),
                       ],
-                      Text(l10n.t('recent_expenses'), style: Theme.of(context).textTheme.headlineMedium),
+                      Text(l10n.t('recent_expenses'),
+                          style: Theme.of(context).textTheme.headlineMedium),
                       const SizedBox(height: 12),
                       if (state.expenses.isEmpty)
                         EmptyStatePanel(
@@ -147,21 +154,24 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             final exp = state.expenses[index];
                             return ListTile(
                               contentPadding: EdgeInsets.zero,
-                              leading: Icon(Icons.receipt_long, color: context.semanticColors.warning),
+                              leading: Icon(Icons.receipt_long,
+                                  color: context.semanticColors.warning),
                               title: Row(
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      exp.description ?? l10n.t('no_description'),
+                                      exp.description ??
+                                          l10n.t('no_description'),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   _ExpenseStatusBadge(status: exp.status),
                                 ],
                               ),
-                              subtitle: Text(exp.category?.name ?? l10n.t('general_category')),
+                              subtitle: Text(exp.category?.name ??
+                                  l10n.t('general_category')),
                               trailing: Text(
-                                '${exp.amount.toStringAsFixed(2)} USD',
+                                '${exp.amount.toStringAsFixed(2)} EGP',
                                 style: Theme.of(context).textTheme.labelLarge,
                               ),
                             );
@@ -178,7 +188,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             icon: Icons.error_outline,
             title: l10n.t('load_failed_expenses'),
             actionLabel: l10n.t('retry'),
-            onAction: () => context.read<ExpenseCubit>().fetchExpensesAndCategories(),
+            onAction: () =>
+                context.read<ExpenseCubit>().fetchExpensesAndCategories(),
           );
         },
       ),
@@ -214,9 +225,12 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
           children: [
             Icon(Icons.info_outline, color: semantic.warning, size: 36),
             const SizedBox(height: 12),
-            Text(l10n.t('no_accepted_trips'), style: Theme.of(context).textTheme.headlineMedium),
+            Text(l10n.t('no_accepted_trips'),
+                style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
-            Text(l10n.t('no_accepted_trips_hint'), textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+            Text(l10n.t('no_accepted_trips_hint'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium),
           ],
         ),
       );
@@ -228,38 +242,54 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DropdownButtonFormField<String>(
-            value: _selectedTripId,
+            initialValue: _selectedTripId,
             decoration: InputDecoration(labelText: l10n.t('linked_trip')),
             items: acceptedTrips
-                .map((trip) => DropdownMenuItem(value: trip.id, child: Text(_tripLabel(trip), overflow: TextOverflow.ellipsis)))
+                .map((trip) => DropdownMenuItem(
+                    value: trip.id,
+                    child: Text(_tripLabel(trip),
+                        overflow: TextOverflow.ellipsis)))
                 .toList(),
             onChanged: (val) => setState(() => _selectedTripId = val),
-            validator: (value) => value == null ? l10n.t('select_trip_required') : null,
+            validator: (value) =>
+                value == null ? l10n.t('select_trip_required') : null,
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedCategoryId,
+            initialValue: _selectedCategoryId,
             decoration: InputDecoration(labelText: l10n.t('expense_category')),
-            items: categories.map((cat) => DropdownMenuItem(value: cat.id, child: Text(cat.name))).toList(),
+            items: categories
+                .map((cat) =>
+                    DropdownMenuItem(value: cat.id, child: Text(cat.name)))
+                .toList(),
             onChanged: (val) => setState(() => _selectedCategoryId = val),
-            validator: (value) => value == null ? l10n.t('select_category_required') : null,
+            validator: (value) =>
+                value == null ? l10n.t('select_category_required') : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _amountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(labelText: l10n.t('amount_usd'), prefixIcon: const Icon(Icons.attach_money)),
+            decoration: InputDecoration(
+                labelText: l10n.t('amount_usd'),
+                prefixIcon: const Icon(Icons.attach_money)),
             validator: (value) {
               if (value == null || value.isEmpty) return l10n.t('enter_amount');
-              if (double.tryParse(value) == null) return l10n.t('invalid_amount');
+              if (double.tryParse(value) == null) {
+                return l10n.t('invalid_amount');
+              }
               return null;
             },
           ),
           const SizedBox(height: 16),
           TextFormField(
             controller: _descController,
-            decoration: InputDecoration(labelText: l10n.t('description_purpose'), prefixIcon: const Icon(Icons.description)),
-            validator: (value) => value == null || value.isEmpty ? l10n.t('enter_description') : null,
+            decoration: InputDecoration(
+                labelText: l10n.t('description_purpose'),
+                prefixIcon: const Icon(Icons.description)),
+            validator: (value) => value == null || value.isEmpty
+                ? l10n.t('enter_description')
+                : null,
           ),
           const SizedBox(height: 16),
           _receiptFile != null
@@ -289,7 +319,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           customBorder: const CircleBorder(),
                           child: const Padding(
                             padding: EdgeInsets.all(4),
-                            child: Icon(Icons.close, color: Colors.white, size: 18),
+                            child: Icon(Icons.close,
+                                color: Colors.white, size: 18),
                           ),
                         ),
                       ),
@@ -311,7 +342,8 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       children: [
                         Icon(Icons.camera_alt, size: 32, color: semantic.muted),
                         const SizedBox(height: 8),
-                        Text(l10n.t('capture_receipt'), style: TextStyle(color: semantic.muted)),
+                        Text(l10n.t('capture_receipt'),
+                            style: TextStyle(color: semantic.muted)),
                       ],
                     ),
                   ),

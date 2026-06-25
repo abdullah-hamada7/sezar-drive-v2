@@ -3,7 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../cubit/home_cubit.dart';
-import '../../shift/presentation/qr_scanner_screen.dart' show DriverDetailsSheet;
+import '../../shift/presentation/qr_scanner_screen.dart'
+    show DriverDetailsSheet;
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/identity_verification_screen.dart';
 import '../../../core/theme/app_semantic_colors.dart';
@@ -32,105 +33,119 @@ class _HomeScreenState extends State<HomeScreen> {
     return BlocListener<AuthCubit, AuthState>(
       listener: (context, state) {
         if (state is AuthPasswordChanged) {
-          AppFeedback.show(context, message: l10n.t('password_updated'), type: AppFeedbackType.success);
+          AppFeedback.show(context,
+              message: l10n.t('password_updated'),
+              type: AppFeedbackType.success);
         } else if (state is AuthError) {
-          AppFeedback.show(context, message: state.message, type: AppFeedbackType.error);
+          AppFeedback.show(context,
+              message: state.message, type: AppFeedbackType.error);
         }
       },
       child: Scaffold(
-      appBar: AppBar(title: Text(l10n.t('dashboard'))),
-      body: BlocBuilder<HomeCubit, HomeState>(
-        builder: (context, state) {
-          if (state is HomeLoading) {
-            return const ListLoadingSkeleton(itemCount: 3, itemHeight: 96);
-          }
-          if (state is HomeError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(state.message, textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.read<HomeCubit>().fetchHomeData(),
-                    child: Text(l10n.t('retry')),
-                  ),
-                ],
-              ),
-            );
-          }
-          if (state is HomeLoaded) {
-            return RefreshIndicator(
-              onRefresh: () => context.read<HomeCubit>().fetchHomeData(),
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  if (state.isStale)
-                    SemanticBanner(
-                      message: l10n.t('cached_offline'),
-                      icon: Icons.cloud_off,
-                      background: context.semanticColors.warning,
-                      foreground: AppTheme.backgroundColor,
+        appBar: AppBar(title: Text(l10n.t('dashboard'))),
+        body: BlocBuilder<HomeCubit, HomeState>(
+          builder: (context, state) {
+            if (state is HomeLoading) {
+              return const ListLoadingSkeleton(itemCount: 3, itemHeight: 96);
+            }
+            if (state is HomeError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(state.message, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () =>
+                          context.read<HomeCubit>().fetchHomeData(),
+                      child: Text(l10n.t('retry')),
                     ),
-                  if (!state.user.identityVerified)
-                    Card(
-                      color: context.semanticColors.statusBackground(context.semanticColors.warning),
-                      child: ListTile(
-                        leading: Icon(Icons.verified_user, color: context.semanticColors.warning),
-                        title: Text(l10n.t('identity_required'), style: const TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: Text(l10n.t('identity_upload_hint')),
-                        trailing: TextButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const IdentityVerificationScreen()),
-                            );
-                          },
-                          child: Text(l10n.t('upload')),
+                  ],
+                ),
+              );
+            }
+            if (state is HomeLoaded) {
+              return RefreshIndicator(
+                onRefresh: () => context.read<HomeCubit>().fetchHomeData(),
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    if (state.isStale)
+                      SemanticBanner(
+                        message: l10n.t('cached_offline'),
+                        icon: Icons.cloud_off,
+                        background: context.semanticColors.warning,
+                        foreground: AppTheme.backgroundColor,
+                      ),
+                    if (!state.user.identityVerified)
+                      Card(
+                        color: context.semanticColors
+                            .statusBackground(context.semanticColors.warning),
+                        child: ListTile(
+                          leading: Icon(Icons.verified_user,
+                              color: context.semanticColors.warning),
+                          title: Text(l10n.t('identity_required'),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
+                          subtitle: Text(l10n.t('identity_upload_hint')),
+                          trailing: TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const IdentityVerificationScreen()),
+                              );
+                            },
+                            child: Text(l10n.t('upload')),
+                          ),
                         ),
                       ),
+                    _ProfileCard(
+                      user: state.user,
+                      onDetails: () => showModalBottomSheet(
+                        context: context,
+                        builder: (_) => DriverDetailsSheet(user: state.user),
+                      ),
                     ),
-                  _ProfileCard(
-                    user: state.user,
-                    onDetails: () => showModalBottomSheet(
-                      context: context,
-                      builder: (_) => DriverDetailsSheet(user: state.user),
+                    const SizedBox(height: 12),
+                    if (state.activeShift?.status == 'Active')
+                      _ShiftStatusCard(
+                        title: l10n.t('shift_active'),
+                        subtitle: l10n.t('vehicle_label', {
+                          'plate':
+                              state.activeShift?.vehicle?.plateNumber ?? '—'
+                        }),
+                        color: context.semanticColors.success,
+                      )
+                    else if (state.activeShift?.status == 'PendingVerification')
+                      _ShiftStatusCard(
+                        title: l10n.t('shift_pending'),
+                        subtitle: l10n.t('complete_verification_subtitle'),
+                        color: context.semanticColors.warning,
+                      ),
+                    const SizedBox(height: 12),
+                    _CashSummaryCard(
+                      report: state.dailyReport,
+                      l10n: l10n,
+                      onGoToTrips: widget.onNavigateToTrips,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (state.activeShift?.status == 'Active')
-                    _ShiftStatusCard(
-                      title: l10n.t('shift_active'),
-                      subtitle: l10n.t('vehicle_label', {'plate': state.activeShift?.vehicle?.plateNumber ?? '—'}),
-                      color: context.semanticColors.success,
-                    )
-                  else if (state.activeShift?.status == 'PendingVerification')
-                    _ShiftStatusCard(
-                      title: l10n.t('shift_pending'),
-                      subtitle: l10n.t('complete_verification_subtitle'),
-                      color: context.semanticColors.warning,
+                    const SizedBox(height: 16),
+                    _EarningsChartCard(
+                        history: state.earningsHistory, l10n: l10n),
+                    const SizedBox(height: 16),
+                    _RecentActivityCard(
+                      activities: state.recentActivity,
+                      l10n: l10n,
+                      onViewAll: widget.onNavigateToTrips,
                     ),
-                  const SizedBox(height: 12),
-                  _CashSummaryCard(
-                    report: state.dailyReport,
-                    l10n: l10n,
-                    onGoToTrips: widget.onNavigateToTrips,
-                  ),
-                  const SizedBox(height: 16),
-                  _EarningsChartCard(history: state.earningsHistory, l10n: l10n),
-                  const SizedBox(height: 16),
-                  _RecentActivityCard(
-                    activities: state.recentActivity,
-                    l10n: l10n,
-                    onViewAll: widget.onNavigateToTrips,
-                  ),
-                ],
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ),
-    ),
     );
   }
 }
@@ -145,12 +160,16 @@ class _ProfileCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: CircleAvatar(
-          backgroundImage: user.avatarUrl != null ? NetworkImage(user.avatarUrl as String) : null,
+          backgroundImage: user.avatarUrl != null
+              ? NetworkImage(user.avatarUrl as String)
+              : null,
           child: user.avatarUrl == null ? const Icon(Icons.person) : null,
         ),
-        title: Text(user.name as String, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(user.name as String,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(user.email as String),
-        trailing: IconButton(icon: const Icon(Icons.info_outline), onPressed: onDetails),
+        trailing: IconButton(
+            icon: const Icon(Icons.info_outline), onPressed: onDetails),
       ),
     );
   }
@@ -160,7 +179,8 @@ class _ShiftStatusCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
-  const _ShiftStatusCard({required this.title, required this.subtitle, required this.color});
+  const _ShiftStatusCard(
+      {required this.title, required this.subtitle, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +188,8 @@ class _ShiftStatusCard extends StatelessWidget {
       color: context.semanticColors.statusBackground(color),
       child: ListTile(
         leading: Icon(Icons.timer, color: color),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: color)),
+        title: Text(title,
+            style: TextStyle(fontWeight: FontWeight.w600, color: color)),
         subtitle: Text(subtitle),
       ),
     );
@@ -179,20 +200,24 @@ class _CashSummaryCard extends StatelessWidget {
   final DailyReport report;
   final AppLocalizations l10n;
   final VoidCallback? onGoToTrips;
-  const _CashSummaryCard({required this.report, required this.l10n, this.onGoToTrips});
+  const _CashSummaryCard(
+      {required this.report, required this.l10n, this.onGoToTrips});
 
   @override
   Widget build(BuildContext context) {
     final semantic = context.semanticColors;
     final hasUncollected = report.uncollectedCashTotal > 0;
     return Card(
-      color: hasUncollected ? semantic.statusBackground(semantic.danger, opacity: 0.1) : null,
+      color: hasUncollected
+          ? semantic.statusBackground(semantic.danger, opacity: 0.1)
+          : null,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.t('todays_cash'), style: Theme.of(context).textTheme.labelLarge),
+            Text(l10n.t('todays_cash'),
+                style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Text(
               hasUncollected
@@ -201,7 +226,8 @@ class _CashSummaryCard extends StatelessWidget {
                       'amount': report.uncollectedCashTotal.toStringAsFixed(2),
                     })
                   : l10n.t('no_uncollected_cash'),
-              style: TextStyle(color: hasUncollected ? semantic.danger : semantic.muted),
+              style: TextStyle(
+                  color: hasUncollected ? semantic.danger : semantic.muted),
             ),
             Text(
               l10n.t('collected_cash', {
@@ -214,7 +240,8 @@ class _CashSummaryCard extends StatelessWidget {
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(onPressed: onGoToTrips, child: Text(l10n.t('go_to_trips'))),
+                child: TextButton(
+                    onPressed: onGoToTrips, child: Text(l10n.t('go_to_trips'))),
               ),
             ],
           ],
@@ -235,7 +262,9 @@ class _EarningsChartCard extends StatelessWidget {
     final semantic = context.semanticColors;
 
     final nonZero = history.where((p) => p.amount > 0).toList();
-    final maxAmount = nonZero.isEmpty ? 1.0 : nonZero.fold<double>(0, (max, p) => p.amount > max ? p.amount : max);
+    final maxAmount = nonZero.isEmpty
+        ? 1.0
+        : nonZero.fold<double>(0, (max, p) => p.amount > max ? p.amount : max);
 
     return Card(
       child: Padding(
@@ -243,7 +272,8 @@ class _EarningsChartCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.t('daily_earnings'), style: Theme.of(context).textTheme.labelLarge),
+            Text(l10n.t('daily_earnings'),
+                style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 16),
             SizedBox(
               height: 140,
@@ -251,7 +281,8 @@ class _EarningsChartCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: history.asMap().entries.map((entry) {
                   final point = entry.value;
-                  final barHeight = maxAmount > 0 ? (point.amount / maxAmount) * 100 : 0.0;
+                  final barHeight =
+                      maxAmount > 0 ? (point.amount / maxAmount) * 100 : 0.0;
                   final showLabel = entry.key % 3 == 0;
                   return Expanded(
                     child: Padding(
@@ -260,19 +291,23 @@ class _EarningsChartCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           if (point.amount > 0)
-                            Text('\$${point.amount.toStringAsFixed(0)}', style: TextStyle(fontSize: 8, color: semantic.muted)),
+                            Text('${point.amount.toStringAsFixed(0)} EGP',
+                                style: TextStyle(
+                                    fontSize: 8, color: semantic.muted)),
                           const SizedBox(height: 2),
                           Container(
                             height: barHeight.clamp(2.0, 100.0),
                             decoration: BoxDecoration(
                               color: scheme.primary,
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                              borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(3)),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             showLabel ? point.hour.split(':').first : '',
-                            style: TextStyle(fontSize: 8, color: semantic.muted),
+                            style:
+                                TextStyle(fontSize: 8, color: semantic.muted),
                           ),
                         ],
                       ),
@@ -292,7 +327,8 @@ class _RecentActivityCard extends StatelessWidget {
   final List<RecentActivity> activities;
   final AppLocalizations l10n;
   final VoidCallback? onViewAll;
-  const _RecentActivityCard({required this.activities, required this.l10n, this.onViewAll});
+  const _RecentActivityCard(
+      {required this.activities, required this.l10n, this.onViewAll});
 
   IconData _typeIcon(String type) {
     switch (type) {
@@ -308,7 +344,8 @@ class _RecentActivityCard extends StatelessWidget {
   String _formatTime(AppLocalizations l10n, DateTime ts) {
     final diff = DateTime.now().difference(ts);
     if (diff.inMinutes < 1) return l10n.t('just_now');
-    if (diff.inHours < 1) return l10n.t('minutes_ago', {'n': '${diff.inMinutes}'});
+    if (diff.inHours < 1)
+      return l10n.t('minutes_ago', {'n': '${diff.inMinutes}'});
     if (diff.inHours < 24) return l10n.t('hours_ago', {'n': '${diff.inHours}'});
     return '${ts.year}-${ts.month.toString().padLeft(2, '0')}-${ts.day.toString().padLeft(2, '0')}';
   }
@@ -326,28 +363,36 @@ class _RecentActivityCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(l10n.t('recent_activity'), style: Theme.of(context).textTheme.labelLarge),
+                Text(l10n.t('recent_activity'),
+                    style: Theme.of(context).textTheme.labelLarge),
                 if (onViewAll != null)
-                  TextButton(onPressed: onViewAll, child: Text(l10n.t('view_all'))),
+                  TextButton(
+                      onPressed: onViewAll, child: Text(l10n.t('view_all'))),
               ],
             ),
             const SizedBox(height: 8),
             if (activities.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: Text(l10n.t('no_recent_activity'), style: TextStyle(color: semantic.muted))),
+                child: Center(
+                    child: Text(l10n.t('no_recent_activity'),
+                        style: TextStyle(color: semantic.muted))),
               )
             else
               ...activities.map((a) => ListTile(
                     leading: Icon(_typeIcon(a.type), color: scheme.primary),
                     title: Text(a.title, style: const TextStyle(fontSize: 14)),
-                    subtitle: Text('${a.status} · ${_formatTime(l10n, a.timestamp)}', style: const TextStyle(fontSize: 11)),
+                    subtitle: Text(
+                        '${a.status} · ${_formatTime(l10n, a.timestamp)}',
+                        style: const TextStyle(fontSize: 11)),
                     trailing: a.amount != null
                         ? Text(
-                            '${a.amount! >= 0 ? '' : '-'}\$${a.amount!.abs().toStringAsFixed(2)}',
+                            '${a.amount! >= 0 ? '' : '-'}${a.amount!.abs().toStringAsFixed(2)} EGP',
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: (a.amount ?? 0) < 0 ? semantic.danger : semantic.success,
+                              color: (a.amount ?? 0) < 0
+                                  ? semantic.danger
+                                  : semantic.success,
                             ),
                           )
                         : null,

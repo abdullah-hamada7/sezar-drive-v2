@@ -27,14 +27,16 @@ class MobilePushService {
   Future<void> _initFirebase() async {
     try {
       if (DefaultFirebaseOptions.isConfigured) {
-        await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+        await Firebase.initializeApp(
+            options: DefaultFirebaseOptions.currentPlatform);
       } else {
         await Firebase.initializeApp();
       }
       final messaging = FirebaseMessaging.instance;
 
       if (Platform.isIOS) {
-        await messaging.requestPermission(alert: true, badge: true, sound: true);
+        await messaging.requestPermission(
+            alert: true, badge: true, sound: true);
       } else {
         await messaging.requestPermission();
       }
@@ -72,7 +74,8 @@ class MobilePushService {
     if (!_firebaseReady) return;
     _allowServerRegistration = true;
     try {
-      final token = _pendingFcmToken ?? await FirebaseMessaging.instance.getToken();
+      final token =
+          _pendingFcmToken ?? await FirebaseMessaging.instance.getToken();
       if (token != null) {
         await _registerToken(token);
       }
@@ -88,12 +91,13 @@ class MobilePushService {
   }
 
   Future<void> unregister() async {
+    final tokenToUnregister = _currentToken;
     onSessionCleared();
-    if (_currentToken != null) {
+    if (tokenToUnregister != null) {
       try {
         await _client.dio.post(
           '/push/unregister-device',
-          data: {'token': _currentToken},
+          data: {'token': tokenToUnregister},
         );
       } catch (e) {
         debugPrint('[MobilePush] unregister failed: $e');
@@ -119,7 +123,8 @@ class MobilePushService {
     final accessToken = await _storage.getToken();
     if (accessToken == null || accessToken.isEmpty) {
       _pendingFcmToken = token;
-      debugPrint('[MobilePush] Deferring token registration until authenticated.');
+      debugPrint(
+          '[MobilePush] Deferring token registration until authenticated.');
       return;
     }
 

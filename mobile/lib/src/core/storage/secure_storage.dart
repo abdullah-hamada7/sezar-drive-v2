@@ -11,6 +11,27 @@ class SecureStorage {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userKey = 'user_profile';
   static const String _fingerprintKey = 'device_fingerprint';
+  static const String _pendingVerifyKey = 'pending_device_verify';
+
+  Future<void> savePendingDeviceVerification(String payload) async {
+    try {
+      await _storage.write(key: _pendingVerifyKey, value: payload);
+    } catch (_) {}
+  }
+
+  Future<String?> getPendingDeviceVerification() async {
+    try {
+      return await _storage.read(key: _pendingVerifyKey);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearPendingDeviceVerification() async {
+    try {
+      await _storage.delete(key: _pendingVerifyKey);
+    } catch (_) {}
+  }
 
   Future<void> saveToken(String token) async {
     try {
@@ -99,6 +120,12 @@ class SecureStorage {
     await deleteToken();
     await deleteRefreshToken();
     await deleteUserProfile();
+  }
+
+  /// Full sign-out including device verification checkpoint.
+  Future<void> clearAuthFlow() async {
+    await clearSession();
+    await clearPendingDeviceVerification();
   }
 
   Future<void> clearAll() async {

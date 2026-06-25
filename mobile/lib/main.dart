@@ -17,6 +17,7 @@ import 'src/core/services/session_revoked_notifier.dart';
 import 'src/features/auth/cubit/auth_cubit.dart';
 import 'src/features/auth/presentation/login_screen.dart';
 import 'src/features/auth/presentation/device_verification_screen.dart';
+import 'src/features/auth/presentation/must_change_password_screen.dart';
 import 'src/features/shift/cubit/shift_cubit.dart';
 import 'src/features/shift/presentation/shift_screen.dart';
 import 'src/features/trip/cubit/trip_cubit.dart';
@@ -154,13 +155,15 @@ class _AppWithIdle extends StatefulWidget {
   final IdleTimerService idleTimer;
   final WebSocketService wsService;
   final Widget child;
-  const _AppWithIdle({required this.idleTimer, required this.wsService, required this.child});
+  const _AppWithIdle(
+      {required this.idleTimer, required this.wsService, required this.child});
 
   @override
   State<_AppWithIdle> createState() => _AppWithIdleState();
 }
 
-class _AppWithIdleState extends State<_AppWithIdle> with WidgetsBindingObserver {
+class _AppWithIdleState extends State<_AppWithIdle>
+    with WidgetsBindingObserver {
   bool _isBackgrounded = false;
 
   @override
@@ -185,7 +188,8 @@ class _AppWithIdleState extends State<_AppWithIdle> with WidgetsBindingObserver 
           _isBackgrounded = false;
         });
       }
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
       if (mounted) {
         setState(() {
           _isBackgrounded = true;
@@ -217,7 +221,7 @@ class _AppWithIdleState extends State<_AppWithIdle> with WidgetsBindingObserver 
                         Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -240,7 +244,7 @@ class _AppWithIdleState extends State<_AppWithIdle> with WidgetsBindingObserver 
                         Text(
                           'Secure Connection Active',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
+                            color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
                           ),
@@ -271,6 +275,7 @@ class AppAuthGate extends StatelessWidget {
           return DeviceVerificationScreen(
             userId: state.userId,
             verificationToken: state.verificationToken,
+            bannerMessage: state.bannerMessage,
           );
         }
         if (state is AuthVerifyingDevice) {
@@ -280,14 +285,17 @@ class AppAuthGate extends StatelessWidget {
             isVerifying: true,
           );
         }
+        if (state is AuthMustChangePassword) {
+          return MustChangePasswordScreen(
+              key: ValueKey(state.tempToken),
+              bannerMessage: state.bannerMessage);
+        }
         if (state is AuthLoading) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (state is AuthUnauthenticated ||
-            state is AuthError ||
-            state is AuthMustChangePassword) {
+        if (state is AuthUnauthenticated || state is AuthError) {
           return const LoginScreen();
         }
         return const Scaffold(
@@ -343,10 +351,12 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
     context.read<NotificationCubit>().fetchNotifications();
     _pendingOffline = getIt<OfflineQueueService>().pendingCount;
     _isOnline = getIt<ConnectivityService>().isOnline;
-    _queueSub = getIt<OfflineQueueService>().onPendingCountChanged.listen((count) {
+    _queueSub =
+        getIt<OfflineQueueService>().onPendingCountChanged.listen((count) {
       if (mounted) setState(() => _pendingOffline = count);
     });
-    _connSub = getIt<ConnectivityService>().onConnectivityChanged.listen((online) {
+    _connSub =
+        getIt<ConnectivityService>().onConnectivityChanged.listen((online) {
       if (mounted) setState(() => _isOnline = online);
       if (online) _autoSyncOffline();
     });
@@ -380,7 +390,8 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
       final l10n = AppLocalizations.of(context);
       AppFeedback.show(
         context,
-        message: l10n.t('sync_complete', {'synced': '${result.synced}', 'failed': '0'}),
+        message: l10n
+            .t('sync_complete', {'synced': '${result.synced}', 'failed': '0'}),
         type: AppFeedbackType.success,
       );
       context.read<OfflineQueueCubit>().fetchQueue();
@@ -457,12 +468,15 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
     }
     return MaterialBanner(
       backgroundColor: color,
-      content: Text(message, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+      content: Text(message,
+          style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w600)),
       actions: [
         if (_pendingOffline > 0 && _isOnline && !_isSyncing)
           TextButton(
             onPressed: _autoSyncOffline,
-            child: Text(l10n.t('sync_now'), style: const TextStyle(color: Colors.white)),
+            child: Text(l10n.t('sync_now'),
+                style: const TextStyle(color: Colors.white)),
           ),
       ],
     );
@@ -476,7 +490,9 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
         title: Text(l10n.t('logout')),
         content: Text(l10n.t('logout_confirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.t('cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.t('cancel'))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
@@ -520,7 +536,8 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
                       child: IconButton(
                         icon: const Icon(Icons.menu, color: Colors.white),
                         tooltip: l10n.t('menu'),
-                        onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                        onPressed: () =>
+                            _scaffoldKey.currentState?.openDrawer(),
                       ),
                     ),
                   ),
@@ -538,7 +555,8 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
           if (index == 2) context.read<ShiftCubit>().fetchActiveShift();
         },
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.home), label: l10n.t('nav_home')),
+          NavigationDestination(
+              icon: const Icon(Icons.home), label: l10n.t('nav_home')),
           NavigationDestination(
             icon: _badgedIcon(Icons.route, _badgeForTab('trips')),
             label: l10n.t('nav_trips'),
@@ -565,18 +583,27 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
               decoration: const BoxDecoration(color: AppTheme.primaryColor),
               child: Text(
                 l10n.t('menu'),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(color: Colors.white),
               ),
             ),
             ListTile(
               leading: _badgedIcon(Icons.car_crash, _badgeForTab('damage')),
               title: Text(l10n.t('report_damage')),
-              onTap: () { Navigator.pop(context); setState(() => _selectedIndex = 5); },
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 5);
+              },
             ),
             ListTile(
               leading: _badgedIcon(Icons.gavel, _badgeForTab('violations')),
               title: Text(l10n.t('traffic_violations')),
-              onTap: () { Navigator.pop(context); setState(() => _selectedIndex = 6); },
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 6);
+              },
             ),
             ListTile(
               leading: _badgedIcon(Icons.notifications, _unseenNotifications()),
@@ -593,23 +620,32 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
                 child: const Icon(Icons.cloud_queue),
               ),
               title: Text(l10n.t('offline_queue')),
-              onTap: () { Navigator.pop(context); setState(() => _selectedIndex = 8); },
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 8);
+              },
             ),
             const Divider(),
             ListTile(
-              leading: Icon(settings.themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode),
-              title: Text(settings.themeMode == ThemeMode.dark ? l10n.t('theme_dark') : l10n.t('theme_light')),
+              leading: Icon(settings.themeMode == ThemeMode.dark
+                  ? Icons.dark_mode
+                  : Icons.light_mode),
+              title: Text(settings.themeMode == ThemeMode.dark
+                  ? l10n.t('theme_dark')
+                  : l10n.t('theme_light')),
               onTap: () => context.read<SettingsCubit>().toggleTheme(),
             ),
             ListTile(
               leading: const Icon(Icons.language),
-              title: Text('${l10n.t('language')}: ${isArabic ? 'العربية' : 'English'}'),
+              title: Text(
+                  '${l10n.t('language')}: ${isArabic ? 'العربية' : 'English'}'),
               onTap: () => context.read<SettingsCubit>().toggleLocale(),
             ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
-              title: Text(l10n.t('logout'), style: const TextStyle(color: Colors.red)),
+              title: Text(l10n.t('logout'),
+                  style: const TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(context);
                 _confirmLogout();
