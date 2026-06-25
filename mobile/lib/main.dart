@@ -5,6 +5,8 @@ import 'src/core/services/service_locator.dart';
 import 'src/core/theme/app_theme.dart';
 import 'src/core/theme/app_semantic_colors.dart';
 import 'src/core/widgets/app_feedback.dart';
+import 'src/core/widgets/fleet_shell.dart';
+import 'src/core/widgets/sezar_brand_mark.dart';
 import 'src/core/network/dio_client.dart';
 import 'src/core/storage/secure_storage.dart';
 import 'src/core/services/offline_sync_service.dart';
@@ -200,57 +202,41 @@ class _AppWithIdleState extends State<_AppWithIdle>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
     return GestureDetector(
       onTap: () => widget.idleTimer.reset(),
       onPanDown: (_) => widget.idleTimer.reset(),
       onScaleStart: (_) => widget.idleTimer.reset(),
       child: Stack(
-        textDirection: TextDirection.ltr,
         children: [
           widget.child,
           if (_isBackgrounded)
             Positioned.fill(
-              child: Directionality(
-                textDirection: TextDirection.ltr,
-                child: Material(
-                  color: AppTheme.backgroundColor,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.security,
-                            size: 80,
-                            color: Colors.white,
-                          ),
+              child: Material(
+                color: AppTheme.backgroundColor,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SezarBrandMark(
+                        size: 88,
+                        semanticLabel: l10n.t('brand_name'),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        l10n.t('brand_name'),
+                        style: theme.textTheme.headlineLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.t('secure_connection_active'),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w500,
                         ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Sezar Drive',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Secure Connection Active',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -484,6 +470,7 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
 
   Future<void> _confirmLogout() async {
     final l10n = AppLocalizations.of(context);
+    final danger = context.semanticColors.danger;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -494,7 +481,10 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(l10n.t('cancel'))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: danger,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: Text(l10n.t('logout')),
           ),
@@ -513,6 +503,7 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
     final l10n = AppLocalizations.of(context);
     final settings = context.watch<SettingsCubit>().state;
     final isArabic = settings.locale.languageCode == 'ar';
+    final danger = context.semanticColors.danger;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -521,28 +512,12 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
         children: [
           _offlineBanner(l10n),
           Expanded(
-            child: Stack(
-              children: [
-                GestureDetector(
-                  onTap: () => getIt<IdleTimerService>().reset(),
-                  child: _screens[_selectedIndex],
-                ),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 4, top: 4),
-                    child: Material(
-                      color: Colors.black45,
-                      shape: const CircleBorder(),
-                      child: IconButton(
-                        icon: const Icon(Icons.menu, color: Colors.white),
-                        tooltip: l10n.t('menu'),
-                        onPressed: () =>
-                            _scaffoldKey.currentState?.openDrawer(),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            child: FleetShellScope(
+              openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+              child: GestureDetector(
+                onTap: () => getIt<IdleTimerService>().reset(),
+                child: _screens[_selectedIndex],
+              ),
             ),
           ),
         ],
@@ -579,16 +554,7 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: AppTheme.primaryColor),
-              child: Text(
-                l10n.t('menu'),
-                style: Theme.of(context)
-                    .textTheme
-                    .headlineMedium
-                    ?.copyWith(color: Colors.white),
-              ),
-            ),
+            FleetDrawerHeader(title: l10n.t('menu')),
             ListTile(
               leading: _badgedIcon(Icons.car_crash, _badgeForTab('damage')),
               title: Text(l10n.t('report_damage')),
@@ -643,9 +609,8 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
             ),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: Text(l10n.t('logout'),
-                  style: const TextStyle(color: Colors.red)),
+              leading: Icon(Icons.logout, color: danger),
+              title: Text(l10n.t('logout'), style: TextStyle(color: danger)),
               onTap: () {
                 Navigator.pop(context);
                 _confirmLogout();

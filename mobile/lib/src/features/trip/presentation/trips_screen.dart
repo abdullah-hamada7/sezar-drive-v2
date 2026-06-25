@@ -12,6 +12,7 @@ import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/theme/app_status.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/empty_state_panel.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../../../core/widgets/list_loading_skeleton.dart';
 import '../../badges/cubit/badge_cubit.dart';
 import '../../../core/services/tab_badge_service.dart';
@@ -53,7 +54,7 @@ class _TripsScreenState extends State<TripsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('my_trips'))),
+      appBar: FleetAppBar(title: l10n.t('my_trips')),
       body: BlocConsumer<TripCubit, TripState>(
         listener: (context, state) {
           if (state is TripError) {

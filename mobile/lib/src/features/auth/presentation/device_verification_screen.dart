@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/auth_cubit.dart';
 
 class DeviceVerificationScreen extends StatefulWidget {
@@ -75,8 +76,8 @@ class _DeviceVerificationScreenState extends State<DeviceVerificationScreen> {
                 : widget.userId;
 
         return Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.t('new_device_title')),
+          appBar: FleetAppBar(
+            title: l10n.t('new_device_title'),
             leading: verifying
                 ? null
                 : IconButton(

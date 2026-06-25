@@ -6,6 +6,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/utils/qr_normalizer.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/theme/app_status.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../../auth/cubit/auth_cubit.dart';
 import '../../auth/presentation/identity_verification_screen.dart';
 
@@ -45,8 +46,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('scan_vehicle_qr_title')),
+      appBar: FleetAppBar(
+        title: l10n.t('scan_vehicle_qr_title'),
+        showBackButton: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.flash_on),

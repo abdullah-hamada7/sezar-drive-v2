@@ -11,6 +11,7 @@ import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/services/tab_badge_service.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../../../core/widgets/empty_state_panel.dart';
 import '../../badges/cubit/badge_cubit.dart';
 import '../../shift/cubit/shift_cubit.dart';
@@ -119,7 +120,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
 
     if (shiftState is! ShiftLoaded || shiftState.activeShift == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(l10n.t('vehicle_inspection'))),
+        appBar: FleetAppBar(title: l10n.t('vehicle_inspection')),
         body: EmptyStatePanel(
           icon: Icons.fact_check_outlined,
           title: l10n.t('vehicle_inspection'),
@@ -132,7 +133,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
     final vehicleId = shift.vehicleId ?? shift.vehicle?.id ?? 'vehicle_unknown';
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('vehicle_inspection'))),
+      appBar: FleetAppBar(title: l10n.t('vehicle_inspection')),
       body: BlocConsumer<InspectionCubit, InspectionState>(
         listener: (context, state) {
           if (state is InspectionSuccess) {

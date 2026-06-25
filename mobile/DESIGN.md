@@ -1,47 +1,49 @@
 ---
 name: Sezar Driver
-description: Field-first driver app — high-contrast dark UI optimized for vehicle and outdoor use
+description: Field-first driver app — zinc ops surfaces + fleet signal red (brand mark)
 colors:
-  primary: "#6366F1"
-  primary-deep: "#4F46E5"
-  background: "#0F172A"
-  surface: "#1E293B"
-  surface-border: "#334155"
-  ink: "#F8FAFC"
-  ink-muted: "#94A3B8"
-  success: "#10B981"
+  primary: "#EF4444"
+  primary-deep: "#DC2626"
+  button-primary: "#B91C1C"
+  background: "#09090B"
+  surface: "#131316"
+  surface-elevated: "#1C1C21"
+  surface-border: "#2E2E36"
+  ink: "#FAFAFA"
+  ink-muted: "#A1A1AA"
+  success: "#22C55E"
   warning: "#F59E0B"
   danger: "#EF4444"
-  light-background: "#F8FAFC"
+  light-background: "#F4F4F5"
   light-surface: "#FFFFFF"
-  light-ink: "#0F172A"
+  light-ink: "#18181B"
 typography:
   display:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "24px"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "-0.02em"
   headline:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "20px"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.01em"
   body:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "16px"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
   label:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 600
     lineHeight: 1.4
     letterSpacing: "normal"
   caption:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Plus Jakarta Sans, system-ui, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.4
@@ -59,12 +61,12 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "{colors.ink}"
+    textColor: "#FFFFFF"
     rounded: "{rounded.md}"
     padding: "14px 20px"
   button-danger:
     backgroundColor: "{colors.danger}"
-    textColor: "{colors.ink}"
+    textColor: "#FFFFFF"
     rounded: "{rounded.md}"
     padding: "14px 20px"
   card:
@@ -76,26 +78,25 @@ components:
 
 ## Overview
 
-Sezar Driver uses Material 3 with a **field-first dark theme** as the default working mode. Typography is single-family (Inter via Google Fonts) with a tight product scale (24 / 20 / 16 / 14). Layout follows bottom navigation for high-frequency tasks (Home, Trips, Shift, Expenses, Inspection) and a drawer for secondary flows (damage, violations, notifications, offline queue, settings).
+Sezar Driver uses Material 3 with a **field-first dark theme** aligned to the official Sezar Drive fleet mark (red bus icon on zinc). Typography is **Plus Jakarta Sans** — one family, product scale 24 / 20 / 16 / 14. Default working mode is dark zinc (`#09090B`), not blue-slate SaaS.
 
-Spacing rhythm: 4 → 8 → 16 → 24 → 36. Cards group trip/shift content; avoid nested cards. Primary actions use filled buttons; destructive actions use danger red with explicit confirmation dialogs.
-
-Motion stays functional (150–250ms state feedback). No page-load choreography. Respect reduced motion.
+Brand assets live at `assets/brand/sezar-drive-icon.svg` (same mark as admin PWA). Use `SezarBrandMark` / `SezarBrandLockup` — never generic taxi icons or unrelated indigo palettes.
 
 ## Colors
 
 | Role | Dark | Light | Usage |
 |------|------|-------|--------|
-| Primary | `#6366F1` | `#6366F1` | Primary actions, focus rings, active nav |
-| Surface | `#1E293B` | `#FFFFFF` | Cards, sheets, inputs |
-| Background | `#0F172A` | `#F8FAFC` | Scaffold |
-| Ink | `#F8FAFC` | `#0F172A` | Headings, body |
-| Muted | `#94A3B8` | `#64748B` | Secondary labels, hints |
-| Success | `#10B981` | `#10B981` | Verified, completed, synced |
-| Warning | `#F59E0B` | `#F59E0B` | Offline cache, pending review |
-| Danger | `#EF4444` | `#EF4444` | Errors, damage lock, logout |
+| Primary | `#EF4444` | `#EF4444` | Primary actions, active nav, brand accent |
+| Surface | `#131316` | `#FFFFFF` | Cards, sheets, nav bar |
+| Surface elevated | `#1C1C21` | `#F4F4F5` | Profile card, drawer header |
+| Background | `#09090B` | `#F4F4F5` | Scaffold |
+| Ink | `#FAFAFA` | `#18181B` | Headings, body |
+| Muted | `#A1A1AA` | `#71717A` | Secondary labels, hints |
+| Success | `#22C55E` | `#22C55E` | Active shift, completed, synced |
+| Warning | `#F59E0B` | `#F59E0B` | Pending verification, offline cache |
+| Danger | `#EF4444` | `#EF4444` | Errors, logout (same hue as brand — pair with icon + label) |
 
-Semantic colors must come from `AppTheme` tokens — never ad-hoc `Colors.green` for success on one screen and `Colors.indigo` on another.
+Semantic colors must come from `AppTheme` / `AppSemanticColors` — never ad-hoc `Colors.indigo` or ride-hail gradients.
 
 ## Typography
 
@@ -104,36 +105,32 @@ Semantic colors must come from `AppTheme` tokens — never ad-hoc `Colors.green`
 - **Body (16px)**: Primary content, button labels
 - **Caption (14px)**: Hints, metadata, status chips
 
-Body line length is unconstrained in mobile lists; keep chip and banner copy short. Arabic uses the same scale with RTL mirroring via Flutter localization delegates.
+Arabic uses the same scale with RTL mirroring via Flutter localization delegates.
 
 ## Elevation
 
-Prefer **flat surfaces with 1px borders** (`#334155` on dark) over soft drop shadows. Card elevation: 0–2 max. Do not combine heavy shadow + border on the same component (ghost-card anti-pattern).
-
-Login logo: solid surface circle, no glow blur. Overlays (privacy screen, modals): solid scrim or high-opacity brand fill, not glass blur stacks.
+**Flat surfaces + 1px borders** (`#2E2E36` on dark). No ghost-card pattern (border + wide shadow). Card radius max **16px**. Login form uses bordered surface panel — no glass blur.
 
 ## Components
 
-- **NavigationBar**: 5 primary destinations; badge counts on trips, shift, expenses, inspection
-- **Drawer**: Secondary routes + theme/locale toggles + logout (danger styling)
-- **MaterialBanner**: Offline/sync status below app bar region — orange (pending) / red (offline)
-- **Cards**: 16px radius, 16px padding, single border OR minimal elevation
-- **Inputs**: Filled, 12px radius, 2px primary focus border
-- **Status chips**: Semantic background at ~20% opacity + solid foreground text
-- **Feedback**: Fleet spec prefers top-right toast (5s auto-dismiss); migrate from bottom SnackBar over time
-- **Loading**: Prefer skeleton placeholders for list screens; spinner only for initial auth gate and button submit states
+- **SezarBrandMark / SezarBrandLockup**: Official SVG mark + wordmark
+- **FleetAppBar**: Brand mark + screen title + “Sezar Drive” micro-label
+- **FleetDrawerHeader**: Elevated surface header with mark (not solid red block)
+- **NavigationBar**: 68px height, red selection indicator tint
+- **MaterialBanner**: Offline/sync — orange / red semantic fills
+- **EmptyStatePanel**: Icon in tinted brand container, not bare gray glyph
+- **Feedback**: Top-right toast (5s auto-dismiss)
 
 ## Do's and Don'ts
 
 **Do**
-- Use `Theme.of(context).colorScheme` and `AppTheme` semantic constants
-- Pair color with icon + label for trip/shift/verification state
-- Keep primary tap targets ≥48dp
-- Localize all user-visible strings (EN + AR)
+- Use the red fleet mark from `assets/brand/`
+- Pair color with icon + label for state
+- Keep tap targets ≥48dp
+- Localize EN + AR
 
 **Don't**
-- Hardcode `Colors.indigo`, `Color(0xFF1E293B)`, etc. in feature screens
-- Use decorative glow shadows on logos or buttons
-- Show spinners alone on full list pages when skeleton layout is known
-- Mix SnackBar (bottom) and undocumented feedback patterns without a shared helper
-- Use modals when inline confirmation or banner suffices
+- Use `Icons.local_taxi` or generic indigo `#6366F1`
+- Use side-stripe card accents or gradient text
+- Use decorative glow on logos or buttons
+- Use uppercase tracked eyebrows on every section

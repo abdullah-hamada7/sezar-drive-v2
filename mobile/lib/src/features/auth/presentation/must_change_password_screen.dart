@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/auth_cubit.dart';
 
 class MustChangePasswordScreen extends StatefulWidget {
@@ -57,10 +58,7 @@ class _MustChangePasswordScreenState extends State<MustChangePasswordScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('password_change_required')),
-        automaticallyImplyLeading: false,
-      ),
+      appBar: FleetAppBar(title: l10n.t('password_change_required')),
       body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthMustChangePassword && state.bannerMessage != null) {

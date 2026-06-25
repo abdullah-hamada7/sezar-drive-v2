@@ -152,7 +152,7 @@ ButtonStyle warningButtonStyle(BuildContext context) {
 
 ButtonStyle primaryButtonStyle(BuildContext context) {
   return ElevatedButton.styleFrom(
-    backgroundColor: Theme.of(context).colorScheme.primary,
+    backgroundColor: AppTheme.buttonPrimaryColor,
     foregroundColor: Colors.white,
   );
 }

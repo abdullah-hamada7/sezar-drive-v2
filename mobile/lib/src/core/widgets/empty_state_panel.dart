@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_semantic_colors.dart';
+import '../theme/app_theme.dart';
 
 /// Task-oriented empty state — title, one line of guidance, optional action.
 class EmptyStatePanel extends StatelessWidget {
@@ -22,6 +23,7 @@ class EmptyStatePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final muted = context.semanticColors.muted;
 
     return Center(
@@ -30,8 +32,21 @@ class EmptyStatePanel extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 56, color: muted),
-            const SizedBox(height: 16),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: context.semanticColors
+                    .statusBackground(scheme.primary, opacity: 0.12),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                border: Border.all(
+                  color: context.semanticColors
+                      .statusBackground(scheme.primary, opacity: 0.28),
+                ),
+              ),
+              child: Icon(icon, size: 32, color: scheme.primary),
+            ),
+            const SizedBox(height: 20),
             Text(
               title,
               textAlign: TextAlign.center,
@@ -42,7 +57,7 @@ class EmptyStatePanel extends StatelessWidget {
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyMedium?.copyWith(color: muted),
               ),
             ],
             if (actionLabel != null && onAction != null) ...[

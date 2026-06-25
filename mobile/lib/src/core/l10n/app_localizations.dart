@@ -22,6 +22,10 @@ class AppLocalizations {
 
   static const _en = {
     'app_title': 'Sezar Driver',
+    'brand_name': 'Sezar Drive',
+    'driver_operations': 'Driver Operations',
+    'secure_connection_active': 'Secure Connection Active',
+    'profile_details': 'Driver details',
     'nav_home': 'Home',
     'nav_trips': 'Trips',
     'nav_shift': 'Shift',
@@ -304,6 +308,10 @@ class AppLocalizations {
 
   static const _ar = {
     'app_title': 'سيزار للسائق',
+    'brand_name': 'سيزار درايف',
+    'driver_operations': 'عمليات السائق',
+    'secure_connection_active': 'اتصال آمن نشط',
+    'profile_details': 'تفاصيل السائق',
     'nav_home': 'الرئيسية',
     'nav_trips': 'الرحلات',
     'nav_shift': 'الوردية',

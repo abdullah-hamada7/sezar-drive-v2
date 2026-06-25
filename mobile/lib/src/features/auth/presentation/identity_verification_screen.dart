@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/auth_cubit.dart';
 
 class IdentityVerificationScreen extends StatefulWidget {
@@ -27,7 +28,10 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('identity_verification_title'))),
+      appBar: FleetAppBar(
+        title: l10n.t('identity_verification_title'),
+        showBackButton: true,
+      ),
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {

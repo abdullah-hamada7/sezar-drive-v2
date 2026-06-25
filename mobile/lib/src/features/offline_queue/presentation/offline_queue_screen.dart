@@ -7,6 +7,7 @@ import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/empty_state_panel.dart';
 import '../../../core/widgets/list_loading_skeleton.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/offline_queue_cubit.dart';
 
 class OfflineQueueScreen extends StatefulWidget {
@@ -30,8 +31,8 @@ class _OfflineQueueScreenState extends State<OfflineQueueScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('offline_queue')),
+      appBar: FleetAppBar(
+        title: l10n.t('offline_queue'),
         actions: [
           IconButton(
             icon: const Icon(Icons.sync),

@@ -8,6 +8,7 @@ import '../../../core/widgets/empty_state_panel.dart';
 import '../../../core/widgets/list_loading_skeleton.dart';
 import '../../badges/cubit/badge_cubit.dart';
 import '../../../core/services/tab_badge_service.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/violation_cubit.dart';
 
 class ViolationsScreen extends StatefulWidget {
@@ -59,8 +60,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
     final semantic = context.semanticColors;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('traffic_violations')),
+      appBar: FleetAppBar(
+        title: l10n.t('traffic_violations'),
         actions: [
           IconButton(icon: const Icon(Icons.filter_list), onPressed: _pickDateRange),
           IconButton(

@@ -15,6 +15,7 @@ import '../../../core/services/connectivity_service.dart';
 import '../../../core/services/tab_badge_service.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/empty_state_panel.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../../../core/widgets/list_loading_skeleton.dart';
 import '../../badges/cubit/badge_cubit.dart';
 import '../../shift/cubit/shift_cubit.dart';
@@ -81,7 +82,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
         shiftState is ShiftLoaded && shiftState.activeShift != null;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('expenses_log'))),
+      appBar: FleetAppBar(title: l10n.t('expenses_log')),
       body: BlocConsumer<ExpenseCubit, ExpenseState>(
         listener: (context, state) {
           if (state is ExpenseSuccess) {

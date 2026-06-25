@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 enum ShiftStatus {
   pendingVerification('PendingVerification'),
   active('Active'),
@@ -19,13 +21,13 @@ enum ShiftStatus {
   Color get color {
     switch (this) {
       case ShiftStatus.pendingVerification:
-        return Colors.amber;
+        return AppTheme.warningColor;
       case ShiftStatus.active:
-        return Colors.green;
+        return AppTheme.successColor;
       case ShiftStatus.closed:
-        return Colors.grey;
+        return AppTheme.textMutedColor;
       case ShiftStatus.unknown:
-        return Colors.grey;
+        return AppTheme.textMutedColor;
     }
   }
 
@@ -65,19 +67,19 @@ enum TripStatus {
   Color get color {
     switch (this) {
       case TripStatus.pending:
-        return Colors.blue;
+        return AppTheme.primaryColor;
       case TripStatus.accepted:
-        return Colors.teal;
+        return AppTheme.warningColor;
       case TripStatus.inProgress:
-        return Colors.green;
+        return AppTheme.successColor;
       case TripStatus.completed:
-        return Colors.grey;
+        return AppTheme.textMutedColor;
       case TripStatus.cancelled:
-        return Colors.red;
+        return AppTheme.dangerColor;
       case TripStatus.rejected:
-        return Colors.orange;
+        return AppTheme.warningColor;
       case TripStatus.unknown:
-        return Colors.grey;
+        return AppTheme.textMutedColor;
     }
   }
 }

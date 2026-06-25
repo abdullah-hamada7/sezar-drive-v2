@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/password_reset_cubit.dart';
 
 class PasswordResetScreen extends StatefulWidget {
@@ -36,7 +37,10 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('account_recovery'))),
+      appBar: FleetAppBar(
+        title: l10n.t('account_recovery'),
+        showBackButton: true,
+      ),
       body: BlocConsumer<PasswordResetCubit, PasswordResetState>(
         listener: (context, state) {
           if (state is PasswordResetCodeSent) {

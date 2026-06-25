@@ -10,6 +10,7 @@ import '../../auth/presentation/identity_verification_screen.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/theme/app_status.dart';
 import '../../../core/widgets/app_feedback.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../../../core/widgets/list_loading_skeleton.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.t('dashboard'))),
+        appBar: FleetAppBar(title: l10n.t('dashboard')),
         body: BlocBuilder<HomeCubit, HomeState>(
           builder: (context, state) {
             if (state is HomeLoading) {
@@ -107,7 +108,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) => DriverDetailsSheet(user: state.user),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
+                    FleetSectionLabel(label: l10n.t('nav_shift')),
                     if (state.activeShift?.status == 'Active')
                       _ShiftStatusCard(
                         title: l10n.t('shift_active'),
@@ -122,17 +124,27 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: l10n.t('shift_pending'),
                         subtitle: l10n.t('complete_verification_subtitle'),
                         color: context.semanticColors.warning,
+                      )
+                    else
+                      _ShiftStatusCard(
+                        title: l10n.t('no_active_shift'),
+                        subtitle: l10n.t('no_active_shift_hint'),
+                        color: context.semanticColors.muted,
+                        leading: Icons.schedule,
                       ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
+                    FleetSectionLabel(label: l10n.t('todays_cash')),
                     _CashSummaryCard(
                       report: state.dailyReport,
                       l10n: l10n,
                       onGoToTrips: widget.onNavigateToTrips,
                     ),
                     const SizedBox(height: 16),
+                    FleetSectionLabel(label: l10n.t('daily_earnings')),
                     _EarningsChartCard(
                         history: state.earningsHistory, l10n: l10n),
                     const SizedBox(height: 16),
+                    FleetSectionLabel(label: l10n.t('recent_activity')),
                     _RecentActivityCard(
                       activities: state.recentActivity,
                       l10n: l10n,
@@ -157,19 +169,50 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final semantic = context.semanticColors;
+
     return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundImage: user.avatarUrl != null
-              ? NetworkImage(user.avatarUrl as String)
-              : null,
-          child: user.avatarUrl == null ? const Icon(Icons.person) : null,
+      color: AppTheme.surfaceElevated,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              backgroundColor: semantic.statusBackground(scheme.primary),
+              backgroundImage: user.avatarUrl != null
+                  ? NetworkImage(user.avatarUrl as String)
+                  : null,
+              child: user.avatarUrl == null
+                  ? Icon(Icons.person, color: scheme.primary)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.name as String,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    user.email as String,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              tooltip: l10n.t('profile_details'),
+              icon: const Icon(Icons.info_outline),
+              onPressed: onDetails,
+            ),
+          ],
         ),
-        title: Text(user.name as String,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(user.email as String),
-        trailing: IconButton(
-            icon: const Icon(Icons.info_outline), onPressed: onDetails),
       ),
     );
   }
@@ -179,18 +222,49 @@ class _ShiftStatusCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
-  const _ShiftStatusCard(
-      {required this.title, required this.subtitle, required this.color});
+  final IconData? leading;
+  const _ShiftStatusCard({
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    this.leading,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: context.semanticColors.statusBackground(color),
-      child: ListTile(
-        leading: Icon(Icons.timer, color: color),
-        title: Text(title,
-            style: TextStyle(fontWeight: FontWeight.w600, color: color)),
-        subtitle: Text(subtitle),
+      color: context.semanticColors.statusBackground(color, opacity: 0.12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: context.semanticColors.statusBackground(color),
+                borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+              ),
+              child: Icon(leading ?? Icons.local_shipping_outlined, color: color),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: color,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -344,8 +418,9 @@ class _RecentActivityCard extends StatelessWidget {
   String _formatTime(AppLocalizations l10n, DateTime ts) {
     final diff = DateTime.now().difference(ts);
     if (diff.inMinutes < 1) return l10n.t('just_now');
-    if (diff.inHours < 1)
+    if (diff.inHours < 1) {
       return l10n.t('minutes_ago', {'n': '${diff.inMinutes}'});
+    }
     if (diff.inHours < 24) return l10n.t('hours_ago', {'n': '${diff.inHours}'});
     return '${ts.year}-${ts.month.toString().padLeft(2, '0')}-${ts.day.toString().padLeft(2, '0')}';
   }

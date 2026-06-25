@@ -24,7 +24,7 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     success: AppTheme.successColor,
     warning: AppTheme.warningColor,
     danger: AppTheme.dangerColor,
-    border: Color(0xFF334155),
+    border: Color(0xFF2E2E36),
     inputFill: AppTheme.backgroundColor,
     muted: AppTheme.textMutedColor,
   );
@@ -33,9 +33,9 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
     success: AppTheme.successColor,
     warning: AppTheme.warningColor,
     danger: AppTheme.dangerColor,
-    border: Color(0xFFE2E8F0),
-    inputFill: Color(0xFFF1F5F9),
-    muted: Color(0xFF64748B),
+    border: Color(0xFFD4D4D8),
+    inputFill: Color(0xFFF4F4F5),
+    muted: Color(0xFF71717A),
   );
 
   Color statusBackground(Color color, {double opacity = 0.18}) {

@@ -13,6 +13,7 @@ import '../../../core/services/connectivity_service.dart';
 import '../../../core/services/tab_badge_service.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/empty_state_panel.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../../shift/cubit/shift_cubit.dart';
 import '../cubit/damage_cubit.dart';
 
@@ -83,7 +84,7 @@ class _DamageScreenState extends State<DamageScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.t('report_damage'))),
+      appBar: FleetAppBar(title: l10n.t('report_damage')),
       body: BlocConsumer<DamageCubit, DamageState>(
         listener: (context, state) {
           if (state is DamageReported) {

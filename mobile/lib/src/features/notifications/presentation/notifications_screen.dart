@@ -5,6 +5,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/widgets/empty_state_panel.dart';
 import '../../../core/widgets/list_loading_skeleton.dart';
+import '../../../core/widgets/fleet_shell.dart';
 import '../cubit/notification_cubit.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -35,8 +36,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.t('notifications')),
+      appBar: FleetAppBar(
+        title: l10n.t('notifications'),
         actions: [
           IconButton(
             icon: const Icon(Icons.mark_email_read_outlined),
