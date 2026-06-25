@@ -1,6 +1,7 @@
 import { http } from './http.service';
 
 export const violationService = {
+  // Admin-scoped endpoints
   getViolations(params = {}) {
     const query = new URLSearchParams(params).toString();
     return http.get(`/violations?${query}`);
@@ -35,9 +36,14 @@ export const violationService = {
     return http.get(`/violations/driver-stats${query}`);
   },
 
+  // Driver-scoped endpoints (parity with mobile)
   getMyViolations(params = {}) {
     const query = new URLSearchParams(params).toString();
     return http.get(`/violations/my?${query}`);
+  },
+
+  markViolationSeen(id) {
+    return http.patch(`/violations/${id}/seen`, {});
   },
 };
 

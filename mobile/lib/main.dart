@@ -127,25 +127,28 @@ class _SezarDriverAppState extends State<SezarDriverApp> {
       ],
       child: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, settings) {
-          return _AppWithIdle(
-            idleTimer: idleTimer,
-            wsService: wsService,
-            child: MaterialApp(
-              title: 'Sezar Driver',
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: settings.themeMode,
-              locale: settings.locale,
-              supportedLocales: const [Locale('en'), Locale('ar')],
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              debugShowCheckedModeBanner: false,
-              home: const AppAuthGate(),
-            ),
+          return MaterialApp(
+            title: 'Sezar Driver',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode,
+            locale: settings.locale,
+            supportedLocales: const [Locale('en'), Locale('ar')],
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              return _AppWithIdle(
+                idleTimer: idleTimer,
+                wsService: wsService,
+                child: child!,
+              );
+            },
+            home: const AppAuthGate(),
           );
         },
       ),

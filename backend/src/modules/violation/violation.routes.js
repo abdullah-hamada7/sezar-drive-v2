@@ -257,4 +257,19 @@ router.get(
   }
 );
 
+// ─── PATCH /api/v1/violations/:id/seen ─────────────
+// Marks a violation as seen by the driver (for badge count management)
+router.patch(
+  '/:id/seen',
+  authenticate, enforcePasswordChanged, authorize('driver'),
+  [param('id').isUUID()],
+  async (req, res, next) => {
+    try {
+      handleValidation(req);
+      const result = await violationService.markViolationSeen(req.params.id, req.user.id);
+      res.json(result);
+    } catch (err) { next(err); }
+  }
+);
+
 module.exports = router;

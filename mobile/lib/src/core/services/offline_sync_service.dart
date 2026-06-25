@@ -16,7 +16,7 @@ class SyncResult {
 
 class OfflineQueueService {
   static const String _boxName = 'offline_queue';
-  static const int maxRetries = 3;
+  static const int maxRetries = 5;
   final DioClient _client;
   final StreamController<int> _pendingController = StreamController<int>.broadcast();
 

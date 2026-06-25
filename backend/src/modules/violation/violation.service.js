@@ -244,6 +244,27 @@ async function getVehicles() {
   });
 }
 
+async function markViolationSeen(id, driverId) {
+  const violation = await prisma.trafficViolation.findFirst({
+    where: { id, driverId },
+  });
+
+  if (!violation) {
+    throw new NotFoundError('Violation not found or not assigned to this driver');
+  }
+
+  const updated = await prisma.trafficViolation.update({
+    where: { id },
+    data: { seenAt: new Date() },
+    include: {
+      driver: { select: { id: true, name: true } },
+      vehicle: { select: { id: true, plateNumber: true } },
+    },
+  });
+
+  return await signViolation(updated);
+}
+
 module.exports = {
   createViolation,
   updateViolation,
@@ -253,4 +274,5 @@ module.exports = {
   getDriverDailyStats,
   getDrivers,
   getVehicles,
+  markViolationSeen,
 };

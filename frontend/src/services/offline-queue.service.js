@@ -1,6 +1,6 @@
 import { getDb, OFFLINE_QUEUE_STORE, requestToPromise } from './indexeddb.service';
 
-const MAX_RETRY_COUNT = 10;
+const MAX_RETRY_COUNT = 5;
 let syncInFlightPromise = null;
 
 async function replayOfflineExpenseBundle(httpService, entry) {

@@ -13,6 +13,7 @@ import { useLanguage } from '../../hooks/useLanguage';
 import { usePushPermission } from '../../hooks/usePushPermission';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useDriverBadges } from '../../hooks/useDriverBadges';
+import { useIdleTimer } from '../../hooks/useIdleTimer';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import './DriverLayout.css';
 
@@ -26,6 +27,12 @@ export default function DriverLayout() {
   usePushPermission();
   usePushNotifications();
   useDriverTracking();
+
+  // Idle timer for security parity with mobile (auto-logout after inactivity)
+  useIdleTimer({
+    timeoutMinutes: 30,
+    enabled: true,
+  });
 
   // Live badge counts fetched from the backend — one count per tab.
   // Each count = items admin created/assigned that need driver attention.

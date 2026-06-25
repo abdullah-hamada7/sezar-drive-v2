@@ -13,8 +13,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Sezar Driver'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Sezar Drive'), findsOneWidget);
+    expect(find.text('Sign in'), findsNWidgets(2));
     expect(find.text('0'), findsNothing);
   });
 }
