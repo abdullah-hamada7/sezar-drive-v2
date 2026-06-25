@@ -8,44 +8,44 @@ export default {
     extend: {
       colors: {
         bg: {
-          DEFAULT: '#F7F3EB', /* Cashmere/Bone */
-          secondary: '#FFFFFF',
-          tertiary: '#EAE5D9',
-          card: '#FFFFFF',
-          hover: '#F0EBE1',
-          input: '#FFFFFF',
-          inverse: '#141311',
+          DEFAULT: 'var(--color-bg)',
+          secondary: 'var(--color-bg-secondary)',
+          tertiary: 'var(--color-bg-tertiary)',
+          card: 'var(--color-bg-card)',
+          hover: 'var(--color-bg-hover)',
+          input: 'var(--color-bg-input)',
+          inverse: 'var(--color-text)',
         },
         primary: {
-          DEFAULT: '#D46340', /* Terracotta */
-          light: '#E27D5F',
-          dark: '#B54D2E',
-          50: '#FDF3F0',
-          100: '#FBE4DD',
-          900: '#522013',
+          DEFAULT: 'var(--color-primary)',
+          light: 'var(--color-primary-light)',
+          dark: 'var(--color-primary-dark)',
+          50: 'rgba(239, 68, 68, 0.05)',
+          100: 'rgba(239, 68, 68, 0.1)',
+          900: 'var(--color-primary-dark)',
         },
         accent: {
-          olive: '#4A5D4E', /* Muted Olive */
-          gold: '#C5A880',
+          olive: 'var(--color-accent)',
+          gold: 'var(--color-warning)',
         },
-        surface: 'rgba(255, 255, 255, 0.95)',
+        surface: 'var(--color-surface)',
         text: {
-          DEFAULT: '#141311', /* Deep Charcoal */
-          secondary: '#4A4843',
-          muted: '#8A867D',
-          inverse: '#F7F3EB',
+          DEFAULT: 'var(--color-text)',
+          secondary: 'var(--color-text-secondary)',
+          muted: 'var(--color-text-muted)',
+          inverse: 'var(--color-bg)',
         },
-        success: '#4A5D4E',
-        danger: '#A83232',
-        warning: '#D49540',
-        info: '#3B6882',
-        border: '#E8E2D5',
-        'border-light': '#F2EFE8',
+        success: 'var(--color-success)',
+        danger: 'var(--color-danger)',
+        warning: 'var(--color-warning)',
+        info: 'var(--color-info)',
+        border: 'var(--color-border)',
+        'border-light': 'var(--color-border-light)',
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'serif'],
-        body: ['"Outfit"', 'sans-serif'],
-        sans: ['"Outfit"', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'sans-serif'],
+        body: ['"Plus Jakarta Sans"', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
       },
       borderRadius: {
         none: '0',
@@ -72,7 +72,7 @@ export default {
       boxShadow: {
         soft: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         highlight: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.05)',
-        glow: '0 0 15px rgba(59, 130, 246, 0.5)',
+        glow: '0 0 15px rgba(239, 68, 68, 0.5)',
       },
       backdropBlur: {
         xs: '2px',
