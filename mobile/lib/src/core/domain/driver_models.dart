@@ -10,6 +10,8 @@ class User {
   final bool mustChangePassword;
   final bool identityVerified;
   final String? identityPhotoUrl;
+  final String? idCardFront;
+  final String? idCardBack;
   final double? lastKnownLat;
   final double? lastKnownLng;
   final DateTime? lastLocationAt;
@@ -27,6 +29,8 @@ class User {
     required this.mustChangePassword,
     required this.identityVerified,
     this.identityPhotoUrl,
+    this.idCardFront,
+    this.idCardBack,
     this.lastKnownLat,
     this.lastKnownLng,
     this.lastLocationAt,
@@ -42,36 +46,62 @@ class User {
       phone: (json['phone'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
       role: (json['role'] ?? '').toString(),
-      licenseNumber: json['licenseNumber']?.toString(),
-      mustChangePassword: parseBool(json['mustChangePassword'], false),
-      identityVerified: parseBool(json['identityVerified'], false),
-      identityPhotoUrl: json['identityPhotoUrl']?.toString(),
-      lastKnownLat: parseDouble(json['lastKnownLat']),
-      lastKnownLng: parseDouble(json['lastKnownLng']),
-      lastLocationAt: json['lastLocationAt'] != null ? DateTime.tryParse(json['lastLocationAt'].toString()) : null,
-      isActive: parseBool(json['isActive'], true),
-      avatarUrl: (json['avatarUrl'] ?? json['profilePhotoUrl'])?.toString(),
-      lastBiometricVerifiedAt: json['lastBiometricVerifiedAt'] != null ? DateTime.tryParse(json['lastBiometricVerifiedAt'].toString()) : null,
+      licenseNumber:
+          (json['licenseNumber'] ?? json['license_number'])?.toString(),
+      mustChangePassword: parseBool(
+        json['mustChangePassword'] ?? json['must_change_password'],
+        false,
+      ),
+      identityVerified: parseBool(
+        json['identityVerified'] ?? json['identity_verified'],
+        false,
+      ),
+      identityPhotoUrl:
+          (json['identityPhotoUrl'] ?? json['identity_photo_url'])?.toString(),
+      idCardFront: (json['idCardFront'] ?? json['id_card_front'])?.toString(),
+      idCardBack: (json['idCardBack'] ?? json['id_card_back'])?.toString(),
+      lastKnownLat: parseDouble(json['lastKnownLat'] ?? json['last_known_lat']),
+      lastKnownLng: parseDouble(json['lastKnownLng'] ?? json['last_known_lng']),
+      lastLocationAt: (json['lastLocationAt'] ?? json['last_location_at']) !=
+              null
+          ? DateTime.tryParse(
+              (json['lastLocationAt'] ?? json['last_location_at']).toString())
+          : null,
+      isActive: parseBool(json['isActive'] ?? json['is_active'], true),
+      avatarUrl: (json['avatarUrl'] ??
+              json['profilePhotoUrl'] ??
+              json['avatar_url'] ??
+              json['profile_photo_url'])
+          ?.toString(),
+      lastBiometricVerifiedAt: (json['lastBiometricVerifiedAt'] ??
+                  json['last_biometric_verified_at']) !=
+              null
+          ? DateTime.tryParse((json['lastBiometricVerifiedAt'] ??
+                  json['last_biometric_verified_at'])
+              .toString())
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'email': email,
-    'phone': phone,
-    'name': name,
-    'role': role,
-    'licenseNumber': licenseNumber,
-    'mustChangePassword': mustChangePassword,
-    'identityVerified': identityVerified,
-    'identityPhotoUrl': identityPhotoUrl,
-    'lastKnownLat': lastKnownLat,
-    'lastKnownLng': lastKnownLng,
-    'lastLocationAt': lastLocationAt?.toIso8601String(),
-    'isActive': isActive,
-    'avatarUrl': avatarUrl,
-    'lastBiometricVerifiedAt': lastBiometricVerifiedAt?.toIso8601String(),
-  };
+        'id': id,
+        'email': email,
+        'phone': phone,
+        'name': name,
+        'role': role,
+        'licenseNumber': licenseNumber,
+        'mustChangePassword': mustChangePassword,
+        'identityVerified': identityVerified,
+        'identityPhotoUrl': identityPhotoUrl,
+        'idCardFront': idCardFront,
+        'idCardBack': idCardBack,
+        'lastKnownLat': lastKnownLat,
+        'lastKnownLng': lastKnownLng,
+        'lastLocationAt': lastLocationAt?.toIso8601String(),
+        'isActive': isActive,
+        'avatarUrl': avatarUrl,
+        'lastBiometricVerifiedAt': lastBiometricVerifiedAt?.toIso8601String(),
+      };
 }
 
 class Vehicle {
@@ -109,15 +139,15 @@ class Vehicle {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'plateNumber': plateNumber,
-    'model': model,
-    'year': year,
-    'capacity': capacity,
-    'qrCode': qrCode,
-    'status': status,
-    'isActive': isActive,
-  };
+        'id': id,
+        'plateNumber': plateNumber,
+        'model': model,
+        'year': year,
+        'capacity': capacity,
+        'qrCode': qrCode,
+        'status': status,
+        'isActive': isActive,
+      };
 }
 
 class Shift {
@@ -151,27 +181,33 @@ class Shift {
       driverId: (json['driverId'] ?? '').toString(),
       vehicleId: json['vehicleId']?.toString(),
       status: (json['status'] ?? '').toString(),
-      startedAt: json['startedAt'] != null ? DateTime.tryParse(json['startedAt'].toString()) : null,
-      closedAt: json['closedAt'] != null ? DateTime.tryParse(json['closedAt'].toString()) : null,
+      startedAt: json['startedAt'] != null
+          ? DateTime.tryParse(json['startedAt'].toString())
+          : null,
+      closedAt: json['closedAt'] != null
+          ? DateTime.tryParse(json['closedAt'].toString())
+          : null,
       closeReason: json['closeReason']?.toString(),
       startSelfieUrl: json['startSelfieUrl']?.toString(),
       verificationStatus: (json['verificationStatus'] ?? 'PENDING').toString(),
-      vehicle: json['vehicle'] != null ? Vehicle.fromJson(Map<String, dynamic>.from(json['vehicle'] as Map)) : null,
+      vehicle: json['vehicle'] != null
+          ? Vehicle.fromJson(Map<String, dynamic>.from(json['vehicle'] as Map))
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'driverId': driverId,
-    'vehicleId': vehicleId,
-    'status': status,
-    'startedAt': startedAt?.toIso8601String(),
-    'closedAt': closedAt?.toIso8601String(),
-    'closeReason': closeReason,
-    'startSelfieUrl': startSelfieUrl,
-    'verificationStatus': verificationStatus,
-    'vehicle': vehicle?.toJson(),
-  };
+        'id': id,
+        'driverId': driverId,
+        'vehicleId': vehicleId,
+        'status': status,
+        'startedAt': startedAt?.toIso8601String(),
+        'closedAt': closedAt?.toIso8601String(),
+        'closeReason': closeReason,
+        'startSelfieUrl': startSelfieUrl,
+        'verificationStatus': verificationStatus,
+        'vehicle': vehicle?.toJson(),
+      };
 }
 
 class Passenger {
@@ -197,11 +233,11 @@ class Passenger {
   }
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    'phone': phone,
-    'companionCount': companionCount,
-    'bagCount': bagCount,
-  };
+        'name': name,
+        'phone': phone,
+        'companionCount': companionCount,
+        'bagCount': bagCount,
+      };
 }
 
 class Trip {
@@ -276,54 +312,64 @@ class Trip {
       pickupLocation: (json['pickupLocation'] ?? '').toString(),
       dropoffLocation: (json['dropoffLocation'] ?? '').toString(),
       paymentMethod: (json['paymentMethod'] ?? 'CASH').toString(),
-      cashCollectedAt: json['cashCollectedAt'] != null ? DateTime.tryParse(json['cashCollectedAt'].toString()) : null,
+      cashCollectedAt: json['cashCollectedAt'] != null
+          ? DateTime.tryParse(json['cashCollectedAt'].toString())
+          : null,
       cashCollectedBy: json['cashCollectedBy']?.toString(),
       cashCollectedNote: json['cashCollectedNote']?.toString(),
       pickupLat: parseDoubleWithDefault(json['pickupLat'], 0.0),
       pickupLng: parseDoubleWithDefault(json['pickupLng'], 0.0),
       dropoffLat: parseDoubleWithDefault(json['dropoffLat'], 0.0),
       dropoffLng: parseDoubleWithDefault(json['dropoffLng'], 0.0),
-      scheduledTime: json['scheduledTime'] != null ? DateTime.tryParse(json['scheduledTime'].toString()) : null,
+      scheduledTime: json['scheduledTime'] != null
+          ? DateTime.tryParse(json['scheduledTime'].toString())
+          : null,
       price: parseDoubleWithDefault(json['price'], 0.0),
       adminCharge: parseDoubleWithDefault(json['adminCharge'], 0.0),
       driverNetPrice: parseDoubleWithDefault(json['driverNetPrice'], 0.0),
-      actualStartTime: json['actualStartTime'] != null ? DateTime.tryParse(json['actualStartTime'].toString()) : null,
-      actualEndTime: json['actualEndTime'] != null ? DateTime.tryParse(json['actualEndTime'].toString()) : null,
+      actualStartTime: json['actualStartTime'] != null
+          ? DateTime.tryParse(json['actualStartTime'].toString())
+          : null,
+      actualEndTime: json['actualEndTime'] != null
+          ? DateTime.tryParse(json['actualEndTime'].toString())
+          : null,
       cancellationReason: json['cancellationReason']?.toString(),
       cancelledBy: json['cancelledBy']?.toString(),
       status: (json['status'] ?? '').toString(),
       passengers: parsedPassengers,
-      vehicle: json['vehicle'] != null ? Vehicle.fromJson(Map<String, dynamic>.from(json['vehicle'] as Map)) : null,
+      vehicle: json['vehicle'] != null
+          ? Vehicle.fromJson(Map<String, dynamic>.from(json['vehicle'] as Map))
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'driverId': driverId,
-    'shiftId': shiftId,
-    'vehicleId': vehicleId,
-    'pickupLocation': pickupLocation,
-    'dropoffLocation': dropoffLocation,
-    'paymentMethod': paymentMethod,
-    'cashCollectedAt': cashCollectedAt?.toIso8601String(),
-    'cashCollectedBy': cashCollectedBy,
-    'cashCollectedNote': cashCollectedNote,
-    'pickupLat': pickupLat,
-    'pickupLng': pickupLng,
-    'dropoffLat': dropoffLat,
-    'dropoffLng': dropoffLng,
-    'scheduledTime': scheduledTime?.toIso8601String(),
-    'price': price,
-    'adminCharge': adminCharge,
-    'driverNetPrice': driverNetPrice,
-    'actualStartTime': actualStartTime?.toIso8601String(),
-    'actualEndTime': actualEndTime?.toIso8601String(),
-    'cancellationReason': cancellationReason,
-    'cancelledBy': cancelledBy,
-    'status': status,
-    'passengers': passengers?.map((e) => e.toJson()).toList(),
-    'vehicle': vehicle?.toJson(),
-  };
+        'id': id,
+        'driverId': driverId,
+        'shiftId': shiftId,
+        'vehicleId': vehicleId,
+        'pickupLocation': pickupLocation,
+        'dropoffLocation': dropoffLocation,
+        'paymentMethod': paymentMethod,
+        'cashCollectedAt': cashCollectedAt?.toIso8601String(),
+        'cashCollectedBy': cashCollectedBy,
+        'cashCollectedNote': cashCollectedNote,
+        'pickupLat': pickupLat,
+        'pickupLng': pickupLng,
+        'dropoffLat': dropoffLat,
+        'dropoffLng': dropoffLng,
+        'scheduledTime': scheduledTime?.toIso8601String(),
+        'price': price,
+        'adminCharge': adminCharge,
+        'driverNetPrice': driverNetPrice,
+        'actualStartTime': actualStartTime?.toIso8601String(),
+        'actualEndTime': actualEndTime?.toIso8601String(),
+        'cancellationReason': cancellationReason,
+        'cancelledBy': cancelledBy,
+        'status': status,
+        'passengers': passengers?.map((e) => e.toJson()).toList(),
+        'vehicle': vehicle?.toJson(),
+      };
 }
 
 class InspectionPhoto {
@@ -352,12 +398,12 @@ class InspectionPhoto {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'inspectionId': inspectionId,
-    'direction': direction,
-    'photoUrl': photoUrl,
-    'uploadedAt': uploadedAt.toIso8601String(),
-  };
+        'id': id,
+        'inspectionId': inspectionId,
+        'direction': direction,
+        'photoUrl': photoUrl,
+        'uploadedAt': uploadedAt.toIso8601String(),
+      };
 }
 
 class Inspection {
@@ -398,26 +444,31 @@ class Inspection {
       mileage: parseInt(json['mileage']),
       checklistData: json['checklistData'] as Map<String, dynamic>?,
       createdAt: DateTime.parse(json['createdAt'] as String),
-      completedAt: json['completedAt'] != null ? DateTime.parse(json['completedAt'] as String) : null,
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'] as String)
+          : null,
       photos: json['photos'] != null
-          ? (json['photos'] as List).map((e) => InspectionPhoto.fromJson(Map<String, dynamic>.from(e as Map))).toList()
+          ? (json['photos'] as List)
+              .map((e) =>
+                  InspectionPhoto.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList()
           : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'shiftId': shiftId,
-    'vehicleId': vehicleId,
-    'driverId': driverId,
-    'type': type,
-    'status': status,
-    'mileage': mileage,
-    'checklistData': checklistData,
-    'createdAt': createdAt.toIso8601String(),
-    'completedAt': completedAt?.toIso8601String(),
-    'photos': photos?.map((e) => e.toJson()).toList(),
-  };
+        'id': id,
+        'shiftId': shiftId,
+        'vehicleId': vehicleId,
+        'driverId': driverId,
+        'type': type,
+        'status': status,
+        'mileage': mileage,
+        'checklistData': checklistData,
+        'createdAt': createdAt.toIso8601String(),
+        'completedAt': completedAt?.toIso8601String(),
+        'photos': photos?.map((e) => e.toJson()).toList(),
+      };
 }
 
 class ExpenseCategory {
@@ -443,11 +494,11 @@ class ExpenseCategory {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'name': name,
-    'isActive': isActive,
-    'requiresApproval': requiresApproval,
-  };
+        'id': id,
+        'name': name,
+        'isActive': isActive,
+        'requiresApproval': requiresApproval,
+      };
 }
 
 class Expense {
@@ -489,23 +540,26 @@ class Expense {
       receiptUrl: json['receiptUrl']?.toString(),
       status: (json['status'] ?? '').toString(),
       createdAt: DateTime.parse(json['createdAt'] as String),
-      category: json['category'] != null ? ExpenseCategory.fromJson(Map<String, dynamic>.from(json['category'] as Map)) : null,
+      category: json['category'] != null
+          ? ExpenseCategory.fromJson(
+              Map<String, dynamic>.from(json['category'] as Map))
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'shiftId': shiftId,
-    'tripId': tripId,
-    'driverId': driverId,
-    'categoryId': categoryId,
-    'amount': amount,
-    'description': description,
-    'receiptUrl': receiptUrl,
-    'status': status,
-    'createdAt': createdAt.toIso8601String(),
-    'category': category?.toJson(),
-  };
+        'id': id,
+        'shiftId': shiftId,
+        'tripId': tripId,
+        'driverId': driverId,
+        'categoryId': categoryId,
+        'amount': amount,
+        'description': description,
+        'receiptUrl': receiptUrl,
+        'status': status,
+        'createdAt': createdAt.toIso8601String(),
+        'category': category?.toJson(),
+      };
 }
 
 class DamagePhoto {
@@ -531,11 +585,11 @@ class DamagePhoto {
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'damageReportId': damageReportId,
-    'photoUrl': photoUrl,
-    'uploadedAt': uploadedAt.toIso8601String(),
-  };
+        'id': id,
+        'damageReportId': damageReportId,
+        'photoUrl': photoUrl,
+        'uploadedAt': uploadedAt.toIso8601String(),
+      };
 }
 
 class DamageReport {
@@ -572,22 +626,24 @@ class DamageReport {
       status: json['status'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
       photos: json['photos'] != null
-          ? (json['photos'] as List).map((e) => DamagePhoto.fromJson(e as Map<String, dynamic>)).toList()
+          ? (json['photos'] as List)
+              .map((e) => DamagePhoto.fromJson(e as Map<String, dynamic>))
+              .toList()
           : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'vehicleId': vehicleId,
-    'driverId': driverId,
-    'tripId': tripId,
-    'shiftId': shiftId,
-    'description': description,
-    'status': status,
-    'createdAt': createdAt.toIso8601String(),
-    'photos': photos?.map((e) => e.toJson()).toList(),
-  };
+        'id': id,
+        'vehicleId': vehicleId,
+        'driverId': driverId,
+        'tripId': tripId,
+        'shiftId': shiftId,
+        'description': description,
+        'status': status,
+        'createdAt': createdAt.toIso8601String(),
+        'photos': photos?.map((e) => e.toJson()).toList(),
+      };
 }
 
 class TrafficViolation {
@@ -628,24 +684,26 @@ class TrafficViolation {
       time: (json['time'] ?? '').toString(),
       location: (json['location'] ?? '').toString(),
       fineAmount: parseDoubleWithDefault(json['fineAmount'], 0.0),
-      seenAt: json['seenAt'] != null ? DateTime.parse(json['seenAt'] as String) : null,
+      seenAt: json['seenAt'] != null
+          ? DateTime.parse(json['seenAt'] as String)
+          : null,
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'driverId': driverId,
-    'vehicleId': vehicleId,
-    'violationNumber': violationNumber,
-    'photoUrl': photoUrl,
-    'date': date.toIso8601String(),
-    'time': time,
-    'location': location,
-    'fineAmount': fineAmount,
-    'seenAt': seenAt?.toIso8601String(),
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'driverId': driverId,
+        'vehicleId': vehicleId,
+        'violationNumber': violationNumber,
+        'photoUrl': photoUrl,
+        'date': date.toIso8601String(),
+        'time': time,
+        'location': location,
+        'fineAmount': fineAmount,
+        'seenAt': seenAt?.toIso8601String(),
+        'createdAt': createdAt.toIso8601String(),
+      };
 }
 
 class NotificationModel {
@@ -680,19 +738,19 @@ class NotificationModel {
       type: (json['type'] ?? '').toString(),
       entityId: (json['entityId'] ?? json['entity_id'])?.toString(),
       isRead: parseBool(json['isRead'] ?? json['is_read'], false),
-      createdAt: DateTime.tryParse(createdAtRaw?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt:
+          DateTime.tryParse(createdAtRaw?.toString() ?? '') ?? DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'id': id,
-    'userId': userId,
-    'title': title,
-    'body': body,
-    'type': type,
-    'entityId': entityId,
-    'isRead': isRead,
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'userId': userId,
+        'title': title,
+        'body': body,
+        'type': type,
+        'entityId': entityId,
+        'isRead': isRead,
+        'createdAt': createdAt.toIso8601String(),
+      };
 }

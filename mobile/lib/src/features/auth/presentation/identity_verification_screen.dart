@@ -14,12 +14,22 @@ class IdentityVerificationScreen extends StatefulWidget {
   const IdentityVerificationScreen({super.key});
 
   @override
-  State<IdentityVerificationScreen> createState() => _IdentityVerificationScreenState();
+  State<IdentityVerificationScreen> createState() =>
+      _IdentityVerificationScreenState();
 }
 
-class _IdentityVerificationScreenState extends State<IdentityVerificationScreen> {
+class _IdentityVerificationScreenState
+    extends State<IdentityVerificationScreen> {
   File? _identityPhoto;
+  File? _idCardFront;
+  File? _idCardBack;
   bool _isUploading = false;
+
+  bool get _canSubmit =>
+      _identityPhoto != null &&
+      _idCardFront != null &&
+      _idCardBack != null &&
+      !_isUploading;
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +45,13 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
       body: BlocListener<AuthCubit, AuthState>(
         listener: (context, state) {
           if (state is AuthError) {
-            AppFeedback.show(context, message: state.message, type: AppFeedbackType.error);
+            AppFeedback.show(context,
+                message: state.message, type: AppFeedbackType.error);
             if (mounted) setState(() => _isUploading = false);
           } else if (state is AuthAuthenticated) {
-            AppFeedback.show(context, message: l10n.t('identity_submitted'), type: AppFeedbackType.success);
+            AppFeedback.show(context,
+                message: l10n.t('identity_submitted'),
+                type: AppFeedbackType.success);
             Navigator.pop(context);
           }
         },
@@ -49,43 +62,52 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
             children: [
               Icon(Icons.verified_user, size: 64, color: scheme.primary),
               const SizedBox(height: 16),
-              Text(l10n.t('identity_upload_title'), textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
+              Text(l10n.t('identity_upload_title'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 8),
-              Text(l10n.t('identity_upload_body'), textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+              Text(l10n.t('identity_upload_body'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 24),
-              GestureDetector(
-                onTap: _pickPhoto,
-                child: Container(
-                  height: 220,
-                  decoration: BoxDecoration(
-                    color: scheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: semantic.border),
-                  ),
-                  child: _identityPhoto != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.file(_identityPhoto!, fit: BoxFit.cover),
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.camera_alt, size: 48, color: semantic.muted),
-                            const SizedBox(height: 12),
-                            Text(l10n.t('tap_to_photo'), style: TextStyle(color: semantic.muted)),
-                          ],
-                        ),
-                ),
+              _IdentityPhotoCard(
+                title: l10n.t('driver_identity_photo'),
+                file: _identityPhoto,
+                onTap: () => _pickPhoto((photo) => _identityPhoto = photo),
+                semantic: semantic,
+                surfaceColor: scheme.surface,
+              ),
+              const SizedBox(height: 16),
+              _IdentityPhotoCard(
+                title: l10n.t('national_id_front'),
+                file: _idCardFront,
+                onTap: () => _pickPhoto((photo) => _idCardFront = photo),
+                semantic: semantic,
+                surfaceColor: scheme.surface,
+              ),
+              const SizedBox(height: 16),
+              _IdentityPhotoCard(
+                title: l10n.t('national_id_back'),
+                file: _idCardBack,
+                onTap: () => _pickPhoto((photo) => _idCardBack = photo),
+                semantic: semantic,
+                surfaceColor: scheme.surface,
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: _identityPhoto != null && !_isUploading ? _uploadIdentity : null,
+                onPressed: _canSubmit ? _uploadIdentity : null,
                 child: _isUploading
-                    ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : Text(l10n.t('submit_verification')),
               ),
               const SizedBox(height: 16),
-              OutlinedButton(onPressed: () => Navigator.pop(context), child: Text(l10n.t('skip_for_now'))),
+              OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(l10n.t('skip_for_now'))),
             ],
           ),
         ),
@@ -93,10 +115,13 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
     );
   }
 
-  Future<void> _pickPhoto() async {
+  Future<void> _pickPhoto(ValueChanged<File> onSelected) async {
     try {
-      final image = await ImagePicker().pickImage(source: ImageSource.camera, imageQuality: 80);
-      if (image != null && mounted) setState(() => _identityPhoto = File(image.path));
+      final image = await ImagePicker()
+          .pickImage(source: ImageSource.camera, imageQuality: 80);
+      if (image != null && mounted) {
+        setState(() => onSelected(File(image.path)));
+      }
     } catch (e) {
       if (mounted) {
         AppFeedback.show(
@@ -109,9 +134,77 @@ class _IdentityVerificationScreenState extends State<IdentityVerificationScreen>
   }
 
   Future<void> _uploadIdentity() async {
-    if (_identityPhoto == null) return;
+    final l10n = AppLocalizations.of(context);
+    if (_identityPhoto == null || _idCardFront == null || _idCardBack == null) {
+      AppFeedback.show(
+        context,
+        message: l10n.t('identity_all_photos_required'),
+        type: AppFeedbackType.warning,
+      );
+      return;
+    }
     setState(() => _isUploading = true);
-    await context.read<AuthCubit>().uploadIdentityPhoto(_identityPhoto!);
+    await context.read<AuthCubit>().uploadIdentityPhoto(
+          _identityPhoto!,
+          idCardFront: _idCardFront!,
+          idCardBack: _idCardBack!,
+        );
     if (mounted) setState(() => _isUploading = false);
+  }
+}
+
+class _IdentityPhotoCard extends StatelessWidget {
+  final String title;
+  final File? file;
+  final VoidCallback onTap;
+  final AppSemanticColors semantic;
+  final Color surfaceColor;
+
+  const _IdentityPhotoCard({
+    required this.title,
+    required this.file,
+    required this.onTap,
+    required this.semantic,
+    required this.surfaceColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: semantic.border),
+            ),
+            child: file != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.file(file!, fit: BoxFit.cover),
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.camera_alt, size: 44, color: semantic.muted),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.t('tap_to_photo'),
+                        style: TextStyle(color: semantic.muted),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 }

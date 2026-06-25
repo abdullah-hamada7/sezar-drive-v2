@@ -38,7 +38,7 @@ export function useDriverBadges() {
 
   useEffect(() => {
     mountedRef.current = true;
-    fetch();
+    const initialFetchTimer = window.setTimeout(fetch, 0);
 
     // Refresh badge counts when any relevant WS event fires
     const events = [
@@ -52,6 +52,7 @@ export function useDriverBadges() {
 
     return () => {
       mountedRef.current = false;
+      window.clearTimeout(initialFetchTimer);
       events.forEach(e => window.removeEventListener(e, fetch));
       clearInterval(intervalRef.current);
     };

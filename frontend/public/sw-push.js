@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
       self.registration.showNotification(title, options)
     );
-  } catch (err) {
+  } catch {
     // If payload is not valid JSON, show text fallback
     const text = event.data.text();
     event.waitUntil(
@@ -42,7 +42,7 @@ self.addEventListener('notificationclick', (event) => {
   const clickAction = '/driver/trips';
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       // Check if there is already a window open
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
@@ -51,8 +51,8 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       // Otherwise open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(clickAction);
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(clickAction);
       }
     })
   );

@@ -168,6 +168,7 @@ class AuthCubit extends Cubit<AuthState> {
         'email': normalizedEmail,
         'password': password,
         'deviceFingerprint': fingerprint,
+        'client': 'driver-app',
       });
 
       final data = _parseResponseMap(response.data);
@@ -192,6 +193,14 @@ class AuthCubit extends Cubit<AuthState> {
           _normalizeOptionalUserJson(_parseUserMapOptional(data['user']));
 
       if (accessToken != null && userJson != null) {
+        final userRole = userJson['role']?.toString();
+        if (userRole != 'driver') {
+          _pendingLoginPassword = null;
+          emit(const AuthError(
+              'Access denied: Admins cannot sign in to the driver app.'));
+          return;
+        }
+
         await _storage.clearPendingDeviceVerification();
         await _completeLogin(
             accessToken, data['refreshToken'] as String?, userJson);
@@ -218,6 +227,7 @@ class AuthCubit extends Cubit<AuthState> {
       final fields = <String, String>{
         'userId': userId,
         'deviceFingerprint': fingerprint,
+        'client': 'driver-app',
       };
       if (verificationToken.isNotEmpty) {
         fields['verificationToken'] = verificationToken;
@@ -246,6 +256,16 @@ class AuthCubit extends Cubit<AuthState> {
           verificationToken,
           bannerMessage:
               'Device verification failed: unexpected server response.',
+        ));
+        return;
+      }
+
+      final userRole = userJson['role']?.toString();
+      if (userRole != 'driver') {
+        emit(AuthDeviceUnverified(
+          userId,
+          verificationToken,
+          bannerMessage: 'Access denied: Admins cannot sign in to the driver app.',
         ));
         return;
       }
@@ -339,14 +359,29 @@ class AuthCubit extends Cubit<AuthState> {
     } catch (_) {}
   }
 
-  Future<void> uploadIdentityPhoto(File photo) async {
+  Future<void> uploadIdentityPhoto(
+    File photo, {
+    required File idCardFront,
+    required File idCardBack,
+  }) async {
     try {
       final bytes = await photo.readAsBytes();
+      final frontBytes = await idCardFront.readAsBytes();
+      final backBytes = await idCardBack.readAsBytes();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
       final formData = buildMultipartForm(
         files: {
           'photo': jpegMultipartFromBytes(
             bytes,
-            filename: 'identity_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            filename: 'identity_$timestamp.jpg',
+          ),
+          'idCardFront': jpegMultipartFromBytes(
+            frontBytes,
+            filename: 'id_front_$timestamp.jpg',
+          ),
+          'idCardBack': jpegMultipartFromBytes(
+            backBytes,
+            filename: 'id_back_$timestamp.jpg',
           ),
         },
       );

@@ -17,7 +17,7 @@ const ABSOLUTE_SESSION_MAX_DAYS = 30;
  * Login with email and password. Returns JWT access + refresh tokens.
  * Now supports device fingerprinting for security.
  */
-async function login(email, password, ipAddress, deviceFingerprint) {
+async function login(email, password, ipAddress, deviceFingerprint, client) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !user.isActive) {
     console.log(`Login failed for ${email}: User not found or inactive`);
@@ -28,6 +28,14 @@ async function login(email, password, ipAddress, deviceFingerprint) {
   if (!valid) {
     console.log(`Login failed for ${email}: Invalid password`);
     throw new UnauthorizedError('Invalid email or password', 'INVALID_CREDENTIALS');
+  }
+
+  if (client === 'driver-app' && user.role !== 'driver') {
+    console.log(`Login blocked for ${email}: Admin attempting mobile driver-app login`);
+    throw new UnauthorizedError(
+      'Access denied. Only driver accounts are permitted to sign in to this mobile application.',
+      'DRIVER_ONLY_ACCESS'
+    );
   }
 
   // Device Security & Mandatory Biometric Check (Drivers only)
@@ -97,7 +105,7 @@ async function login(email, password, ipAddress, deviceFingerprint) {
 /**
  * Verify a new device using face comparison.
  */
-async function verifyDevice(userId, deviceFingerprint, selfieBuffer, ipAddress, verificationToken) {
+async function verifyDevice(userId, deviceFingerprint, selfieBuffer, ipAddress, verificationToken, client) {
   if (verificationToken) {
     assertVerificationTicket(verificationToken, userId, deviceFingerprint);
   } else {
@@ -106,6 +114,15 @@ async function verifyDevice(userId, deviceFingerprint, selfieBuffer, ipAddress, 
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new NotFoundError('User');
+
+  if (client === 'driver-app' && user.role !== 'driver') {
+    console.log(`Verify-device blocked for ${user.email}: Admin attempting mobile driver-app verification`);
+    throw new UnauthorizedError(
+      'Access denied. Only driver accounts are permitted to sign in to this mobile application.',
+      'DRIVER_ONLY_ACCESS'
+    );
+  }
+
   if (!user.avatarUrl) throw new ValidationError('No profile photo (avatar) found for this user');
 
   const device = await prisma.userDevice.findUnique({
@@ -150,7 +167,7 @@ async function verifyDevice(userId, deviceFingerprint, selfieBuffer, ipAddress, 
 /**
  * Change password (forced on first login).
  */
-async function changePassword(userId, currentPassword, newPassword, ipAddress) {
+async function changePassword(userId, currentPassword, newPassword, ipAddress, client) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new UnauthorizedError('User not found');
 
@@ -159,6 +176,14 @@ async function changePassword(userId, currentPassword, newPassword, ipAddress) {
 
   if (currentPassword === newPassword) {
     throw new ValidationError('New password must be different from current password');
+  }
+
+  if (client === 'driver-app' && user.role !== 'driver') {
+    console.log(`Change-password blocked for ${user.email}: Admin attempting mobile password change`);
+    throw new UnauthorizedError(
+      'Access denied. Only driver accounts are permitted to sign in to this mobile application.',
+      'DRIVER_ONLY_ACCESS'
+    );
   }
 
   validatePasswordPolicy(newPassword);
@@ -192,7 +217,7 @@ async function changePassword(userId, currentPassword, newPassword, ipAddress) {
 /**
  * Refresh access token using refresh token.
  */
-async function refreshAccessToken(refreshTokenValue) {
+async function refreshAccessToken(refreshTokenValue, client) {
   const tokenHash = hashToken(refreshTokenValue);
   const storedToken = await prisma.refreshToken.findFirst({
     where: { tokenHash },
@@ -201,6 +226,14 @@ async function refreshAccessToken(refreshTokenValue) {
 
   if (!storedToken) {
     throw new UnauthorizedError('Invalid or expired refresh token', 'INVALID_TOKEN');
+  }
+
+  if (client === 'driver-app' && storedToken.user.role !== 'driver') {
+    console.log(`Refresh blocked for ${storedToken.user.email}: Admin attempting mobile token refresh`);
+    throw new UnauthorizedError(
+      'Access denied. Only driver accounts are permitted to sign in to this mobile application.',
+      'DRIVER_ONLY_ACCESS'
+    );
   }
 
   const now = new Date();

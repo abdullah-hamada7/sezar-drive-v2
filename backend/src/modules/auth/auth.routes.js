@@ -54,11 +54,15 @@ router.post(
   async (req, res, next) => {
     try {
       handleValidation(req);
+
+      const client = req.body.client || req.headers['x-client-type'];
+
       const result = await authService.login(
         req.body.email,
         req.body.password,
         req.clientIp,
-        req.body.deviceFingerprint
+        req.body.deviceFingerprint,
+        client
       );
       if (result.refreshToken) {
         res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions(req));
@@ -89,12 +93,15 @@ router.post(
       handleValidation(req);
       if (!req.file) throw new ValidationError('Selfie photo is required');
 
+      const client = req.body.client || req.headers['x-client-type'];
+
       const result = await authService.verifyDevice(
         req.body.userId,
         req.body.deviceFingerprint,
         req.file.buffer,
         req.clientIp,
-        req.body.verificationToken
+        req.body.verificationToken,
+        client
       );
       console.log(`[VERIFY_OK] requestId=${requestId} userId=${req.body.userId}`);
       if (result.refreshToken) {
@@ -119,11 +126,15 @@ router.post(
   async (req, res, next) => {
     try {
       handleValidation(req);
+
+      const client = req.body.client || req.headers['x-client-type'];
+
       const result = await authService.changePassword(
         req.user.id,
         req.body.currentPassword,
         req.body.newPassword,
-        req.clientIp
+        req.clientIp,
+        client
       );
       if (result.refreshToken) {
         res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions(req));
@@ -143,7 +154,9 @@ router.post(
       const refreshToken = req.body?.refreshToken || readCookie(req, REFRESH_COOKIE_NAME);
       if (!refreshToken) throw new ValidationError('Refresh token is required');
 
-      const result = await authService.refreshAccessToken(refreshToken);
+      const client = req.body.client || req.headers['x-client-type'];
+
+      const result = await authService.refreshAccessToken(refreshToken, client);
       if (result.refreshToken) {
         res.cookie(REFRESH_COOKIE_NAME, result.refreshToken, getRefreshCookieOptions(req));
       }

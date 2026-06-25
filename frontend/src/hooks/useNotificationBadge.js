@@ -39,7 +39,7 @@ export function useNotificationBadge() {
 
   useEffect(() => {
     mountedRef.current = true;
-    fetchCount();
+    const initialFetchTimer = window.setTimeout(fetchCount, 0);
 
     // Refresh badge when any driver WebSocket event arrives
     const handleNewNotification = () => {
@@ -53,6 +53,7 @@ export function useNotificationBadge() {
 
     return () => {
       mountedRef.current = false;
+      window.clearTimeout(initialFetchTimer);
       clearInterval(intervalRef.current);
       window.removeEventListener('ws:update', handleNewNotification);
     };

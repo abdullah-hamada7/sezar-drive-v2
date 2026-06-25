@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import { useState, useCallback, useContext, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { ToastContext } from '../contexts/toastContext';

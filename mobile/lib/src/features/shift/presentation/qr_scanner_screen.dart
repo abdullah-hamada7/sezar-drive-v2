@@ -85,6 +85,9 @@ class DriverDetailsSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final semantic = context.semanticColors;
+    final hasIdentityDocuments =
+        (user.idCardFront?.trim().isNotEmpty ?? false) ||
+            (user.idCardBack?.trim().isNotEmpty ?? false);
     return Padding(
       padding: EdgeInsets.only(
         left: 24,
@@ -92,71 +95,98 @@ class DriverDetailsSheet extends StatelessWidget {
         top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundImage: user.avatarUrl != null
-                    ? NetworkImage(user.avatarUrl!)
-                    : null,
-                child: user.avatarUrl == null
-                    ? const Icon(Icons.person, size: 32)
-                    : null,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(user.name,
-                        style: const TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w600)),
-                    Text(user.email, style: TextStyle(color: semantic.muted)),
-                    const SizedBox(height: 4),
-                    StatusChip(
-                      label: user.identityVerified
-                          ? l10n.t('verified')
-                          : l10n.t('pending_verification'),
-                      color: user.identityVerified
-                          ? semantic.success
-                          : semantic.warning,
-                    ),
-                  ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundImage: user.avatarUrl != null
+                      ? NetworkImage(user.avatarUrl!)
+                      : null,
+                  child: user.avatarUrl == null
+                      ? const Icon(Icons.person, size: 32)
+                      : null,
                 ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user.name,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w600)),
+                      Text(user.email, style: TextStyle(color: semantic.muted)),
+                      const SizedBox(height: 4),
+                      StatusChip(
+                        label: user.identityVerified
+                            ? l10n.t('verified')
+                            : l10n.t('pending_verification'),
+                        color: user.identityVerified
+                            ? semantic.success
+                            : semantic.warning,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _DetailRow(label: l10n.t('phone'), value: user.phone),
+            if (user.licenseNumber != null)
+              _DetailRow(label: l10n.t('license'), value: user.licenseNumber!),
+            if (hasIdentityDocuments) ...[
+              const SizedBox(height: 16),
+              Text(
+                l10n.t('identity_documents'),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _IdentityDocumentPreview(
+                      title: l10n.t('national_id_front'),
+                      imageUrl: user.idCardFront,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _IdentityDocumentPreview(
+                      title: l10n.t('national_id_back'),
+                      imageUrl: user.idCardBack,
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          _DetailRow(label: l10n.t('phone'), value: user.phone),
-          if (user.licenseNumber != null)
-            _DetailRow(label: l10n.t('license'), value: user.licenseNumber!),
-          const SizedBox(height: 16),
-          if (!user.identityVerified)
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const IdentityVerificationScreen()),
-                );
-              },
-              icon: const Icon(Icons.verified_user),
-              label: Text(l10n.t('upload_identity')),
+            const SizedBox(height: 16),
+            if (!user.identityVerified)
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const IdentityVerificationScreen()),
+                  );
+                },
+                icon: const Icon(Icons.verified_user),
+                label: Text(l10n.t('upload_identity')),
+              ),
+            OutlinedButton(
+              onPressed: () => _showChangePasswordDialog(context),
+              child: Text(l10n.t('change_password')),
             ),
-          OutlinedButton(
-            onPressed: () => _showChangePasswordDialog(context),
-            child: Text(l10n.t('change_password')),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.t('close')),
-          ),
-        ],
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.t('close')),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -229,6 +259,50 @@ class _DetailRow extends StatelessWidget {
           Expanded(child: Text(value)),
         ],
       ),
+    );
+  }
+}
+
+class _IdentityDocumentPreview extends StatelessWidget {
+  final String title;
+  final String? imageUrl;
+
+  const _IdentityDocumentPreview({
+    required this.title,
+    required this.imageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = context.semanticColors;
+    final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.labelSmall),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: AspectRatio(
+            aspectRatio: 4 / 3,
+            child: Container(
+              color: semantic.statusBackground(semantic.muted, opacity: 0.12),
+              child: hasImage
+                  ? Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.broken_image_outlined,
+                        color: semantic.muted,
+                      ),
+                    )
+                  : Icon(Icons.image_not_supported_outlined,
+                      color: semantic.muted),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
