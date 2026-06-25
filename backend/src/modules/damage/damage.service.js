@@ -2,8 +2,7 @@ const prisma = require('../../config/database');
 const { NotFoundError, ValidationError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
-const { notifyAdmins } = require('../tracking/tracking.ws');
-const driverAlert = require('../../services/driverAlert.service');
+const NotificationAdapter = require('../../services/notificationAdapter.service');
 
 /**
  * Create a damage report. Auto-locks the vehicle.
@@ -35,7 +34,7 @@ async function createDamageReport(data, driverId, ipAddress) {
     ipAddress,
   });
 
-  notifyAdmins('damage_reported', 'Vehicle Damage Reported!', `Driver ${driver?.name || 'Unknown'} reported damage on vehicle ${vehicle.plateNumber}. Vehicle has been locked.`, { reportId: report.id });
+  NotificationAdapter.notifyAdmins('damage_reported', 'Vehicle Damage Reported!', `Driver ${driver?.name || 'Unknown'} reported damage on vehicle ${vehicle.plateNumber}. Vehicle has been locked.`, { reportId: report.id });
 
   return report;
 }
@@ -113,7 +112,7 @@ async function reviewDamageReport(reportId, adminId, action, ipAddress) {
   });
 
   const statusLabel = newStatus.replace(/_/g, ' ');
-  driverAlert.alertDriver(report.driverId, {
+  NotificationAdapter.alertDriver(report.driverId, {
     type: 'damage_update',
     title: 'Damage Report Updated',
     body: `Your damage report was reviewed — status: ${statusLabel}.`,
@@ -121,7 +120,7 @@ async function reviewDamageReport(reportId, adminId, action, ipAddress) {
     wsPayload: { status: newStatus, reportId },
   });
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'damage_reviewed',
     'Damage Report Updated',
     `Damage report ${reportId} was ${newStatus}.`,

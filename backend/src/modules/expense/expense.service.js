@@ -2,8 +2,7 @@ const prisma = require('../../config/database');
 const { NotFoundError, ConflictError, ValidationError, ForbiddenError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
-const { notifyAdmins } = require('../tracking/tracking.ws');
-const driverAlert = require('../../services/driverAlert.service');
+const NotificationAdapter = require('../../services/notificationAdapter.service');
 
 /**
  * Create an expense for a shift.
@@ -71,7 +70,7 @@ async function createExpense(data, driverId, ipAddress) {
   });
 
   if (status === 'pending') {
-    notifyAdmins('expense_pending', 'New Expense Approval', `Driver ${shift.driver.name} submitted a EGP${amount} expense for ${category.name}.`, {
+    NotificationAdapter.notifyAdmins('expense_pending', 'New Expense Approval', `Driver ${shift.driver.name} submitted a EGP${amount} expense for ${category.name}.`, {
       expenseId: expense.id,
       status,
       tripId,
@@ -79,7 +78,7 @@ async function createExpense(data, driverId, ipAddress) {
       categoryId,
     });
   } else {
-    notifyAdmins('expense_update', 'Expense Submitted', `Driver ${shift.driver.name} submitted an expense for ${category.name}.`, {
+    NotificationAdapter.notifyAdmins('expense_update', 'Expense Submitted', `Driver ${shift.driver.name} submitted an expense for ${category.name}.`, {
       expenseId: expense.id,
       status,
       tripId,
@@ -88,7 +87,7 @@ async function createExpense(data, driverId, ipAddress) {
     });
   }
 
-  driverAlert.notifyDriverWs(driverId, {
+  NotificationAdapter.notifyDriverWs(driverId, {
     type: 'expense_update',
     expenseId: expense.id,
     status,
@@ -255,7 +254,7 @@ async function reviewExpensesBulk({ expenseIds, action, rejectionReason }, admin
     byDriver.get(e.driverId).push(e.id);
   }
   for (const [driverId, updatedIds] of byDriver.entries()) {
-    driverAlert.alertDriver(driverId, {
+    NotificationAdapter.alertDriver(driverId, {
       type: 'expense_reviewed',
       title: status === 'approved' ? 'Expense Approved' : 'Expense Rejected',
       body: status === 'approved'
@@ -269,7 +268,7 @@ async function reviewExpensesBulk({ expenseIds, action, rejectionReason }, admin
     });
   }
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'expense_reviewed',
     'Expense Review Updated',
     `${pendingIds.length} expense(s) were ${status}.`,
@@ -343,7 +342,7 @@ async function reviewExpense(expenseId, adminId, action, rejectionReason, ipAddr
     ipAddress,
   });
 
-  driverAlert.alertDriver(expense.driverId, {
+  NotificationAdapter.alertDriver(expense.driverId, {
     type: 'expense_reviewed',
     title: status === 'approved' ? 'Expense Approved' : 'Expense Rejected',
     body: status === 'approved'
@@ -357,7 +356,7 @@ async function reviewExpense(expenseId, adminId, action, rejectionReason, ipAddr
     },
   });
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'expense_reviewed',
     'Expense Review Updated',
     `Expense ${expenseId} was ${status}.`,

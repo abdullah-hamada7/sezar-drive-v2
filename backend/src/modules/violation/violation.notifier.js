@@ -1,4 +1,4 @@
-const driverAlert = require('../../services/driverAlert.service');
+const NotificationAdapter = require('../../services/notificationAdapter.service');
 
 /**
  * ViolationNotifier — alerts drivers when a traffic violation is recorded.
@@ -8,7 +8,7 @@ class ViolationNotifier {
     const fineAmount = violation.fineAmount != null ? Number(violation.fineAmount) : 0;
     const location = violation.location || 'See details in the app';
 
-    driverAlert.alertDriver(driverId, {
+    NotificationAdapter.alertDriver(driverId, {
       type: 'violation_created',
       title: 'Traffic Violation Recorded',
       body: `Violation #${violation.violationNumber} — fine ${fineAmount.toFixed(2)} at ${location}`,

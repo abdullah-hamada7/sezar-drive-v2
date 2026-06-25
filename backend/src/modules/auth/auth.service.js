@@ -7,8 +7,7 @@ const fileService = require('../../services/FileService');
 const faceVerificationService = require('../../services/FaceVerificationService');
 const { UnauthorizedError, ForbiddenError, ValidationError, ConflictError, NotFoundError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
-const { notifyAdmins } = require('../tracking/tracking.ws');
-const driverAlert = require('../../services/driverAlert.service');
+const NotificationAdapter = require('../../services/notificationAdapter.service');
 
 const REFRESH_TOKEN_LIFETIME_DAYS = 7;
 const REFRESH_ROTATION_GRACE_SECONDS = 20;
@@ -339,7 +338,7 @@ async function uploadIdentityPhoto(driverId, { photoUrl, idCardFront, idCardBack
     ipAddress,
   });
 
-  notifyAdmins('identity_upload', 'New Identity Verification', `Driver ${user.name} has uploaded a new identity photo for review.`, { driverId });
+  NotificationAdapter.notifyAdmins('identity_upload', 'New Identity Verification', `Driver ${user.name} has uploaded a new identity photo for review.`, { driverId });
 
   return {
     verification: await fileService.signIdentityVerification(verification),
@@ -407,7 +406,7 @@ async function reviewIdentity(id, adminId, action, rejectionReason, ipAddress) {
     ipAddress,
   });
 
-  driverAlert.alertDriver(verification.driverId, {
+  NotificationAdapter.alertDriver(verification.driverId, {
     type: 'identity_update',
     title: status === 'approved' ? 'Identity Verified' : 'Identity Verification Update',
     body: status === 'approved'
@@ -417,7 +416,7 @@ async function reviewIdentity(id, adminId, action, rejectionReason, ipAddress) {
     wsPayload: { status, reason: rejectionReason },
   });
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'identity_reviewed',
     'Identity Review Updated',
     `Driver identity was ${status}.`,

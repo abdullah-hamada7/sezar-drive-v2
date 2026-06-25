@@ -1,7 +1,7 @@
 const prisma = require('../../config/database');
 const jwt = require('jsonwebtoken');
 const config = require('../../config');
-const { notifyAdmins } = require('../tracking/tracking.ws');
+const NotificationAdapter = require('../../services/notificationAdapter.service');
 const { ValidationError, NotFoundError, ConflictError } = require('../../errors');
 
 /**
@@ -39,7 +39,7 @@ async function requestRescue(email) {
   });
 
   // Notify admins via WebSocket
-  notifyAdmins('rescue_request', 'Password Rescue Requested', `Driver ${user.name} is requesting a password rescue code.`, {
+  NotificationAdapter.notifyAdmins('rescue_request', 'Password Rescue Requested', `Driver ${user.name} is requesting a password rescue code.`, {
     requestId: request.id,
     driverId: user.id,
     driverName: user.name,

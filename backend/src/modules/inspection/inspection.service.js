@@ -3,7 +3,7 @@ const { ConflictError, NotFoundError, ValidationError, ForbiddenError } = requir
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
 const { sanitizeDeep } = require('../../utils/sanitize');
-const { notifyAdmins } = require('../tracking/tracking.ws');
+const NotificationAdapter = require('../../services/notificationAdapter.service');
 
 /**
  * Create a full or checklist inspection for a shift.
@@ -36,7 +36,7 @@ async function createInspection(data, driverId, ipAddress) {
     ipAddress,
   });
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'inspection_created',
     'Inspection Created',
     'A driver created a new inspection.',
@@ -60,7 +60,7 @@ async function uploadInspectionPhoto(inspectionId, direction, photoUrl, driverId
     data: { inspectionId, direction, photoUrl },
   });
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'inspection_photo_uploaded',
     'Inspection Photo Uploaded',
     'A driver uploaded an inspection photo.',
@@ -116,7 +116,7 @@ async function completeInspection(inspectionId, driverId, checklistData, ipAddre
     ipAddress,
   });
 
-  notifyAdmins(
+  NotificationAdapter.notifyAdmins(
     'inspection_completed',
     'Inspection Completed',
     'A driver completed an inspection.',

@@ -1,7 +1,7 @@
 # Fleet Management Platform — API Specification
 
-**Version:** 1.1
-**Date:** 2026-02-17
+**Version:** 1.2  
+**Date:** 2026-06-25  
 **Base URL:** `/api/v1`
 
 ---
@@ -79,7 +79,7 @@
 | Method | Endpoint | Auth | Role | Description | Request Body |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/` | Bearer | Driver | Create inspection entry | `shiftId`, `vehicleId`, `type` (full/checklist), `mileage` |
-| `POST` | `/:id/photos` | Bearer | Driver | Upload inspection photo | `direction` (front/back/left/right), `photo` (file) |
+| `POST` | `/:id/photos` | Bearer | Driver | Upload inspection photo | `direction` (`front`/`back`/`left`/`right`/`dashboard`/`tank` + checklist extras), `photo` (file) |
 | `PUT` | `/:id/complete` | Bearer | Driver | Complete inspection | `checklistData` (JSON) |
 | `GET` | `/` | Bearer | Any | Get inspections for shift | Query: `shiftId` |
 
@@ -155,8 +155,71 @@
 ## 13. Audit Module (`/audit-logs`)
 
 | Method | Endpoint | Auth | Role | Description | Request Body |
-| :--- | :--- | : :--- | :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/` | Bearer | Admin | View system audit logs | Query: `actorId`, `entityType`, `actionType`, date range |
+
+---
+
+## 14. Notification Module (`/notifications`)
+
+In-app notification inbox. Populated by `driverAlert.service.js` for driver-facing events.
+
+| Method | Endpoint | Auth | Role | Description | Request Body |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/` | Bearer | Any | List notifications (paginated) | Query: `limit` (max 100), `offset` |
+| `GET` | `/unseen-count` | Bearer | Any | Badge count of unread notifications | - |
+| `PATCH` | `/mark-read` | Bearer | Any | Mark specific notifications read | `{ "ids": ["uuid", ...] }` |
+| `PATCH` | `/mark-all-read` | Bearer | Any | Mark all notifications read | - |
+
+**Response shape (`GET /`):** `{ notifications, total, unseenCount }`
+
+---
+
+## 15. Push Module (`/push`)
+
+Device registration for background alerts.
+
+| Method | Endpoint | Auth | Role | Description | Request Body |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/vapid-key` | Bearer | Any | Web Push VAPID public key (PWA) | - |
+| `POST` | `/subscribe` | Bearer | Any | Register Web Push subscription | `{ "subscription": { endpoint, keys } }` |
+| `POST` | `/unsubscribe` | Bearer | Any | Remove Web Push subscription | `{ "endpoint": "..." }` |
+| `POST` | `/register-device` | Bearer | Any | Register FCM token (Flutter) | `{ "token": "...", "platform": "android" \| "ios" }` |
+| `POST` | `/unregister-device` | Bearer | Any | Remove FCM token on logout | `{ "token": "..." }` |
+
+> Push delivery is triggered server-side via `push.service.sendNotificationToUser()` — not called directly by clients except for registration.
+
+---
+
+## 16. Violation Module (`/violations`)
+
+Admin-managed traffic violations. **Creating a violation alerts the driver** via unified alert service.
+
+| Method | Endpoint | Auth | Role | Description | Request Body |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/` | Bearer | Admin | Create violation | `driverId`, `vehicleId`, `date`, `time`, `location`, `violationNumber`, `fineAmount`, `photo` (optional file) |
+| `PUT` | `/:id` | Bearer | Admin | Update violation | Same fields (optional) + optional `photo` |
+| `DELETE` | `/:id` | Bearer | Admin | Delete violation | - |
+| `GET` | `/` | Bearer | Admin | List violations (paginated) | Query: `page`, `limit`, `driverId`, `vehicleId`, `startDate`, `endDate`, `search`, `sortBy`, `sortOrder` |
+| `GET` | `/export` | Bearer | Admin | Export violations CSV | Same query filters |
+| `GET` | `/my` | Bearer | Driver | List own violations | Query: pagination + date filters |
+| `GET` | `/options/drivers` | Bearer | Admin | Driver dropdown options | - |
+| `GET` | `/options/vehicles` | Bearer | Admin | Vehicle dropdown options | - |
+| `GET` | `/driver-stats` | Bearer | Admin | Daily violation stats by driver | Query: `date` |
+| `GET` | `/:id` | Bearer | Admin | Get violation by id | - |
+
+---
+
+## 17. Driver Badge Module (`/drivers`)
+
+Tab badge counts for the driver mobile/PWA shell.
+
+| Method | Endpoint | Auth | Role | Description | Request Body |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/badge-counts` | Bearer | Driver | Per-tab counts of new items | - |
+| `PATCH` | `/tabs/:tab/mark-viewed` | Bearer | Driver | Mark tab viewed (resets badge) | `:tab` = `trips` \| `shift` \| `inspection` \| `expenses` \| `damage` \| `violations` |
+
+> For `violations`, marking viewed also sets `seen_at` on all unseen violation records for that driver.
 
 ---
 
@@ -166,3 +229,4 @@
 |---------|------|--------|--------|
 | 1.0 | 2026-02-14 | Initial API Spec | Backend Developer |
 | 1.1 | 2026-02-17 | Added /stats and /verify modules; synced identity routes | Backend Developer |
+| 1.2 | 2026-06-25 | Added /notifications, /push, /violations, driver badge endpoints; six-photo inspection directions | Backend Developer |

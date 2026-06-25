@@ -1,10 +1,10 @@
 # Database Schema — Fleet Transportation & Trip Management Platform
 
-**Version:** 1.1  
+**Version:** 1.2  
 **Author Role:** Database Administrator  
-**Date:** 2026-02-17  
+**Date:** 2026-06-25  
 **Status:** Approved  
-**Input Artifacts:** `02-prd.md` v1.2, `03-architecture.md` v1.1  
+**Input Artifacts:** `02-prd.md` v1.2, `03-architecture.md` v1.4  
 
 ---
 
@@ -34,6 +34,12 @@ erDiagram
     
     users ||--o{ audit_logs : "actor"
     users ||--o{ vehicle_assignments : "assigned to"
+    users ||--o{ traffic_violations : "receives"
+    users ||--o{ notifications : "has"
+    users ||--o{ push_subscriptions : "subscribes"
+    users ||--o{ device_push_tokens : "registers"
+    users ||--o{ driver_tab_views : "views tabs"
+    vehicles ||--o{ traffic_violations : "cited on"
 ```
 
 ---
@@ -288,6 +294,87 @@ ON trips (driver_id) WHERE status IN ('Assigned', 'Started');
 
 **Seed config keys:** `shift_auto_timeout_hours`, `inspection_policy`, `tracking_interval_seconds`, `max_report_days`
 
+### 2.17 traffic_violations
+
+Admin-entered traffic citations linked to a driver and vehicle. Creating a record triggers a driver alert (push + WebSocket + notification).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | |
+| driver_id | UUID | FK → users(id), NOT NULL | Cited driver |
+| vehicle_id | UUID | FK → vehicles(id), NOT NULL | Vehicle involved |
+| violation_number | VARCHAR(50) | NOT NULL | Official citation number |
+| photo_url | VARCHAR(500) | nullable | S3 key for violation photo |
+| date | DATE | NOT NULL | Violation date |
+| time | VARCHAR(10) | NOT NULL | HH:MM |
+| location | VARCHAR(255) | NOT NULL | Location description |
+| fine_amount | DECIMAL(10,2) | NOT NULL | Fine in EGP |
+| seen_at | TIMESTAMPTZ | nullable | When driver viewed violations tab |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+
+**Indexes:** `(driver_id)`, `(vehicle_id)`, `(date)`, `(driver_id, seen_at)`
+
+### 2.18 driver_tab_views
+
+Tracks when a driver last opened each app tab. Used with entity timestamps to compute badge counts (`GET /drivers/badge-counts`).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| driver_id | UUID | FK → users(id), PK (composite) | |
+| tab_name | VARCHAR(20) | PK (composite) | `trips`, `shift`, `inspection`, `expenses`, `damage`, `violations` |
+| viewed_at | TIMESTAMPTZ | NOT NULL | Last tab open time |
+
+**Primary key:** `(driver_id, tab_name)`
+
+### 2.19 push_subscriptions
+
+Web Push (VAPID) subscriptions for the driver PWA.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | |
+| user_id | UUID | FK → users(id), NOT NULL | |
+| endpoint | TEXT | UNIQUE, NOT NULL | Push service endpoint URL |
+| keys | JSONB | NOT NULL | `{ auth, p256dh }` |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+
+**Index:** `(user_id)`
+
+### 2.20 device_push_tokens
+
+FCM registration tokens for Flutter mobile clients.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | |
+| user_id | UUID | FK → users(id), ON DELETE CASCADE, NOT NULL | |
+| token | VARCHAR(512) | UNIQUE, NOT NULL | FCM device token |
+| platform | VARCHAR(20) | NOT NULL | `android` or `ios` |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+
+**Index:** `(user_id)`
+
+### 2.21 notifications
+
+Persistent in-app notification inbox for drivers (and any user receiving alerts).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | UUID | PK | |
+| user_id | UUID | FK → users(id), NOT NULL | Recipient |
+| title | VARCHAR(255) | NOT NULL | Notification title |
+| body | VARCHAR(1000) | NOT NULL | Notification body |
+| type | VARCHAR(50) | NOT NULL | Event type (e.g. `trip_assigned`, `traffic_violation`) |
+| entity_id | VARCHAR(255) | nullable | Related trip/shift/violation id |
+| is_read | BOOLEAN | NOT NULL, DEFAULT false | Read state |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT NOW() | |
+
+**Indexes:** `(user_id, is_read)`, `(user_id, created_at)`
+
+> **Migration:** Table created by `20260625120000_add_notifications`. Run `npx prisma migrate deploy` on production after pull.
+
 ---
 
 ## 3. Seed Data
@@ -321,3 +408,4 @@ INSERT INTO admin_config (key, value) VALUES
 |---------|------|--------|--------|
 | 1.0 | 2026-02-14 | Initial schema | Database Administrator |
 | 1.1 | 2026-02-17 | Synced with schema.prisma: added identity fields, language, and validation states | Database Administrator |
+| 1.2 | 2026-06-25 | Added traffic_violations, notifications, push_subscriptions, device_push_tokens, driver_tab_views | Database Administrator |

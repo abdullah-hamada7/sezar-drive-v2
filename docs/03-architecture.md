@@ -1,10 +1,10 @@
 # Architecture Document — Sezar Drive
 
-**Version:** 1.1  
+**Version:** 1.4  
 **Author Role:** Solutions Architect  
-**Date:** 2026-02-17  
+**Date:** 2026-06-25  
 **Status:** Approved  
-**Input Artifacts:** `01-strategy.md` v1.0, `02-prd.md` v1.2  
+**Input Artifacts:** `01-strategy.md` v1.0, `02-prd.md` v1.2, `09-driver-alerts-and-notifications.md` v1.0  
 
 ---
 
@@ -31,7 +31,7 @@ Modules are internally isolated with clear interfaces, enabling future microserv
 ```mermaid
 graph TB
     Admin["Admin User<br/>(Web Browser)"]
-    Driver["Driver<br/>(Mobile Browser)"]
+    Driver["Driver<br/>(PWA + Flutter APK)"]
     
     System["Fleet Management Platform<br/>(Modular Monolith)"]
     
@@ -65,7 +65,8 @@ graph TB
 graph TB
     subgraph "Client Layer"
         AdminUI["Admin Dashboard<br/>(React SPA)"]
-        DriverUI["Driver App<br/>(React Mobile-First)"]
+        DriverUI["Driver PWA<br/>(React Mobile-First)"]
+        FlutterApp["Driver Native App<br/>(Flutter Android/iOS)"]
     end
     
     subgraph "API Layer"
@@ -85,6 +86,9 @@ graph TB
         Tracking["Tracking Module"]
         Report["Report Module"]
         Audit["Audit Module"]
+        Push["Push Module<br/>(FCM + VAPID)"]
+        Notify["Notification Module"]
+        Violation["Violation Module"]
     end
     
     subgraph "Data Layer"
@@ -95,7 +99,9 @@ graph TB
     
     AdminUI --> Gateway
     DriverUI --> Gateway
+    FlutterApp --> Gateway
     DriverUI --> WS
+    FlutterApp --> WS
     AdminUI --> WS
     
     Gateway --> Auth
@@ -108,6 +114,9 @@ graph TB
     Gateway --> Damage
     Gateway --> Report
     Gateway --> Tracking
+    Gateway --> Push
+    Gateway --> Notify
+    Gateway --> Violation
     
     WS --> Tracking
     
@@ -150,6 +159,9 @@ graph TB
 | **Tracking** | GPS location updates, WebSocket broadcast, history | Driver, Audit |
 | **Report** | PDF/Excel generation, revenue aggregation | Trip, Expense, Driver |
 | **Audit** | Immutable logging, query interface | None (leaf module) |
+| **Push** | FCM device tokens, Web Push VAPID subscriptions | Auth |
+| **Notification** | In-app notification inbox, badge counts | Auth, Push |
+| **Violation** | Traffic violation CRUD, driver alerts on create | Auth, Audit, `driverAlert.service` |
 
 ---
 
@@ -428,6 +440,61 @@ sequenceDiagram
 
 ---
 
+## 11. Flutter Native Client & Driver Alert Architecture
+
+### 11.1 Client strategy
+
+Sezar Drive serves drivers through **two first-class clients**:
+
+| Client | Stack | Primary use |
+|--------|-------|-------------|
+| **Driver PWA** | React 19 + Vite | Browser-based drivers; Web Push (VAPID) |
+| **Driver native app** | Flutter 3.10+ | APK distribution; FCM push; offline cache |
+
+Both share the same REST API (`/api/v1`), WebSocket endpoint (`/ws/tracking`), and alert event type constants. The Flutter app is the **primary** field client for camera-heavy flows (face capture, QR scan, six-photo inspection).
+
+**Key Flutter modules:** `mobile/lib/src/features/{shift,inspection,trip,notifications}`  
+**Navigation:** `IndexedStack` tab shell; shift-start inspection opens as a **pushed route** (not tab switch) to preserve camera wizard state.  
+**Offline resilience:** Hive-backed inspection draft persistence; silent shift refresh during WebSocket updates.
+
+See [../mobile/README.md](../mobile/README.md) and [09-driver-alerts-and-notifications.md](09-driver-alerts-and-notifications.md).
+
+### 11.2 Unified driver alerting
+
+All admin/system events that affect a driver fan out through **`backend/src/services/driverAlert.service.js`**:
+
+```mermaid
+graph LR
+    Trip[Trip Notifier] --> Alert[driverAlert.service]
+    Shift[Shift Notifier] --> Alert
+    Violation[Violation Service] --> Alert
+    Expense[Expense Service] --> Alert
+    Damage[Damage Service] --> Alert
+    Auth[Auth Service] --> Alert
+    
+    Alert --> WS[WebSocket notifyDriver]
+    Alert --> DB[(notifications table)]
+    Alert --> Push[push.service]
+    Push --> FCM[FCM multicast]
+    Push --> VAPID[Web Push VAPID]
+```
+
+**Why centralize:** Ensures every operational event reaches drivers via push, real-time socket, and persisted inbox — preventing channel drift when new event types are added.
+
+**Driver-initiated events** (e.g. expense submitted) use `notifyDriverWs()` only — no duplicate push when the UI is already active.
+
+### 11.3 Inspection media flow
+
+Pre-shift full inspections require **six S3 photos**: `front`, `back`, `left`, `right`, `dashboard`, `tank`.
+
+1. Mobile `POST /inspections` → creates inspection record  
+2. Mobile `POST /inspections/:id/photos` (×6) → `FileService.upload(file, 'inspections')`  
+3. S3 keys stored in `inspection_photos`; clients receive presigned URLs  
+
+Draft photos are cached locally (Hive) until upload succeeds; see `mobile/lib/src/features/inspection/cubit/inspection_cubit.dart`.
+
+---
+
 ## Change Log
 
 | Version | Date | Change | Author |
@@ -436,3 +503,4 @@ sequenceDiagram
 | 1.1 | 2026-02-17 | Updated Shift/Trip states, Rekognition flow, and API mapping | Solutions Architect |
 | 1.2 | 2026-02-21 | Added Elastic IP for stable connectivity | Solutions Architect |
 | 1.3 | 2026-02-21 | Removed Route 53 to stay in Free Tier; shifted to External DNS | Solutions Architect |
+| 1.4 | 2026-06-25 | Flutter native client, unified driver alerts, push/notification/violation modules, inspection S3 flow | Solutions Architect |
