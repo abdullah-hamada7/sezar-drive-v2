@@ -46,6 +46,9 @@ async function startServer() {
     locationLogBuffer.start();
     locationLogRetention.startSchedule();
 
+    // 3b. Register event handlers (after DB is ready but before server starts)
+    require('./modules/shift/shift.eventHandlers').register();
+
     // 4. Explicitly connect to database with retries
     let connected = false;
     let retries = 5;

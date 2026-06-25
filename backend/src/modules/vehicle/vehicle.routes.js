@@ -2,8 +2,8 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const { validationResult } = require('express-validator');
 const vehicleService = require('./vehicle.service');
-const shiftService = require('../shift/shift.service');
 const prisma = require('../../config/database');
+const eventBus = require('../../services/eventBus');
 const { authenticate, enforcePasswordChanged, authorize } = require('../../middleware/auth');
 const { ValidationError } = require('../../errors');
 const { sendCsv } = require('../../utils/csv');
@@ -201,28 +201,13 @@ router.post(
       handleValidation(req);
       const vehicle = await vehicleService.validateQrCode(req.body.qrCode);
 
-      let shift = await prisma.shift.findFirst({
-        where: { driverId: req.user.id, status: { in: ['PendingVerification', 'Active'] } },
-        orderBy: { createdAt: 'desc' }
+      const [result] = await eventBus.emitAsync('vehicle:qrScanned', {
+        vehicle,
+        driverId: req.user.id,
+        clientIp: req.clientIp,
       });
 
-      if (!shift) {
-        // Auto-create shift if none exists, as requested for the Home -> Assign flow
-        shift = await shiftService.createShift(req.user.id, req.clientIp);
-      }
-
-      // Assign vehicle
-      const assignment = await vehicleService.assignVehicle(
-        vehicle.id, req.user.id, shift.id, req.user.id, req.clientIp
-      );
-
-      // Also update shift with vehicleId
-      await prisma.shift.update({
-        where: { id: shift.id },
-        data: { vehicleId: vehicle.id }
-      });
-
-      res.json(assignment);
+      res.json(result?.assignment || { message: 'Vehicle validated', vehicleId: vehicle.id });
     } catch (err) { next(err); }
   }
 );

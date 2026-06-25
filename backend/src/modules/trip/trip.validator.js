@@ -1,14 +1,8 @@
 const prisma = require('../../config/database');
 const { ConflictError, NotFoundError, ForbiddenError } = require('../../errors');
+const PreconditionValidator = require('../../services/preconditionValidator.service');
 
-/**
- * TripValidator
- * Decouples validation logic from TripService.
- */
 class TripValidator {
-  /**
-   * Validate preconditions for assigning a trip.
-   */
   static async validateAssignmentPreconditions(driverId, options = {}) {
     const { shiftId, vehicleId, allowUnassigned = false } = options;
     const driver = await prisma.user.findUnique({ where: { id: driverId } });
@@ -123,45 +117,16 @@ class TripValidator {
     return { driver, shift: assignment.shift, assignment };
   }
 
-  /**
-   * Validate preconditions for starting a trip.
-   */
   static async validateStartPreconditions(tripId, driverId) {
     const trip = await prisma.trip.findUnique({ where: { id: tripId } });
     if (!trip) throw new NotFoundError('Trip');
     if (trip.driverId !== driverId) throw new ForbiddenError('FORBIDDEN', 'Not your trip');
 
-    // Verify active shift
-    const shift = await prisma.shift.findFirst({
-      where: { driverId, status: 'Active' },
-    });
-    if (!shift) {
-      throw new ConflictError('NO_ACTIVE_SHIFT', 'No active shift');
-    }
+    const shift = await PreconditionValidator.shiftOpen(trip.shiftId, driverId);
+    await PreconditionValidator.driverIdentityVerified(driverId);
+    const assignment = await PreconditionValidator.vehicleAssigned(shift.id, driverId);
+    const inspection = await PreconditionValidator.inspectionCompleted(shift.id, driverId);
 
-    // Verify identity
-    const driver = await prisma.user.findUnique({ where: { id: driverId } });
-    if (!driver.identityVerified) {
-      throw new ForbiddenError('IDENTITY_NOT_VERIFIED', 'Identity not verified');
-    }
-
-    // Verify vehicle assigned
-    const assignment = await prisma.vehicleAssignment.findFirst({
-      where: { driverId, shiftId: shift.id, active: true },
-    });
-    if (!assignment) {
-      throw new ConflictError('NO_VEHICLE_ASSIGNED', 'No vehicle assigned');
-    }
-
-    // Verify inspection completed
-    const inspection = await prisma.inspection.findFirst({
-      where: { shiftId: shift.id, driverId, status: 'completed' },
-    });
-    if (!inspection) {
-      throw new ConflictError('INSPECTION_REQUIRED', 'Inspection not completed');
-    }
-
-    // Verify scheduled time (don't start too early)
     if (trip.scheduledTime) {
       const now = new Date();
       const scheduled = new Date(trip.scheduledTime);
@@ -173,7 +138,7 @@ class TripValidator {
       }
     }
 
-    return { trip, shift, driver, assignment, inspection };
+    return { trip, shift, driver: undefined, assignment, inspection };
   }
 }
 

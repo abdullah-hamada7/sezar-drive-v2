@@ -1,40 +1,19 @@
-import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
 import { driverService as api } from '../../services/driver.service';
-import { ToastContext } from '../../contexts/toastContext';
 import { Plus, Search, Edit, Trash2, X, UserCheck, UserX, Download } from 'lucide-react';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import { EMAIL_REGEX, EGYPT_PHONE_REGEX } from '../../utils/validation';
-import Pagination from '../../components/common/Pagination';
-import { ListError, ListLoading } from '../../components/common/ListStates';
+import { useAdminTable } from '../../hooks/useAdminTable';
 import { downloadApiFile } from '../../utils/download';
 
 export default function DriversPage() {
   const { t } = useTranslation();
-  const { addToast } = useContext(ToastContext);
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const page = useMemo(() => Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1), [searchParams]);
-  const limit = useMemo(() => {
-    const n = parseInt(searchParams.get('limit') || '15', 10) || 15;
-    return Math.min(Math.max(n, 5), 100);
-  }, [searchParams]);
-  const search = useMemo(() => String(searchParams.get('search') || ''), [searchParams]);
-  const statusFilter = useMemo(() => String(searchParams.get('status') || 'active'), [searchParams]);
-
-  const setQuery = useCallback((patch) => {
-    const next = new URLSearchParams(searchParams);
-    Object.entries(patch || {}).forEach(([k, v]) => {
-      if (v === undefined || v === null || v === '' || v === false) next.delete(k);
-      else next.set(k, String(v));
-    });
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
-  const [drivers, setDrivers] = useState([]);
-  const [pagination, setPagination] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const {
+    page, limit, search, statusFilter, setQuery, buildParams, clearFilters,
+    items: drivers, setItems: setDrivers, pagination, loading, loadError,
+    setPagination, setLoading, setLoadError, addToast,
+  } = useAdminTable({ defaultStatus: 'active' });
   const [showModal, setShowModal] = useState(false);
   const [editDriver, setEditDriver] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', phone: '', licenseNumber: '', password: '' });
@@ -74,9 +53,8 @@ export default function DriversPage() {
     setLoading(true);
     setLoadError('');
     try {
-      const params = new URLSearchParams({ page, limit, status: statusFilter });
-      if (search) params.set('search', search);
-      const res = await api.getDrivers(params.toString());
+      const params = buildParams({ status: statusFilter });
+      const res = await api.getDrivers(params);
       setDrivers(res.data.drivers || []);
       setPagination(res.data || {});
     } catch (err) {
@@ -86,7 +64,7 @@ export default function DriversPage() {
       addToast(msg, 'error');
     }
     finally { setLoading(false); }
-  }, [addToast, limit, page, search, statusFilter, t]);
+  }, [addToast, buildParams, setDrivers, setLoading, setLoadError, setPagination, statusFilter, t]);
 
   async function handleExportCsv() {
     setExporting(true);
@@ -323,7 +301,7 @@ export default function DriversPage() {
         <ListError
           message={loadError}
           onRetry={load}
-          onClearFilters={() => setQuery({ search: '', status: 'active', page: 1 })}
+          onClearFilters={clearFilters}
         />
       ) : (
         <div className="table-container">
