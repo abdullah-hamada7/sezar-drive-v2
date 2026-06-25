@@ -70,8 +70,6 @@ class WebSocketService {
       : _dioClient = dioClient,
         _localNotifications = localNotifications;
 
-  String _buildWsUrl(String token) => '${AppConfig.wsBaseUrl}/ws/tracking?token=$token';
-
   Future<void> connect() async {
     if (_isConnected) return;
     _token = await _storage.getToken();
@@ -86,7 +84,10 @@ class WebSocketService {
       _token = await _storage.getToken();
       if (_token == null) return;
 
-      _channel = WebSocketChannel.connect(Uri.parse(_buildWsUrl(_token!)));
+      _channel = WebSocketChannel.connect(
+        Uri.parse('${AppConfig.wsBaseUrl}/ws/tracking'),
+        protocols: ['bearer', _token!],
+      );
       _isConnected = true;
       _reconnectAttempts = 0;
       RealtimeGuard.resetStream('driver');

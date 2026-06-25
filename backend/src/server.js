@@ -38,11 +38,13 @@ async function startServer() {
     const config = require('./config');
     const prisma = require('./config/database');
     const cache = require('./services/cache.service');
+    const wsBroadcast = require('./services/wsBroadcast.service');
     const locationLogBuffer = require('./services/locationLogBuffer.service');
     const locationLogRetention = require('./jobs/locationLogRetention.job');
     const { initWebSocketServer } = require('./modules/tracking/tracking.ws');
 
     await cache.connect();
+    await wsBroadcast.connect();
     locationLogBuffer.start();
     locationLogRetention.startSchedule();
 
@@ -96,7 +98,7 @@ async function startServer() {
     });
 
     // Handle graceful shutdown
-    setupGracefulShutdown(server, prisma, cache, locationLogBuffer, locationLogRetention);
+    setupGracefulShutdown(server, prisma, cache, wsBroadcast, locationLogBuffer, locationLogRetention);
 
   } catch (error) {
     console.error('FAILED TO START SERVER:', error);
@@ -107,7 +109,7 @@ async function startServer() {
 /**
  * Setup process signal handlers for graceful shutdown
  */
-function setupGracefulShutdown(server, prisma, cache, locationLogBuffer, locationLogRetention) {
+function setupGracefulShutdown(server, prisma, cache, wsBroadcast, locationLogBuffer, locationLogRetention) {
   const shutdown = (signal) => {
     console.log(`${signal} received. Shutting down gracefully...`);
     server.close(() => {
@@ -116,6 +118,7 @@ function setupGracefulShutdown(server, prisma, cache, locationLogBuffer, locatio
         .then(() => locationLogBuffer.flushAll())
         .then(() => locationLogBuffer.stop())
         .then(() => locationLogRetention.stopSchedule())
+        .then(() => wsBroadcast.disconnect())
         .then(() => cache.disconnect())
         .then(() => prisma?.$disconnect?.())
         .catch(() => { })

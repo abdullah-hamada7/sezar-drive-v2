@@ -1,4 +1,4 @@
-const { notifyDriver } = require('../modules/tracking/tracking.ws');
+const wsBroadcast = require('./wsBroadcast.service');
 const pushService = require('./push.service');
 const notificationService = require('./notification.service');
 
@@ -38,7 +38,7 @@ async function alertDriver(driverId, {
 }) {
   if (!driverId || !type) return;
 
-  notifyDriver(driverId, {
+  wsBroadcast.notifyDriver(driverId, {
     type,
     entityId,
     ...wsPayload,
@@ -80,7 +80,7 @@ async function alertDriver(driverId, {
  */
 function notifyDriverWs(driverId, payload) {
   if (!driverId) return;
-  notifyDriver(driverId, payload);
+  wsBroadcast.notifyDriver(driverId, payload);
 }
 
-module.exports = { alertDriver, notifyDriverWs };
+module.exports = { alertDriver, notifyDriverWs, notifyAdmins: wsBroadcast.notifyAdmins };

@@ -23,6 +23,9 @@ Sezar Drive documentation spans **strategy → requirements → architecture →
 | [01-strategy.md](01-strategy.md) | 1.0 | Business strategy, KPIs, risks |
 | [02-prd.md](02-prd.md) | 1.2 | Product requirements & acceptance criteria |
 | [adr-001-device-verification.md](adr-001-device-verification.md) | — | Device binding ADR |
+| [adr-002-notification-entry-point.md](adr-002-notification-entry-point.md) | — | NotificationAdapter pattern |
+| [adr-003-flutter-primary-driver.md](adr-003-flutter-primary-driver.md) | — | Flutter primary client |
+| [adr-004-websocket-redis-relay.md](adr-004-websocket-redis-relay.md) | — | WS horizontal scaling |
 
 ### Architecture & Design
 

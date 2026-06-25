@@ -6,7 +6,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ToastContext } from '../../contexts/toastContext';
-import { buildTrackingWsUrl } from '../../utils/trackingWs';
+import { openTrackingWebSocket } from '../../utils/trackingWs';
 import { evaluateRealtimeEvent, resetRealtimeStream } from '../../utils/realtimeGuard';
 import { http } from '../../services/http.service';
 import { ListEmpty, ListError, ListLoading } from '../../components/common/ListStates';
@@ -183,7 +183,7 @@ export default function TrackingPage() {
     if (!token) return;
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 
-    const ws = new WebSocket(buildTrackingWsUrl(token));
+    const ws = openTrackingWebSocket(token);
     wsRef.current = ws;
 
     ws.onopen = () => {

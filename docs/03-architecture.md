@@ -493,6 +493,15 @@ Pre-shift full inspections require **six S3 photos**: `front`, `back`, `left`, `
 
 Draft photos are cached locally (Hive) until upload succeeds; see `mobile/lib/src/features/inspection/cubit/inspection_cubit.dart`.
 
+### 11.4 WebSocket scaling
+
+Driver/admin real-time events are delivered through `wsBroadcast.service.js`:
+
+- **Local delivery** to connected clients on the same Node process
+- **Redis pub/sub relay** (`sezar:ws:relay`) when `REDIS_URL` is configured — enables horizontal API scaling
+
+WebSocket auth accepts JWT via `Sec-WebSocket-Protocol: bearer, <token>` (preferred), query param (legacy), or `Authorization` header.
+
 ---
 
 ## Change Log
@@ -504,3 +513,4 @@ Draft photos are cached locally (Hive) until upload succeeds; see `mobile/lib/sr
 | 1.2 | 2026-02-21 | Added Elastic IP for stable connectivity | Solutions Architect |
 | 1.3 | 2026-02-21 | Removed Route 53 to stay in Free Tier; shifted to External DNS | Solutions Architect |
 | 1.4 | 2026-06-25 | Flutter native client, unified driver alerts, push/notification/violation modules, inspection S3 flow | Solutions Architect |
+| 1.5 | 2026-06-25 | WebSocket Redis relay, verification review via shift.service, WS subprotocol auth | Solutions Architect |

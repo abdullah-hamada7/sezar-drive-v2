@@ -13,7 +13,7 @@ import BrandIcon from '../../components/BrandIcon';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import './AdminLayout.css';
 import { statsService } from '../../services/stats.service';
-import { buildTrackingWsUrl } from '../../utils/trackingWs';
+import { openTrackingWebSocket } from '../../utils/trackingWs';
 import { playNotificationSound } from '../../utils/notificationSound';
 import { evaluateRealtimeEvent, resetRealtimeStream } from '../../utils/realtimeGuard';
 import { http } from '../../services/http.service';
@@ -98,7 +98,7 @@ export default function AdminLayout() {
       }
       if (!token) return;
 
-      const ws = new WebSocket(buildTrackingWsUrl(token));
+      const ws = openTrackingWebSocket(token);
       wsRef.current = ws;
 
       ws.onopen = () => {

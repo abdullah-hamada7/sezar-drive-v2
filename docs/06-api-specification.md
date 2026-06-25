@@ -223,6 +223,44 @@ Tab badge counts for the driver mobile/PWA shell.
 
 ---
 
+## 18. Route Aliases (Spec Compatibility)
+
+The same router modules are mounted at canonical and alias paths in `backend/src/app.js`:
+
+| Alias path | Canonical module | Notes |
+|------------|------------------|-------|
+| `/api/v1/admin/drivers` | `/drivers` | Admin driver CRUD |
+| `/api/v1/admin/trips` | `/trips` | Admin trip management |
+| `/api/v1/driver/trips` | `/trips` | Driver-scoped trip actions |
+| `/api/v1/driver/shifts` | `/shifts` | Driver shift lifecycle |
+| `/api/v1/driver/expenses` | `/expenses` | Driver expenses |
+| `/api/v1/driver/damage` | `/damage-reports` | Driver damage reports |
+| `POST /api/v1/driver/location/batch` | `/tracking/batch` | GPS batch upload alias |
+
+Prefer **canonical paths** in new clients. Aliases exist for legacy spec contracts.
+
+---
+
+## 19. WebSocket (`/ws/tracking`)
+
+Real-time GPS and driver/admin notifications.
+
+| Auth method | Format | Preferred |
+|-------------|--------|-----------|
+| Subprotocol | `Sec-WebSocket-Protocol: bearer, <JWT>` | Yes (avoids token in URL logs) |
+| Query param | `?token=<JWT>` | Legacy fallback |
+| Header | `Authorization: Bearer <JWT>` | Server-side clients |
+
+**Client example (browser):**
+
+```javascript
+const ws = new WebSocket('wss://host/ws/tracking', ['bearer', accessToken]);
+```
+
+**Multi-instance:** When `REDIS_URL` is set, notifications and position broadcasts relay across API instances via Redis pub/sub (`wsBroadcast.service.js`).
+
+---
+
 ## Change Log
 
 | Version | Date | Change | Author |
@@ -230,3 +268,4 @@ Tab badge counts for the driver mobile/PWA shell.
 | 1.0 | 2026-02-14 | Initial API Spec | Backend Developer |
 | 1.1 | 2026-02-17 | Added /stats and /verify modules; synced identity routes | Backend Developer |
 | 1.2 | 2026-06-25 | Added /notifications, /push, /violations, driver badge endpoints; six-photo inspection directions | Backend Developer |
+| 1.3 | 2026-06-25 | Route alias table, WebSocket auth & Redis relay notes | Backend Developer |

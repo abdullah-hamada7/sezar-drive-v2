@@ -2,6 +2,7 @@ const prisma = require('../../config/database');
 const { ConflictError, ForbiddenError, NotFoundError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const { SHIFT_STATE_MACHINE } = require('../../services/state-machine');
+const { DriverVerificationStatus } = require('../../config/constants');
 const FileService = require('../../services/FileService');
 const vehicleService = require('../vehicle/vehicle.service');
 const ShiftValidator = require('./shift.validator');
@@ -322,7 +323,113 @@ async function getShiftById(id, requestingUser = null) {
   return signedShift;
 }
 
+/**
+ * Admin review of shift face verification (manual review queue).
+ * APPROVE: admin override — activates shift without standard activation preconditions.
+ * REJECT: closes shift with rejected verification status.
+ */
+async function adminReviewShiftVerification(shiftId, adminId, decision, reason, ipAddress) {
+  const shift = await prisma.shift.findUnique({ where: { id: shiftId } });
+  if (!shift) throw new NotFoundError('Shift');
+
+  if (shift.status !== 'PendingVerification') {
+    throw new ConflictError('INVALID_SHIFT_STATE', 'Shift is not pending verification review');
+  }
+
+  const normalizedDecision = String(decision).toUpperCase();
+
+  if (normalizedDecision === 'APPROVE') {
+    validateShiftTransition(shift.status, 'Active');
+
+    const updated = await prisma.shift.updateMany({
+      where: { id: shiftId, version: shift.version },
+      data: {
+        verificationStatus: DriverVerificationStatus.VERIFIED,
+        status: 'Active',
+        startedAt: new Date(),
+        version: { increment: 1 },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new ConflictError('CONCURRENT_MODIFICATION', 'Shift was modified concurrently');
+    }
+
+    await AuditService.logOverride({
+      actorId: adminId,
+      actionType: 'shift.verification_approved',
+      entityType: 'shift',
+      entityId: shiftId,
+      previousState: {
+        status: shift.status,
+        verificationStatus: shift.verificationStatus,
+      },
+      newState: {
+        status: 'Active',
+        verificationStatus: DriverVerificationStatus.VERIFIED,
+      },
+      ipAddress,
+      metadata: {
+        skippedPreconditions: ['vehicle_assignment', 'inspection', 'driver_activate_flow'],
+      },
+    }, reason || 'Admin approved manual face verification review');
+
+    ShiftNotifier.onShiftActivated(shiftId, shift.driverId, shift.vehicleId);
+
+    return prisma.shift.findUnique({ where: { id: shiftId } });
+  }
+
+  if (normalizedDecision === 'REJECT') {
+    validateShiftTransition(shift.status, 'Closed');
+
+    const updated = await prisma.shift.updateMany({
+      where: { id: shiftId, version: shift.version },
+      data: {
+        verificationStatus: DriverVerificationStatus.REJECTED,
+        rejectionReason: reason || 'Identity verification failed',
+        status: 'Closed',
+        closedAt: new Date(),
+        closeReason: 'admin_override',
+        version: { increment: 1 },
+      },
+    });
+
+    if (updated.count === 0) {
+      throw new ConflictError('CONCURRENT_MODIFICATION', 'Shift was modified concurrently');
+    }
+
+    await AuditService.logOverride({
+      actorId: adminId,
+      actionType: 'shift.verification_rejected',
+      entityType: 'shift',
+      entityId: shiftId,
+      previousState: {
+        status: shift.status,
+        verificationStatus: shift.verificationStatus,
+      },
+      newState: {
+        status: 'Closed',
+        verificationStatus: DriverVerificationStatus.REJECTED,
+        closeReason: 'admin_override',
+      },
+      ipAddress,
+    }, reason || 'Identity verification failed');
+
+    ShiftNotifier.onShiftClosed(
+      shiftId,
+      shift.driverId,
+      'admin',
+      reason || 'Identity verification failed',
+      adminId,
+    );
+
+    return prisma.shift.findUnique({ where: { id: shiftId } });
+  }
+
+  throw new ConflictError('INVALID_DECISION', 'Decision must be APPROVE or REJECT');
+}
+
 module.exports = {
-  createShift, activateShift, closeShift, adminCloseShift,
+  createShift, activateShift, closeShift, adminCloseShift, adminReviewShiftVerification,
   getActiveShift, getShifts, getShiftById,
 };

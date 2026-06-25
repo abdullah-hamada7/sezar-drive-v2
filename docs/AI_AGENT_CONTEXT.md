@@ -116,7 +116,7 @@ NotificationAdapter.notifyDriverWs(driverId, { type: 'expense_update', expenseId
 NotificationAdapter.notifyAdmins('expense_pending', 'Title', 'Message', { expenseId });
 ```
 
-Implementation chain: `notificationAdapter.service.js` → `driverAlert.service.js` → WebSocket / `notification.service` / `push.service`.
+Implementation chain: `notificationAdapter.service.js` → `driverAlert.service.js` → `wsBroadcast.service.js` → local WS clients + Redis relay.
 
 ---
 

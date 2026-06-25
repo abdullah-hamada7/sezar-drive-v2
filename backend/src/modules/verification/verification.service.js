@@ -2,9 +2,9 @@ const prisma = require('../../config/database');
 const faceVerificationService = require('../../services/FaceVerificationService');
 const fileService = require('../../services/FileService');
 const NotificationAdapter = require('../../services/notificationAdapter.service');
-const ShiftNotifier = require('../shift/shift.notifier');
+const shiftService = require('../shift/shift.service');
 const { DriverVerificationStatus } = require('../../config/constants');
-const { ValidationError } = require('../../errors');
+const { ValidationError, ConflictError } = require('../../errors');
 
 async function verifyFace(referenceUrl, liveBuffer) {
   if (!referenceUrl) {
@@ -16,7 +16,7 @@ async function verifyFace(referenceUrl, liveBuffer) {
   return {
     status: verification.status,
     similarity: verification.similarity,
-    matched: verification.status === DriverVerificationStatus.VERIFIED
+    matched: verification.status === DriverVerificationStatus.VERIFIED,
   };
 }
 
@@ -35,25 +35,25 @@ async function processIdentityUpload(driverId, files) {
       identityPhotoUrl: photoUrl,
       idCardFront,
       idCardBack,
-      identityVerified: false
-    }
+      identityVerified: false,
+    },
   });
 
   const verification = await prisma.identityVerification.create({
     data: {
-      driverId: driverId,
-      photoUrl: photoUrl,
+      driverId,
+      photoUrl,
       idCardFront,
       idCardBack,
-      status: DriverVerificationStatus.PENDING
-    }
+      status: DriverVerificationStatus.PENDING,
+    },
   });
 
   NotificationAdapter.notifyAdmins(
     'identity_upload',
     'New Identity Verification',
     `Driver ${driverId} uploaded identity documents for review.`,
-    { driverId }
+    { driverId },
   );
 
   return { verificationId: verification.id };
@@ -73,11 +73,11 @@ async function processShiftSelfie(driverId, file) {
 
   let shift = await prisma.shift.findFirst({
     where: {
-      driverId: driverId,
+      driverId,
       status: 'PendingVerification',
-      closedAt: null
+      closedAt: null,
     },
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
   });
 
   if (!shift) {
@@ -94,20 +94,89 @@ async function processShiftSelfie(driverId, file) {
     where: { id: shift.id },
     data: {
       startSelfieUrl: selfieUrl,
-      verificationStatus: verification.status
-    }
+      verificationStatus: verification.status,
+    },
   });
 
   return {
     status: verification.status,
     similarity: verification.similarity,
     photoUrl: selfieUrl,
-    shiftId: shift.id
+    shiftId: shift.id,
   };
+}
+
+async function getPendingVerificationShifts({ status = 'pending', name = '' } = {}) {
+  const statusParam = String(status).toLowerCase();
+  const statusMap = {
+    pending: DriverVerificationStatus.PENDING,
+    approved: DriverVerificationStatus.VERIFIED,
+    rejected: DriverVerificationStatus.REJECTED,
+  };
+  const verificationStatus = statusParam === 'all'
+    ? undefined
+    : statusMap[statusParam] || DriverVerificationStatus.PENDING;
+
+  const where = {
+    ...(verificationStatus && { verificationStatus }),
+    ...(verificationStatus === DriverVerificationStatus.PENDING && { status: 'PendingVerification' }),
+    ...(name && {
+      driver: {
+        name: { contains: name, mode: 'insensitive' },
+      },
+    }),
+  };
+
+  const pendingShifts = await prisma.shift.findMany({
+    where,
+    include: {
+      driver: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  return Promise.all(pendingShifts.map(async (shift) => {
+    const signed = { ...shift };
+    if (signed.driver) {
+      signed.driver = await fileService.signDriverUrls(signed.driver);
+    }
+    if (signed.startSelfieUrl) {
+      signed.startSelfieUrl = await fileService.getUrl(signed.startSelfieUrl);
+    }
+    return signed;
+  }));
+}
+
+async function adminReviewShiftVerification(shiftId, adminId, decision, reason, ipAddress) {
+  if (!shiftId || !decision) {
+    throw new ValidationError('Shift ID and decision are required');
+  }
+
+  const normalized = String(decision).toUpperCase();
+  if (!['APPROVE', 'REJECT'].includes(normalized)) {
+    throw new ConflictError('INVALID_DECISION', 'Invalid decision. Use APPROVE or REJECT');
+  }
+
+  return shiftService.adminReviewShiftVerification(
+    shiftId,
+    adminId,
+    normalized,
+    reason,
+    ipAddress,
+  );
 }
 
 module.exports = {
   verifyFace,
   processIdentityUpload,
   processShiftSelfie,
+  getPendingVerificationShifts,
+  adminReviewShiftVerification,
 };

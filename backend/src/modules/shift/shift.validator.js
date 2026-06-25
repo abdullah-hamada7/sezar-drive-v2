@@ -12,9 +12,9 @@ class ShiftValidator {
     await PreconditionValidator.driverIdentityVerified(driverId);
     await PreconditionValidator.biometricVerified(shift.verificationStatus);
     const assignment = await PreconditionValidator.vehicleAssigned(shiftId, driverId);
-    await PreconditionValidator.inspectionCompleted(shiftId, driverId);
+    const inspection = await PreconditionValidator.inspectionCompleted(shiftId, driverId);
 
-    return { shift, assignment, inspection: undefined };
+    return { shift, assignment, inspection };
   }
 
   static async validateClosurePreconditions(shiftId, driverId, startedAt) {

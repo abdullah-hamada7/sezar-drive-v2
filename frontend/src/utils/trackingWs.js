@@ -15,11 +15,16 @@ export function buildTrackingWsUrl(token) {
     }
   }
 
-  const wsUrl = `${protocol}//${host}/ws/tracking?token=${encodeURIComponent(token)}`;
+  const wsUrl = `${protocol}//${host}/ws/tracking`;
 
   if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     console.log('[WebSocket] Connecting:', { wsUrl, apiBase, isAbsolute, derivedHost: host });
   }
 
-  return wsUrl;
+  return { wsUrl, protocols: ['bearer', token] };
+}
+
+export function openTrackingWebSocket(token) {
+  const { wsUrl, protocols } = buildTrackingWsUrl(token);
+  return new WebSocket(wsUrl, protocols);
 }

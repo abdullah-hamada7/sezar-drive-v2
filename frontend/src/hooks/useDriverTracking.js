@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { shiftService as api } from '../services/shift.service';
-import { buildTrackingWsUrl } from '../utils/trackingWs';
+import { openTrackingWebSocket } from '../utils/trackingWs';
 import { playNotificationSound } from '../utils/notificationSound';
 import { evaluateRealtimeEvent, resetRealtimeStream } from '../utils/realtimeGuard';
 import { http } from '../services/http.service';
@@ -47,7 +47,7 @@ export function useDriverTracking() {
     if (!token) return;
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) return;
 
-    const ws = new WebSocket(buildTrackingWsUrl(token));
+    const ws = openTrackingWebSocket(token);
 
     ws.onopen = () => {
       console.log('Driver tracking connected');
