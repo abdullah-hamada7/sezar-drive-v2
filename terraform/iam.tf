@@ -69,6 +69,7 @@ resource "aws_iam_role_policy" "db_backup_s3_access" {
     Statement = [
       {
         Action = [
+          "s3:GetObject",
           "s3:PutObject",
           "s3:ListBucket"
         ]
