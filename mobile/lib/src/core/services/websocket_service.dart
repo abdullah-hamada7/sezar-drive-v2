@@ -11,6 +11,7 @@ import '../../features/shift/cubit/shift_cubit.dart';
 import '../../features/violations/cubit/violation_cubit.dart';
 import '../../features/badges/cubit/badge_cubit.dart';
 import 'local_notification_service.dart';
+import 'driver_alert_events.dart';
 import '../utils/realtime_guard.dart';
 import '../utils/parsers.dart';
 
@@ -33,6 +34,7 @@ enum WsEventType {
   inspectionCompleted,
   update,
   identityUpdate,
+  violationCreated,
   unknown,
 }
 
@@ -135,23 +137,11 @@ class WebSocketService {
     final eventType = _mapEventType(type);
     _eventController.add(WsEvent(type: eventType, data: message, rawType: type));
 
-    if (_localNotifications != null && _driverEventTypes.contains(type)) {
-      _localNotifications!.showEvent(type);
+    if (_localNotifications != null &&
+        DriverAlertEvents.alertTypes.contains(type)) {
+      _localNotifications!.showEvent(type, data: message);
     }
   }
-
-  static const _driverEventTypes = {
-    'trip_assigned',
-    'trip_accepted',
-    'trip_completed',
-    'trip_cancelled',
-    'shift_started',
-    'shift_activated',
-    'shift_closed',
-    'damage_reviewed',
-    'expense_reviewed',
-    'identity_update',
-  };
 
   WsEventType _mapEventType(String type) {
     switch (type) {
@@ -191,6 +181,8 @@ class WebSocketService {
         return WsEventType.update;
       case 'identity_update':
         return WsEventType.identityUpdate;
+      case 'violation_created':
+        return WsEventType.violationCreated;
       default:
         return WsEventType.unknown;
     }
@@ -275,20 +267,9 @@ class WebSocketService {
     _eventController.close();
   }
 
-  static const Map<String, String> eventMessages = {
-    'trip_assigned': 'A new trip was assigned to you',
-    'trip_accepted': 'Trip accepted successfully',
-    'trip_completed': 'Trip completed successfully',
-    'trip_cancelled': 'A trip was cancelled',
-    'shift_started': 'Your shift request was created',
-    'shift_activated': 'Your shift was activated',
-    'shift_closed': 'Your shift was closed',
-    'damage_reviewed': 'Your damage report was reviewed',
-    'expense_reviewed': 'Your expense was reviewed',
-    'identity_update': 'Your identity verification status was updated',
-  };
+  static const Map<String, String> eventMessages = DriverAlertEvents.messages;
 
-  static String? eventMessage(String type) => eventMessages[type];
+  static String? eventMessage(String type) => DriverAlertEvents.messageFor(type);
 
   static void notifyRelevantCubits(
     WsEvent event,
@@ -299,6 +280,11 @@ class WebSocketService {
     ViolationCubit? violationCubit,
     BadgeCubit? badgeCubit,
   ) {
+    if (DriverAlertEvents.alertTypes.contains(event.rawType)) {
+      notificationCubit?.fetchNotifications();
+      badgeCubit?.fetchCounts();
+    }
+
     switch (event.type) {
       case WsEventType.tripAssigned:
       case WsEventType.tripAccepted:
@@ -307,34 +293,32 @@ class WebSocketService {
       case WsEventType.tripUpdated:
         tripCubit?.fetchMyTrips();
         homeCubit?.fetchHomeData();
-        notificationCubit?.fetchNotifications();
-        badgeCubit?.fetchCounts();
         break;
       case WsEventType.shiftStarted:
       case WsEventType.shiftActivated:
       case WsEventType.shiftClosed:
       case WsEventType.shiftUpdated:
-        shiftCubit?.fetchActiveShift();
-        badgeCubit?.fetchCounts();
+        shiftCubit?.fetchActiveShift(silent: true);
         break;
       case WsEventType.expenseUpdate:
       case WsEventType.expenseReviewed:
+        homeCubit?.fetchHomeData();
+        break;
       case WsEventType.damageUpdate:
       case WsEventType.damageReviewed:
         homeCubit?.fetchHomeData();
-        notificationCubit?.fetchNotifications();
-        badgeCubit?.fetchCounts();
         break;
       case WsEventType.identityUpdate:
         homeCubit?.fetchHomeData();
-        badgeCubit?.fetchCounts();
+        break;
+      case WsEventType.violationCreated:
+        violationCubit?.fetchMyViolations();
+        homeCubit?.fetchHomeData();
         break;
       case WsEventType.update:
         tripCubit?.fetchMyTrips();
-        shiftCubit?.fetchActiveShift();
+        shiftCubit?.fetchActiveShift(silent: true);
         homeCubit?.fetchHomeData();
-        notificationCubit?.fetchNotifications();
-        badgeCubit?.fetchCounts();
         break;
       case WsEventType.inspectionCreated:
       case WsEventType.inspectionPhotoUploaded:

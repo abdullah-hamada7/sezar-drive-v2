@@ -15,6 +15,7 @@ import 'mobile_push_service.dart';
 import 'driver_tracking_service.dart';
 import 'background_sync_service.dart';
 import 'session_revoked_notifier.dart';
+import '../../features/inspection/cubit/inspection_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -62,6 +63,7 @@ Future<void> setupLocator({bool testMode = false}) async {
 
   await OfflineQueueService.init();
   await ReadCacheService.init();
+  await InspectionCubit.initDraftStorage();
   if (!testMode) {
     await getIt<MobilePushService>().init();
     try {

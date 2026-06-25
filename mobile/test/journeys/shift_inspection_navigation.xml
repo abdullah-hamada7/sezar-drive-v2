@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<journey name="Shift Inspection Navigation">
+  <description>
+    After login, open Shift tab, start shift if needed, and open inspection without losing navigation context.
+    Requires a provisioned driver account on the target device/emulator.
+  </description>
+  <actions>
+    <action>Wait 2</action>
+    <action>Verify that "Sign in" is visible</action>
+    <action>Tap "Shift"</action>
+    <action>Wait 2</action>
+    <action>Verify that "Shift management" is visible</action>
+    <action>Tap "Start work shift"</action>
+    <action>Wait 2</action>
+    <action>Tap "Open inspection"</action>
+    <action>Wait 2</action>
+    <action>Verify that "Vehicle inspection" is visible</action>
+    <action>Press back</action>
+    <action>Wait 1</action>
+    <action>Verify that "Shift management" is visible</action>
+  </actions>
+</journey>

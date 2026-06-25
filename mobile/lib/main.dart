@@ -318,7 +318,7 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
       HomeScreen(onNavigateToTrips: () => setState(() => _selectedIndex = 1)),
       TripsScreen(onNavigateToShift: () => setState(() => _selectedIndex = 2)),
       ShiftScreen(
-        onNavigateToInspection: () => setState(() => _selectedIndex = 4),
+        onNavigateToInspection: () => _openShiftInspection(context),
         onNavigateToTrips: () {
           setState(() => _selectedIndex = 1);
           context.read<TripCubit>().fetchMyTrips();
@@ -468,6 +468,18 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
     );
   }
 
+  Future<void> _openShiftInspection(BuildContext context) async {
+    final shiftCubit = context.read<ShiftCubit>();
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => const InspectionScreen(fromShiftFlow: true),
+      ),
+    );
+    if (mounted) {
+      shiftCubit.fetchActiveShift(silent: true);
+    }
+  }
+
   Future<void> _confirmLogout() async {
     final l10n = AppLocalizations.of(context);
     final danger = context.semanticColors.danger;
@@ -516,7 +528,10 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
               openDrawer: () => _scaffoldKey.currentState?.openDrawer(),
               child: GestureDetector(
                 onTap: () => getIt<IdleTimerService>().reset(),
-                child: _screens[_selectedIndex],
+                child: IndexedStack(
+                  index: _selectedIndex,
+                  children: _screens,
+                ),
               ),
             ),
           ),
@@ -527,7 +542,9 @@ class _MainNavigationLayoutState extends State<MainNavigationLayout> {
         onDestinationSelected: (index) {
           getIt<IdleTimerService>().reset();
           setState(() => _selectedIndex = index);
-          if (index == 2) context.read<ShiftCubit>().fetchActiveShift();
+          if (index == 2) {
+            context.read<ShiftCubit>().fetchActiveShift(silent: true);
+          }
         },
         destinations: [
           NavigationDestination(

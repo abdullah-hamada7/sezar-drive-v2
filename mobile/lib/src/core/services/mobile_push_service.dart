@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../firebase_options.dart';
 import '../../../firebase_background.dart';
 import '../network/dio_client.dart';
@@ -38,14 +39,20 @@ class MobilePushService {
         await messaging.requestPermission(
             alert: true, badge: true, sound: true);
       } else {
+        await _requestAndroidNotificationPermission();
         await messaging.requestPermission();
       }
 
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
       FirebaseMessaging.onMessage.listen((message) {
-        final title = message.notification?.title ?? 'Sezar Driver';
-        final body = message.notification?.body ?? '';
+        final data = message.data;
+        final title = message.notification?.title ??
+            data['title']?.toString() ??
+            'Sezar Driver';
+        final body = message.notification?.body?.toString() ??
+            data['body']?.toString() ??
+            '';
         if (body.isNotEmpty) {
           _local.show(title: title, body: body);
         }
@@ -142,4 +149,13 @@ class MobilePushService {
   }
 
   Future<void> showEvent(String eventType) => _local.showEvent(eventType);
+
+  Future<bool> _requestAndroidNotificationPermission() async {
+    if (!Platform.isAndroid) return true;
+    final status = await Permission.notification.status;
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) return false;
+    final result = await Permission.notification.request();
+    return result.isGranted;
+  }
 }

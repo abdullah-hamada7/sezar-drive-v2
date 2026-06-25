@@ -1,44 +1,44 @@
-const { notifyAdmins, notifyDriver } = require('../tracking/tracking.ws');
+const { notifyAdmins } = require('../tracking/tracking.ws');
+const driverAlert = require('../../services/driverAlert.service');
 
 /**
- * ShiftNotifier
- * Encapsulates real-time notifications for shift events.
+ * ShiftNotifier — alerts drivers on shift lifecycle changes.
  */
 class ShiftNotifier {
   static onShiftStarted(driverName, shiftId, driverId) {
     notifyAdmins(
-      'shift_started', 
-      'New Shift Started', 
-      `Driver ${driverName} has started a new shift and is pending verification.`, 
-      { shiftId }
+      'shift_started',
+      'New Shift Started',
+      `Driver ${driverName} has started a new shift and is pending verification.`,
+      { shiftId },
     );
     if (driverId) {
-      notifyDriver(driverId, {
-        type: 'shift_started',
-        shiftId
-      });
+      driverAlert.notifyDriverWs(driverId, { type: 'shift_started', shiftId });
     }
   }
 
   static onShiftActivated(shiftId, driverId, vehicleId) {
     notifyAdmins(
-      'shift_activated', 
-      'Shift Activated', 
-      'Driver shift has been activated and is now live.', 
-      { shiftId, driverId, vehicleId }
+      'shift_activated',
+      'Shift Activated',
+      'Driver shift has been activated and is now live.',
+      { shiftId, driverId, vehicleId },
     );
-    notifyDriver(driverId, {
+    driverAlert.alertDriver(driverId, {
       type: 'shift_activated',
-      shiftId,
-      vehicleId
+      title: 'Shift Activated',
+      body: 'Your shift is now active. You can accept trips.',
+      entityId: shiftId,
+      wsPayload: { shiftId, vehicleId },
     });
   }
 
   static onShiftAdminClosed(driverId, reason) {
-    notifyDriver(driverId, {
+    driverAlert.alertDriver(driverId, {
       type: 'shift_closed',
-      reason,
-      closedBy: 'admin'
+      title: 'Shift Closed by Admin',
+      body: reason || 'Your shift was closed by an administrator.',
+      wsPayload: { reason, closedBy: 'admin' },
     });
   }
 
@@ -47,13 +47,20 @@ class ShiftNotifier {
       'shift_closed',
       'Shift Closed',
       `Shift ${shiftId} was closed by ${closedBy}.`,
-      { shiftId, driverId, closedBy, reason, actorId }
+      { shiftId, driverId, closedBy, reason, actorId },
     );
-    notifyDriver(driverId, {
+
+    const isAdmin = closedBy === 'admin';
+    driverAlert.alertDriver(driverId, {
       type: 'shift_closed',
-      shiftId,
-      reason,
-      closedBy
+      title: isAdmin ? 'Shift Closed by Admin' : 'Shift Closed',
+      body: reason || (isAdmin
+        ? 'Your shift was closed by an administrator.'
+        : 'Your shift has been closed.'),
+      entityId: shiftId,
+      wsPayload: { shiftId, reason, closedBy },
+      push: true,
+      persist: true,
     });
   }
 }

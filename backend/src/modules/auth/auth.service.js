@@ -7,7 +7,8 @@ const fileService = require('../../services/FileService');
 const faceVerificationService = require('../../services/FaceVerificationService');
 const { UnauthorizedError, ForbiddenError, ValidationError, ConflictError, NotFoundError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
-const { notifyAdmins, notifyDriver } = require('../tracking/tracking.ws');
+const { notifyAdmins } = require('../tracking/tracking.ws');
+const driverAlert = require('../../services/driverAlert.service');
 
 const REFRESH_TOKEN_LIFETIME_DAYS = 7;
 const REFRESH_ROTATION_GRACE_SECONDS = 20;
@@ -406,11 +407,14 @@ async function reviewIdentity(id, adminId, action, rejectionReason, ipAddress) {
     ipAddress,
   });
 
-  // Real-time Notification
-  notifyDriver(verification.driverId, {
+  driverAlert.alertDriver(verification.driverId, {
     type: 'identity_update',
-    status,
-    reason: rejectionReason
+    title: status === 'approved' ? 'Identity Verified' : 'Identity Verification Update',
+    body: status === 'approved'
+      ? 'Your identity has been verified. You can now start shifts.'
+      : `Identity verification was ${status}.${rejectionReason ? ` Reason: ${rejectionReason}` : ''}`,
+    entityId: verification.id,
+    wsPayload: { status, reason: rejectionReason },
   });
 
   notifyAdmins(

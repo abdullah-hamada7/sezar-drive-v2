@@ -2,6 +2,7 @@ const prisma = require('../../config/database');
 const { NotFoundError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
+const ViolationNotifier = require('./violation.notifier');
 
 async function signViolation(violation) {
   if (!violation) return violation;
@@ -46,6 +47,8 @@ async function createViolation(data, adminId, ipAddress) {
     newState: { driverId, violationNumber, fineAmount },
     ipAddress,
   });
+
+  ViolationNotifier.onViolationCreated(driverId, violation);
 
   return await signViolation(violation);
 }

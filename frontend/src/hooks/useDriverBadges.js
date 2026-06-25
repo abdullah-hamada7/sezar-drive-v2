@@ -43,7 +43,9 @@ export function useDriverBadges() {
     // Refresh badge counts when any relevant WS event fires
     const events = [
       'ws:trip_assigned', 'ws:trip_accepted', 'ws:trip_cancelled', 'ws:trip_completed',
-      'ws:shift_updated', 'ws:update', 'online',
+      'ws:shift_started', 'ws:shift_activated', 'ws:shift_closed', 'ws:shift_updated',
+      'ws:expense_reviewed', 'ws:damage_update', 'ws:identity_update', 'ws:violation_created',
+      'ws:update', 'online',
     ];
     events.forEach(e => window.addEventListener(e, fetch));
     intervalRef.current = setInterval(fetch, POLL_MS);

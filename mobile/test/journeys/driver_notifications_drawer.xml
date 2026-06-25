@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<journey name="Driver Notifications Drawer">
+  <description>
+    Open the drawer notifications screen and verify it loads (empty or list), not an error state.
+    Requires an authenticated driver session.
+  </description>
+  <actions>
+    <action>Wait 2</action>
+    <action>Tap "Home"</action>
+    <action>Wait 1</action>
+    <action>Verify that "Dashboard" is visible</action>
+    <action>Press menu</action>
+    <action>Wait 1</action>
+    <action>Tap "Notifications"</action>
+    <action>Wait 2</action>
+    <action>Verify that "Notifications" is visible</action>
+    <action>Verify that "Could not load notifications" is not visible</action>
+  </actions>
+</journey>

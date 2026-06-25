@@ -6,7 +6,7 @@ const { createUploader } = require('../../middleware/upload');
 const fileService = require('../../services/FileService');
 const { DriverVerificationStatus } = require('../../config/constants');
 const { ValidationError } = require('../../errors');
-const { notifyAdmins, notifyDriver } = require('../tracking/tracking.ws');
+const ShiftNotifier = require('../shift/shift.notifier');
 
 const upload = createUploader();
 
@@ -209,15 +209,7 @@ router.post('/review', authenticate, authorize('admin'), async (req, res, next) 
           startedAt: new Date()
         }
       });
-      notifyDriver(shift.driverId, {
-        type: 'shift_activated',
-        shiftId
-      });
-      notifyAdmins('shift_activated', 'Shift Activated', 'Shift verification approved and activated.', {
-        shiftId,
-        driverId: shift.driverId,
-        actorId: req.user.id
-      });
+      ShiftNotifier.onShiftActivated(shiftId, shift.driverId, shift.vehicleId);
       res.json({ message: 'Shift approved and active' });
     } else if (decision === 'REJECT') {
       await prisma.shift.update({
@@ -230,18 +222,13 @@ router.post('/review', authenticate, authorize('admin'), async (req, res, next) 
           closeReason: 'admin_override' 
         }
       });
-      notifyDriver(shift.driverId, {
-        type: 'shift_closed',
+      ShiftNotifier.onShiftClosed(
         shiftId,
-        reason: reason || 'Identity verification failed',
-        closedBy: 'admin'
-      });
-      notifyAdmins('shift_closed', 'Shift Closed', 'Shift verification rejected and closed.', {
-        shiftId,
-        driverId: shift.driverId,
-        reason: reason || 'Identity verification failed',
-        actorId: req.user.id
-      });
+        shift.driverId,
+        'admin',
+        reason || 'Identity verification failed',
+        req.user.id,
+      );
       res.json({ message: 'Shift rejected and closed' });
     } else {
       res.status(400).json({ error: 'Invalid decision. Use APPROVE or REJECT' });

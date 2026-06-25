@@ -60,6 +60,16 @@ class ShiftCubit extends Cubit<ShiftState> {
 
   ShiftCubit(this._client) : super(ShiftInitial());
 
+  Shift? _cachedActiveShift;
+  bool _cachedPreShiftInspectionComplete = false;
+
+  /// Last known active shift — kept during background refresh so inspection UI
+  /// does not reset while the camera or websocket triggers a silent reload.
+  Shift? get cachedActiveShift => _cachedActiveShift;
+
+  bool get cachedPreShiftInspectionComplete =>
+      _cachedPreShiftInspectionComplete;
+
   Future<List<Map<String, dynamic>>> _fetchInspections(String shiftId) async {
     final response = await _client.dio.get(
       '/inspections',
@@ -134,13 +144,19 @@ class ShiftCubit extends Cubit<ShiftState> {
     }
   }
 
-  Future<void> fetchActiveShift() async {
-    emit(ShiftLoading());
+  Future<void> fetchActiveShift({bool silent = false}) async {
+    final previous =
+        state is ShiftLoaded ? state as ShiftLoaded : null;
+    if (!silent || previous == null) {
+      if (previous == null) emit(ShiftLoading());
+    }
     try {
       final response = await _client.dio.get('/shifts/active');
       final dataMap = parseResponseMap(response.data);
       final shiftData = dataMap['shift'];
       if (shiftData == null) {
+        _cachedActiveShift = null;
+        _cachedPreShiftInspectionComplete = false;
         emit(ShiftLoaded(null));
       } else {
         if (shiftData is! Map) {
@@ -151,11 +167,25 @@ class ShiftCubit extends Cubit<ShiftState> {
         final inspectionComplete = shift.status == 'PendingVerification'
             ? await _hasCompletedInspection(shift.id)
             : false;
+        _cachedActiveShift = shift;
+        _cachedPreShiftInspectionComplete = inspectionComplete;
         emit(
-            ShiftLoaded(shift, preShiftInspectionComplete: inspectionComplete));
+          ShiftLoaded(shift, preShiftInspectionComplete: inspectionComplete),
+        );
       }
     } catch (e) {
-      emit(ShiftError(apiError(e)));
+      if (previous != null) {
+        emit(previous);
+      } else if (_cachedActiveShift != null) {
+        emit(
+          ShiftLoaded(
+            _cachedActiveShift,
+            preShiftInspectionComplete: _cachedPreShiftInspectionComplete,
+          ),
+        );
+      } else {
+        emit(ShiftError(apiError(e)));
+      }
     }
   }
 
@@ -163,7 +193,7 @@ class ShiftCubit extends Cubit<ShiftState> {
     emit(ShiftLoading());
     try {
       await _client.dio.post('/shifts');
-      await fetchActiveShift();
+      await fetchActiveShift(silent: true);
     } catch (e) {
       emit(ShiftError(apiError(e, fallback: 'Failed to start shift.')));
     }
@@ -182,7 +212,7 @@ class ShiftCubit extends Cubit<ShiftState> {
         },
       );
       await _client.dio.post('/verify/shift-selfie', data: formData);
-      await fetchActiveShift();
+      await fetchActiveShift(silent: true);
     } catch (e) {
       emit(ShiftError(apiError(e, fallback: 'Face verification failed.')));
     }
@@ -192,7 +222,7 @@ class ShiftCubit extends Cubit<ShiftState> {
     emit(ShiftLoading());
     try {
       await _client.dio.post('/vehicles/scan-qr', data: {'qrCode': qrCode});
-      await fetchActiveShift();
+      await fetchActiveShift(silent: true);
     } catch (e) {
       emit(ShiftError(apiError(e, fallback: 'QR vehicle assignment failed.')));
     }
@@ -221,7 +251,7 @@ class ShiftCubit extends Cubit<ShiftState> {
     try {
       await _client.dio.put('/shifts/$shiftId/activate');
       emit(ShiftActivated());
-      await fetchActiveShift();
+      await fetchActiveShift(silent: true);
     } catch (e) {
       emit(ShiftError(apiError(e, fallback: 'Failed to activate shift.')));
     }
@@ -248,7 +278,7 @@ class ShiftCubit extends Cubit<ShiftState> {
 
     try {
       await _client.dio.put('/shifts/${shift.id}/close');
-      await fetchActiveShift();
+      await fetchActiveShift(silent: true);
     } catch (e) {
       emit(ShiftError(apiError(e, fallback: 'Failed to close shift.')));
     }
@@ -256,6 +286,8 @@ class ShiftCubit extends Cubit<ShiftState> {
 
   /// Re-emit loaded state after a blocked action.
   void restoreLoaded(Shift shift, {required bool preShiftInspectionComplete}) {
+    _cachedActiveShift = shift;
+    _cachedPreShiftInspectionComplete = preShiftInspectionComplete;
     emit(ShiftLoaded(shift,
         preShiftInspectionComplete: preShiftInspectionComplete));
   }

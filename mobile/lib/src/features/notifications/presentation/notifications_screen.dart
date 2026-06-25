@@ -19,13 +19,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<NotificationCubit>().fetchNotifications();
-    _markAllRead();
+    _loadNotifications();
   }
 
-  Future<void> _markAllRead() async {
+  Future<void> _loadNotifications() async {
+    final cubit = context.read<NotificationCubit>();
+    await cubit.fetchNotifications();
+    if (!mounted) return;
     try {
-      await context.read<NotificationCubit>().markAllAsRead();
+      await cubit.markAllAsRead();
     } catch (_) {}
   }
 
@@ -48,7 +50,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: BlocBuilder<NotificationCubit, NotificationState>(
         builder: (context, state) {
-          if (state is NotificationLoading) {
+          if (state is NotificationLoading || state is NotificationInitial) {
             return const ListLoadingSkeleton(itemCount: 4, itemHeight: 72);
           }
 
@@ -58,43 +60,90 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               return EmptyStatePanel(
                 icon: Icons.notifications_off_outlined,
                 title: l10n.t('notifications_empty'),
-                message: l10n.t('notifications_empty_hint'),
+                message: state.isStale
+                    ? l10n.t('cached_offline')
+                    : l10n.t('notifications_empty_hint'),
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: notifications.length,
-              itemBuilder: (context, index) {
-                final notif = notifications[index];
-                final unread = !notif.isRead;
-                return Card(
-                  color: unread ? semantic.statusBackground(scheme.primary, opacity: 0.08) : null,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: unread ? scheme.primary.withValues(alpha: 0.4) : semantic.border),
+            return Column(
+              children: [
+                if (state.isStale)
+                  MaterialBanner(
+                    content: Text(l10n.t('cached_offline')),
+                    leading: const Icon(Icons.cloud_off_outlined),
+                    actions: [
+                      TextButton(
+                        onPressed: _loadNotifications,
+                        child: Text(l10n.t('retry')),
+                      ),
+                    ],
                   ),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: unread ? scheme.primary : semantic.muted,
-                      child: const Icon(Icons.notifications_active, color: Colors.white, size: 20),
-                    ),
-                    title: Text(notif.title, style: TextStyle(fontWeight: unread ? FontWeight.w600 : FontWeight.normal)),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Text(notif.body),
-                        const SizedBox(height: 8),
-                        Text(
-                          notif.createdAt.toLocal().toString().split('.')[0],
-                          style: Theme.of(context).textTheme.bodyMedium,
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: notifications.length,
+                    itemBuilder: (context, index) {
+                      final notif = notifications[index];
+                      final unread = !notif.isRead;
+                      return Card(
+                        color: unread
+                            ? semantic.statusBackground(scheme.primary,
+                                opacity: 0.08)
+                            : null,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(
+                            color: unread
+                                ? scheme.primary.withValues(alpha: 0.4)
+                                : semantic.border,
+                          ),
                         ),
-                      ],
-                    ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                unread ? scheme.primary : semantic.muted,
+                            child: const Icon(Icons.notifications_active,
+                                color: Colors.white, size: 20),
+                          ),
+                          title: Text(
+                            notif.title,
+                            style: TextStyle(
+                              fontWeight:
+                                  unread ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(notif.body),
+                              const SizedBox(height: 8),
+                              Text(
+                                notif.createdAt
+                                    .toLocal()
+                                    .toString()
+                                    .split('.')[0],
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                ),
+              ],
+            );
+          }
+
+          if (state is NotificationError) {
+            return EmptyStatePanel(
+              icon: Icons.error_outline,
+              title: l10n.t('load_failed_notifications'),
+              message: state.message,
+              actionLabel: l10n.t('retry'),
+              onAction: _loadNotifications,
             );
           }
 
@@ -102,7 +151,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             icon: Icons.error_outline,
             title: l10n.t('load_failed_notifications'),
             actionLabel: l10n.t('retry'),
-            onAction: () => context.read<NotificationCubit>().fetchNotifications(),
+            onAction: _loadNotifications,
           );
         },
       ),

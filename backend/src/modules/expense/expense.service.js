@@ -2,7 +2,8 @@ const prisma = require('../../config/database');
 const { NotFoundError, ConflictError, ValidationError, ForbiddenError } = require('../../errors');
 const AuditService = require('../../services/audit.service');
 const FileService = require('../../services/FileService');
-const { notifyAdmins, notifyDriver } = require('../tracking/tracking.ws');
+const { notifyAdmins } = require('../tracking/tracking.ws');
+const driverAlert = require('../../services/driverAlert.service');
 
 /**
  * Create an expense for a shift.
@@ -87,7 +88,7 @@ async function createExpense(data, driverId, ipAddress) {
     });
   }
 
-  notifyDriver(driverId, {
+  driverAlert.notifyDriverWs(driverId, {
     type: 'expense_update',
     expenseId: expense.id,
     status,
@@ -254,11 +255,17 @@ async function reviewExpensesBulk({ expenseIds, action, rejectionReason }, admin
     byDriver.get(e.driverId).push(e.id);
   }
   for (const [driverId, updatedIds] of byDriver.entries()) {
-    notifyDriver(driverId, {
+    driverAlert.alertDriver(driverId, {
       type: 'expense_reviewed',
-      expenseIds: updatedIds,
-      status,
-      reason: status === 'rejected' ? rejectionReason : null,
+      title: status === 'approved' ? 'Expense Approved' : 'Expense Rejected',
+      body: status === 'approved'
+        ? `${updatedIds.length} expense(s) were approved.`
+        : `${updatedIds.length} expense(s) were rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : ''}`,
+      wsPayload: {
+        expenseIds: updatedIds,
+        status,
+        reason: status === 'rejected' ? rejectionReason : null,
+      },
     });
   }
 
@@ -336,19 +343,18 @@ async function reviewExpense(expenseId, adminId, action, rejectionReason, ipAddr
     ipAddress,
   });
 
-  // Real-time Notification
-  notifyDriver(expense.driverId, {
-    type: 'expense_update',
-    expenseId,
-    status,
-    reason: rejectionReason,
-  });
-
-  notifyDriver(expense.driverId, {
+  driverAlert.alertDriver(expense.driverId, {
     type: 'expense_reviewed',
-    expenseId,
-    status,
-    reason: rejectionReason,
+    title: status === 'approved' ? 'Expense Approved' : 'Expense Rejected',
+    body: status === 'approved'
+      ? 'Your expense was approved.'
+      : `Your expense was rejected.${rejectionReason ? ` Reason: ${rejectionReason}` : ''}`,
+    entityId: expenseId,
+    wsPayload: {
+      expenseId,
+      status,
+      reason: rejectionReason,
+    },
   });
 
   notifyAdmins(

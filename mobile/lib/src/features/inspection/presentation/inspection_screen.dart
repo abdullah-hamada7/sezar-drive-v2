@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/domain/driver_models.dart';
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_semantic_colors.dart';
 import '../../../core/services/connectivity_service.dart';
@@ -13,44 +14,79 @@ import '../../../core/services/tab_badge_service.dart';
 import '../../../core/widgets/app_feedback.dart';
 import '../../../core/widgets/fleet_shell.dart';
 import '../../../core/widgets/empty_state_panel.dart';
+import '../../../core/widgets/list_loading_skeleton.dart';
 import '../../badges/cubit/badge_cubit.dart';
 import '../../shift/cubit/shift_cubit.dart';
 import '../cubit/inspection_cubit.dart';
 
 class InspectionScreen extends StatefulWidget {
-  const InspectionScreen({super.key});
+  const InspectionScreen({super.key, this.fromShiftFlow = false});
+
+  /// When opened from shift activation, use a pushed route so camera/websocket
+  /// refreshes do not swap the bottom-nav tab back to home.
+  final bool fromShiftFlow;
 
   @override
   State<InspectionScreen> createState() => _InspectionScreenState();
 }
 
-class _InspectionScreenState extends State<InspectionScreen> {
+class _InspectionScreenState extends State<InspectionScreen>
+    with WidgetsBindingObserver {
   final _picker = ImagePicker();
   final _notesController = TextEditingController();
   final _checks = <String, String>{};
   final _directionalPhotos = <String, File>{};
   final _issuePhotos = <String, File>{};
 
-  final _checklistItems = ['tires', 'lights', 'brakes', 'mirrors', 'fluids', 'seatbelts', 'horn', 'wipers'];
-  final _directions = ['front', 'back', 'left', 'right', 'dashboard', 'tank'];
+  final _checklistItems = [
+    'tires',
+    'lights',
+    'brakes',
+    'mirrors',
+    'fluids',
+    'seatbelts',
+    'horn',
+    'wipers',
+  ];
+  final _directions = [
+    'front',
+    'back',
+    'left',
+    'right',
+    'dashboard',
+    'tank',
+  ];
 
   int _currentStep = 0;
   bool _isOnline = true;
+  bool _draftLoaded = false;
+  String? _draftShiftId;
   StreamSubscription<bool>? _connSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     for (final item in _checklistItems) {
       _checks[item] = 'good';
     }
     _markTabViewed();
-    _connSub = GetIt.I<ConnectivityService>().onConnectivityChanged.listen((online) {
+    _connSub =
+        GetIt.I<ConnectivityService>().onConnectivityChanged.listen((online) {
       if (mounted) setState(() => _isOnline = online);
     });
     GetIt.I<ConnectivityService>().checkNow().then((online) {
       if (mounted) setState(() => _isOnline = online);
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restoreDraftIfNeeded());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _persistDraft();
+    }
   }
 
   Future<void> _markTabViewed() async {
@@ -58,6 +94,73 @@ class _InspectionScreenState extends State<InspectionScreen> {
       await GetIt.I<TabBadgeService>().markTabViewed('inspection');
       if (mounted) context.read<BadgeCubit>().fetchCounts();
     } catch (_) {}
+  }
+
+  Shift? _resolveShift(ShiftState shiftState, ShiftCubit shiftCubit) {
+    if (shiftState is ShiftLoaded) return shiftState.activeShift;
+    return shiftCubit.cachedActiveShift;
+  }
+
+  Future<void> _restoreDraftIfNeeded() async {
+    if (_draftLoaded || !mounted) return;
+
+    final shift = _resolveShift(
+      context.read<ShiftCubit>().state,
+      context.read<ShiftCubit>(),
+    );
+    if (shift == null) return;
+
+    final draft = await context.read<InspectionCubit>().loadDraft(shift.id);
+    if (!mounted || draft == null) {
+      _draftLoaded = true;
+      _draftShiftId = shift.id;
+      return;
+    }
+
+    setState(() {
+      _draftLoaded = true;
+      _draftShiftId = shift.id;
+      _currentStep = draft.currentStep;
+      _notesController.text = draft.notes;
+      for (final entry in draft.checks.entries) {
+        if (_checks.containsKey(entry.key)) {
+          _checks[entry.key] = entry.value;
+        }
+      }
+      _directionalPhotos
+        ..clear()
+        ..addEntries(
+          draft.directionalPhotoPaths.entries.map(
+            (entry) => MapEntry(entry.key, File(entry.value)),
+          ),
+        );
+      _issuePhotos
+        ..clear()
+        ..addEntries(
+          draft.issuePhotoPaths.entries.map(
+            (entry) => MapEntry(entry.key, File(entry.value)),
+          ),
+        );
+    });
+  }
+
+  Future<void> _persistDraft() async {
+    final shiftId = _draftShiftId;
+    if (shiftId == null) return;
+
+    await context.read<InspectionCubit>().saveDraft(
+          InspectionDraft(
+            shiftId: shiftId,
+            currentStep: _currentStep,
+            checks: Map<String, String>.from(_checks),
+            directionalPhotoPaths: _directionalPhotos.map(
+              (key, file) => MapEntry(key, file.path),
+            ),
+            issuePhotoPaths:
+                _issuePhotos.map((key, file) => MapEntry(key, file.path)),
+            notes: _notesController.text,
+          ),
+        );
   }
 
   void _resetWizard() {
@@ -74,16 +177,22 @@ class _InspectionScreenState extends State<InspectionScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _connSub?.cancel();
     _notesController.dispose();
     super.dispose();
   }
 
   Future<void> _captureDirectionPhoto(String direction) async {
+    await _persistDraft();
     try {
-      final image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+      final image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+      );
       if (image != null && mounted) {
         setState(() => _directionalPhotos[direction] = File(image.path));
+        await _persistDraft();
       }
     } catch (e) {
       if (mounted) {
@@ -97,10 +206,15 @@ class _InspectionScreenState extends State<InspectionScreen> {
   }
 
   Future<void> _captureIssuePhoto(String item) async {
+    await _persistDraft();
     try {
-      final image = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+      final image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 70,
+      );
       if (image != null && mounted) {
         setState(() => _issuePhotos[item] = File(image.path));
+        await _persistDraft();
       }
     } catch (e) {
       if (mounted) {
@@ -113,12 +227,28 @@ class _InspectionScreenState extends State<InspectionScreen> {
     }
   }
 
+  Future<void> _goToStep(int step) async {
+    setState(() => _currentStep = step);
+    await _persistDraft();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final shiftCubit = context.read<ShiftCubit>();
     final shiftState = context.watch<ShiftCubit>().state;
+    final shift = _resolveShift(shiftState, shiftCubit);
+    final waitingForShift =
+        shift == null && shiftState is ShiftLoading && !_draftLoaded;
 
-    if (shiftState is! ShiftLoaded || shiftState.activeShift == null) {
+    if (waitingForShift) {
+      return Scaffold(
+        appBar: FleetAppBar(title: l10n.t('vehicle_inspection')),
+        body: const ListLoadingSkeleton(itemCount: 3, itemHeight: 72),
+      );
+    }
+
+    if (shift == null) {
       return Scaffold(
         appBar: FleetAppBar(title: l10n.t('vehicle_inspection')),
         body: EmptyStatePanel(
@@ -129,23 +259,43 @@ class _InspectionScreenState extends State<InspectionScreen> {
       );
     }
 
-    final shift = shiftState.activeShift!;
+    if (!_draftLoaded || _draftShiftId != shift.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _restoreDraftIfNeeded();
+      });
+    } else {
+      _draftShiftId ??= shift.id;
+    }
+
     final vehicleId = shift.vehicleId ?? shift.vehicle?.id ?? 'vehicle_unknown';
 
     return Scaffold(
-      appBar: FleetAppBar(title: l10n.t('vehicle_inspection')),
+      appBar: FleetAppBar(
+        title: l10n.t('vehicle_inspection'),
+        showBackButton: widget.fromShiftFlow,
+      ),
       body: BlocConsumer<InspectionCubit, InspectionState>(
-        listener: (context, state) {
+        listener: (context, state) async {
           if (state is InspectionSuccess) {
-            context.read<ShiftCubit>().fetchActiveShift();
+            context.read<ShiftCubit>().fetchActiveShift(silent: true);
             AppFeedback.show(
               context,
-              message: state.isOffline ? l10n.t('inspection_queued') : l10n.t('inspection_submitted'),
+              message: state.isOffline
+                  ? l10n.t('inspection_queued')
+                  : l10n.t('inspection_submitted'),
               type: AppFeedbackType.success,
             );
-            _resetWizard();
+            if (widget.fromShiftFlow && Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              _resetWizard();
+            }
           } else if (state is InspectionError) {
-            AppFeedback.show(context, message: state.message, type: AppFeedbackType.error);
+            AppFeedback.show(
+              context,
+              message: state.message,
+              type: AppFeedbackType.error,
+            );
           }
         },
         builder: (context, state) {
@@ -155,9 +305,15 @@ class _InspectionScreenState extends State<InspectionScreen> {
 
           return Column(
             children: [
+              if (shiftState is ShiftLoading)
+                LinearProgressIndicator(
+                  minHeight: 2,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               Container(
                 color: Theme.of(context).colorScheme.surface,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -170,7 +326,13 @@ class _InspectionScreenState extends State<InspectionScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: _buildCurrentStepView(context, l10n, vehicleId, shift.id, shift.status),
+                  child: _buildCurrentStepView(
+                    context,
+                    l10n,
+                    vehicleId,
+                    shift.id,
+                    shift.status,
+                  ),
                 ),
               ),
             ],
@@ -180,7 +342,12 @@ class _InspectionScreenState extends State<InspectionScreen> {
     );
   }
 
-  Widget _buildStepHeader(BuildContext context, AppLocalizations l10n, int index, String title) {
+  Widget _buildStepHeader(
+    BuildContext context,
+    AppLocalizations l10n,
+    int index,
+    String title,
+  ) {
     final semantic = context.semanticColors;
     final scheme = Theme.of(context).colorScheme;
     final isActive = _currentStep == index;
@@ -188,7 +355,7 @@ class _InspectionScreenState extends State<InspectionScreen> {
     final canTap = index < _currentStep;
 
     return InkWell(
-      onTap: canTap ? () => setState(() => _currentStep = index) : null,
+      onTap: canTap ? () => _goToStep(index) : null,
       borderRadius: BorderRadius.circular(20),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -197,17 +364,25 @@ class _InspectionScreenState extends State<InspectionScreen> {
           children: [
             CircleAvatar(
               radius: 12,
-              backgroundColor: isDone ? semantic.success : (isActive ? scheme.primary : semantic.muted),
+              backgroundColor: isDone
+                  ? semantic.success
+                  : (isActive ? scheme.primary : semantic.muted),
               child: Text(
                 '${index + 1}',
-                style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             const SizedBox(width: 6),
             Text(
               title,
               style: TextStyle(
-                color: isActive ? Theme.of(context).colorScheme.onSurface : semantic.muted,
+                color: isActive
+                    ? Theme.of(context).colorScheme.onSurface
+                    : semantic.muted,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -217,7 +392,13 @@ class _InspectionScreenState extends State<InspectionScreen> {
     );
   }
 
-  Widget _buildCurrentStepView(BuildContext context, AppLocalizations l10n, String vehicleId, String shiftId, String shiftStatus) {
+  Widget _buildCurrentStepView(
+    BuildContext context,
+    AppLocalizations l10n,
+    String vehicleId,
+    String shiftId,
+    String shiftStatus,
+  ) {
     if (_currentStep == 0) return _checklistStep(context, l10n);
     if (_currentStep == 1) return _photosStep(context, l10n);
     return _reviewStep(context, l10n, vehicleId, shiftId, shiftStatus);
@@ -228,7 +409,8 @@ class _InspectionScreenState extends State<InspectionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.t('checklist_items'), style: Theme.of(context).textTheme.headlineMedium),
+        Text(l10n.t('checklist_items'),
+            style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 12),
         ListView.builder(
           shrinkWrap: true,
@@ -239,13 +421,16 @@ class _InspectionScreenState extends State<InspectionScreen> {
             final isBad = _checks[item] == 'bad';
             return Card(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(item.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(item.toUpperCase(),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
                         Row(
                           children: [
                             ChoiceChip(
@@ -254,14 +439,21 @@ class _InspectionScreenState extends State<InspectionScreen> {
                               onSelected: (_) => setState(() {
                                 _checks[item] = 'good';
                                 _issuePhotos.remove(item);
+                                _persistDraft();
                               }),
                             ),
                             const SizedBox(width: 8),
                             ChoiceChip(
                               label: Text(l10n.t('bad')),
                               selected: isBad,
-                              selectedColor: semantic.statusBackground(semantic.danger, opacity: 0.35),
-                              onSelected: (_) => setState(() => _checks[item] = 'bad'),
+                              selectedColor: semantic.statusBackground(
+                                semantic.danger,
+                                opacity: 0.35,
+                              ),
+                              onSelected: (_) => setState(() {
+                                _checks[item] = 'bad';
+                                _persistDraft();
+                              }),
                             ),
                           ],
                         ),
@@ -271,16 +463,26 @@ class _InspectionScreenState extends State<InspectionScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Text(l10n.t('photo_proof_required'), style: TextStyle(color: semantic.danger, fontSize: 12)),
+                          Text(l10n.t('photo_proof_required'),
+                              style: TextStyle(
+                                  color: semantic.danger, fontSize: 12)),
                           const Spacer(),
-                          IconButton(icon: const Icon(Icons.camera_alt), onPressed: () => _captureIssuePhoto(item)),
+                          IconButton(
+                            icon: const Icon(Icons.camera_alt),
+                            onPressed: () => _captureIssuePhoto(item),
+                          ),
                         ],
                       ),
                       if (_issuePhotos[item] != null) ...[
                         const SizedBox(height: 8),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: Image.file(_issuePhotos[item]!, height: 120, width: double.infinity, fit: BoxFit.cover),
+                          child: Image.file(
+                            _issuePhotos[item]!,
+                            height: 120,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ],
                     ],
@@ -297,13 +499,14 @@ class _InspectionScreenState extends State<InspectionScreen> {
               if (entry.value == 'bad' && _issuePhotos[entry.key] == null) {
                 AppFeedback.show(
                   context,
-                  message: l10n.t('bad_item_photo_required', {'item': entry.key}),
+                  message:
+                      l10n.t('bad_item_photo_required', {'item': entry.key}),
                   type: AppFeedbackType.warning,
                 );
                 return;
               }
             }
-            setState(() => _currentStep = 1);
+            _goToStep(1);
           },
           child: Text(l10n.t('continue_to_photos')),
         ),
@@ -318,7 +521,8 @@ class _InspectionScreenState extends State<InspectionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.t('directional_photos'), style: Theme.of(context).textTheme.headlineMedium),
+        Text(l10n.t('directional_photos'),
+            style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
@@ -339,7 +543,9 @@ class _InspectionScreenState extends State<InspectionScreen> {
                 decoration: BoxDecoration(
                   color: scheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: file != null ? semantic.success : semantic.border),
+                  border: Border.all(
+                    color: file != null ? semantic.success : semantic.border,
+                  ),
                 ),
                 child: file != null
                     ? Stack(
@@ -353,12 +559,21 @@ class _InspectionScreenState extends State<InspectionScreen> {
                             bottom: 8,
                             left: 8,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.black54,
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: Text(direction.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10)),
+                              child: Text(
+                                direction.toUpperCase(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -366,9 +581,12 @@ class _InspectionScreenState extends State<InspectionScreen> {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.camera_alt, size: 36, color: semantic.muted),
+                          Icon(Icons.camera_alt,
+                              size: 36, color: semantic.muted),
                           const SizedBox(height: 8),
-                          Text(direction.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.w500)),
+                          Text(direction.toUpperCase(),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w500)),
                         ],
                       ),
               ),
@@ -379,17 +597,24 @@ class _InspectionScreenState extends State<InspectionScreen> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(onPressed: () => setState(() => _currentStep = 0), child: Text(l10n.t('back_to_checklist'))),
+              child: OutlinedButton(
+                onPressed: () => _goToStep(0),
+                child: Text(l10n.t('back_to_checklist')),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
                   if (_directionalPhotos.length < _directions.length) {
-                    AppFeedback.show(context, message: l10n.t('all_directions_required'), type: AppFeedbackType.warning);
+                    AppFeedback.show(
+                      context,
+                      message: l10n.t('all_directions_required'),
+                      type: AppFeedbackType.warning,
+                    );
                     return;
                   }
-                  setState(() => _currentStep = 2);
+                  _goToStep(2);
                 },
                 child: Text(l10n.t('review_submit')),
               ),
@@ -400,12 +625,19 @@ class _InspectionScreenState extends State<InspectionScreen> {
     );
   }
 
-  Widget _reviewStep(BuildContext context, AppLocalizations l10n, String vehicleId, String shiftId, String shiftStatus) {
+  Widget _reviewStep(
+    BuildContext context,
+    AppLocalizations l10n,
+    String vehicleId,
+    String shiftId,
+    String shiftStatus,
+  ) {
     final semantic = context.semanticColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(l10n.t('review_summary'), style: Theme.of(context).textTheme.headlineMedium),
+        Text(l10n.t('review_summary'),
+            style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 12),
         Card(
           child: Padding(
@@ -421,8 +653,13 @@ class _InspectionScreenState extends State<InspectionScreen> {
                     children: [
                       Text(item.toUpperCase()),
                       Text(
-                        ok ? l10n.t('good').toUpperCase() : l10n.t('bad').toUpperCase(),
-                        style: TextStyle(color: ok ? semantic.success : semantic.danger, fontWeight: FontWeight.w600),
+                        ok
+                            ? l10n.t('good').toUpperCase()
+                            : l10n.t('bad').toUpperCase(),
+                        style: TextStyle(
+                          color: ok ? semantic.success : semantic.danger,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -435,13 +672,20 @@ class _InspectionScreenState extends State<InspectionScreen> {
         TextField(
           controller: _notesController,
           maxLines: 3,
-          decoration: InputDecoration(labelText: l10n.t('additional_notes'), hintText: l10n.t('notes_hint')),
+          onChanged: (_) => _persistDraft(),
+          decoration: InputDecoration(
+            labelText: l10n.t('additional_notes'),
+            hintText: l10n.t('notes_hint'),
+          ),
         ),
         const SizedBox(height: 24),
         Row(
           children: [
             Expanded(
-              child: OutlinedButton(onPressed: () => setState(() => _currentStep = 1), child: Text(l10n.t('back_to_photos'))),
+              child: OutlinedButton(
+                onPressed: () => _goToStep(1),
+                child: Text(l10n.t('back_to_photos')),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -450,7 +694,9 @@ class _InspectionScreenState extends State<InspectionScreen> {
                   context.read<InspectionCubit>().submitInspection(
                         shiftId: shiftId,
                         vehicleId: vehicleId,
-                        type: shiftStatus == 'PendingVerification' ? 'pre' : 'post',
+                        type: shiftStatus == 'PendingVerification'
+                            ? 'pre'
+                            : 'post',
                         notes: _notesController.text,
                         checks: _checks,
                         directionalPhotos: _directionalPhotos,

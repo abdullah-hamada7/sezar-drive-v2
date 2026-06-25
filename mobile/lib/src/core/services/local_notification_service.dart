@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'driver_alert_events.dart';
 
 /// Shows native Android notifications for real-time driver events while the app
 /// is running. Backend web-push (VAPID) is PWA-only; this mirrors that UX on mobile.
@@ -8,19 +9,6 @@ class LocalNotificationService {
 
   static const _channelId = 'sezar_driver_events';
   static const _channelName = 'Driver Alerts';
-
-  static const Map<String, String> _eventMessages = {
-    'trip_assigned': 'A new trip was assigned to you',
-    'trip_accepted': 'Trip accepted successfully',
-    'trip_completed': 'Trip completed successfully',
-    'trip_cancelled': 'A trip was cancelled',
-    'shift_started': 'Your shift request was created',
-    'shift_activated': 'Your shift was activated',
-    'shift_closed': 'Your shift was closed',
-    'damage_reviewed': 'Your damage report was reviewed',
-    'expense_reviewed': 'Your expense was reviewed',
-    'identity_update': 'Your identity verification status was updated',
-  };
 
   Future<void> init() async {
     if (_initialized) return;
@@ -33,7 +21,7 @@ class LocalNotificationService {
     const channel = AndroidNotificationChannel(
       _channelId,
       _channelName,
-      description: 'Real-time trip and shift notifications',
+      description: 'Real-time trip, shift, and account notifications',
       importance: Importance.high,
     );
 
@@ -44,10 +32,15 @@ class LocalNotificationService {
     _initialized = true;
   }
 
-  Future<void> showEvent(String eventType) async {
+  Future<void> showEvent(
+    String eventType, {
+    Map<String, dynamic>? data,
+  }) async {
     if (!_initialized) return;
-    final body = _eventMessages[eventType];
-    if (body == null) return;
+
+    final title = DriverAlertEvents.titleFor(eventType);
+    final body = _resolveBody(eventType, data);
+    if (body.isEmpty) return;
 
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -60,10 +53,18 @@ class LocalNotificationService {
 
     await _plugin.show(
       eventType.hashCode,
-      'Sezar Drive',
+      title,
       body,
       details,
     );
+  }
+
+  String _resolveBody(String eventType, Map<String, dynamic>? data) {
+    final fallback = DriverAlertEvents.messageFor(eventType);
+    if (fallback != null) return fallback;
+    if (data == null) return '';
+    final message = data['message'] ?? data['body'];
+    return message?.toString() ?? '';
   }
 
   Future<void> show({required String title, required String body}) async {

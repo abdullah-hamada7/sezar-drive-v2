@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<journey name="Driver Login Smoke">
+  <description>Verify the driver app launches to the sign-in screen.</description>
+  <actions>
+    <action>Wait 3</action>
+    <action>Verify that "Sezar Driver" is visible</action>
+    <action>Verify that "Sign in" is visible</action>
+  </actions>
+</journey>

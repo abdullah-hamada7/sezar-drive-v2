@@ -13,11 +13,13 @@ const DRIVER_EVENT_MESSAGES = {
   trip_completed: 'Trip completed successfully',
   trip_cancelled: 'A trip was cancelled',
   shift_started: 'Your shift request was created',
-  shift_activated: 'Your shift was activated',
+  shift_activated: 'Your shift was activated — you can accept trips',
   shift_closed: 'Your shift was closed',
+  damage_update: 'Your damage report was reviewed',
   damage_reviewed: 'Your damage report was reviewed',
   expense_reviewed: 'Your expense was reviewed',
   identity_update: 'Your identity verification status was updated',
+  violation_created: 'A new traffic violation was recorded for you',
 };
 
 // Max buffered locations when WS is offline (~10 min at 10 s intervals)

@@ -41,13 +41,12 @@ export function useNotificationBadge() {
     mountedRef.current = true;
     fetchCount();
 
-    // Increment badge when we receive a new trip notification over WebSocket
+    // Refresh badge when any driver WebSocket event arrives
     const handleNewNotification = () => {
       fetchCount();
     };
 
-    window.addEventListener('ws:trip_assigned', handleNewNotification);
-    window.addEventListener('ws:trip_cancelled', handleNewNotification);
+    window.addEventListener('ws:update', handleNewNotification);
 
     // Periodic background poll to stay in sync
     intervalRef.current = setInterval(fetchCount, POLL_INTERVAL_MS);
@@ -55,8 +54,7 @@ export function useNotificationBadge() {
     return () => {
       mountedRef.current = false;
       clearInterval(intervalRef.current);
-      window.removeEventListener('ws:trip_assigned', handleNewNotification);
-      window.removeEventListener('ws:trip_cancelled', handleNewNotification);
+      window.removeEventListener('ws:update', handleNewNotification);
     };
   }, [fetchCount]);
 
